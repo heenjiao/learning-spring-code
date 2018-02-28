@@ -25,17 +25,19 @@ import org.springframework.stereotype.Controller;
  *
  * @author Juergen Hoeller
  * @since 2.5.3
+ * @deprecated as of 4.3, in favor of annotation-driven handler methods
  */
+@Deprecated
 class AnnotationControllerTypePredicate extends ControllerTypePredicate {
 
 	@Override
-	public boolean isControllerType(Class beanClass) {
+	public boolean isControllerType(Class<?> beanClass) {
 		return (super.isControllerType(beanClass) ||
 				AnnotationUtils.findAnnotation(beanClass, Controller.class) != null);
 	}
 
 	@Override
-	public boolean isMultiActionControllerType(Class beanClass) {
+	public boolean isMultiActionControllerType(Class<?> beanClass) {
 		return (super.isMultiActionControllerType(beanClass) ||
 				AnnotationUtils.findAnnotation(beanClass, Controller.class) != null);
 	}

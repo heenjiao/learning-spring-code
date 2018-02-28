@@ -16,7 +16,6 @@
 
 package org.springframework.beans;
 
-import java.beans.PropertyDescriptor;
 import java.io.Serializable;
 
 import org.springframework.util.Assert;
@@ -56,10 +55,7 @@ public class PropertyValue extends BeanMetadataAttributeAccessor implements Seri
 	volatile Boolean conversionNecessary;
 
 	/** Package-visible field for caching the resolved property path tokens */
-	volatile Object resolvedTokens;
-
-	/** Package-visible field for caching the resolved PropertyDescriptor */
-	volatile PropertyDescriptor resolvedDescriptor;
+	transient volatile Object resolvedTokens;
 
 
 	/**
@@ -85,7 +81,6 @@ public class PropertyValue extends BeanMetadataAttributeAccessor implements Seri
 		this.convertedValue = original.convertedValue;
 		this.conversionNecessary = original.conversionNecessary;
 		this.resolvedTokens = original.resolvedTokens;
-		this.resolvedDescriptor = original.resolvedDescriptor;
 		setSource(original.getSource());
 		copyAttributesFrom(original);
 	}
@@ -103,7 +98,6 @@ public class PropertyValue extends BeanMetadataAttributeAccessor implements Seri
 		this.optional = original.isOptional();
 		this.conversionNecessary = original.conversionNecessary;
 		this.resolvedTokens = original.resolvedTokens;
-		this.resolvedDescriptor = original.resolvedDescriptor;
 		setSource(original);
 		copyAttributesFrom(original);
 	}

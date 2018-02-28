@@ -61,6 +61,7 @@ public class ResourceLoaderClassLoadHelper implements ClassLoadHelper {
 	}
 
 
+	@Override
 	public void initialize() {
 		if (this.resourceLoader == null) {
 			this.resourceLoader = SchedulerFactoryBean.getConfigTimeResourceLoader();
@@ -70,15 +71,17 @@ public class ResourceLoaderClassLoadHelper implements ClassLoadHelper {
 		}
 	}
 
-	public Class loadClass(String name) throws ClassNotFoundException {
+	@Override
+	public Class<?> loadClass(String name) throws ClassNotFoundException {
 		return this.resourceLoader.getClassLoader().loadClass(name);
 	}
 
 	@SuppressWarnings("unchecked")
 	public <T> Class<? extends T> loadClass(String name, Class<T> clazz) throws ClassNotFoundException {
-		return loadClass(name);
+		return (Class<? extends T>) loadClass(name);
 	}
 
+	@Override
 	public URL getResource(String name) {
 		Resource resource = this.resourceLoader.getResource(name);
 		if (resource.exists()) {
@@ -97,6 +100,7 @@ public class ResourceLoaderClassLoadHelper implements ClassLoadHelper {
 		}
 	}
 
+	@Override
 	public InputStream getResourceAsStream(String name) {
 		Resource resource = this.resourceLoader.getResource(name);
 		if (resource.exists()) {

@@ -52,39 +52,45 @@ public class TimerManagerTaskScheduler extends TimerManagerAccessor implements T
 	}
 
 
-	public ScheduledFuture schedule(Runnable task, Trigger trigger) {
+	@Override
+	public ScheduledFuture<?> schedule(Runnable task, Trigger trigger) {
 		return new ReschedulingTimerListener(errorHandlingTask(task, true), trigger).schedule();
 	}
 
-	public ScheduledFuture schedule(Runnable task, Date startTime) {
+	@Override
+	public ScheduledFuture<?> schedule(Runnable task, Date startTime) {
 		TimerScheduledFuture futureTask = new TimerScheduledFuture(errorHandlingTask(task, false));
 		Timer timer = getTimerManager().schedule(futureTask, startTime);
 		futureTask.setTimer(timer);
 		return futureTask;
 	}
 
-	public ScheduledFuture scheduleAtFixedRate(Runnable task, Date startTime, long period) {
+	@Override
+	public ScheduledFuture<?> scheduleAtFixedRate(Runnable task, Date startTime, long period) {
 		TimerScheduledFuture futureTask = new TimerScheduledFuture(errorHandlingTask(task, true));
 		Timer timer = getTimerManager().scheduleAtFixedRate(futureTask, startTime, period);
 		futureTask.setTimer(timer);
 		return futureTask;
 	}
 
-	public ScheduledFuture scheduleAtFixedRate(Runnable task, long period) {
+	@Override
+	public ScheduledFuture<?> scheduleAtFixedRate(Runnable task, long period) {
 		TimerScheduledFuture futureTask = new TimerScheduledFuture(errorHandlingTask(task, true));
 		Timer timer = getTimerManager().scheduleAtFixedRate(futureTask, 0, period);
 		futureTask.setTimer(timer);
 		return futureTask;
 	}
 
-	public ScheduledFuture scheduleWithFixedDelay(Runnable task, Date startTime, long delay) {
+	@Override
+	public ScheduledFuture<?> scheduleWithFixedDelay(Runnable task, Date startTime, long delay) {
 		TimerScheduledFuture futureTask = new TimerScheduledFuture(errorHandlingTask(task, true));
 		Timer timer = getTimerManager().schedule(futureTask, startTime, delay);
 		futureTask.setTimer(timer);
 		return futureTask;
 	}
 
-	public ScheduledFuture scheduleWithFixedDelay(Runnable task, long delay) {
+	@Override
+	public ScheduledFuture<?> scheduleWithFixedDelay(Runnable task, long delay) {
 		TimerScheduledFuture futureTask = new TimerScheduledFuture(errorHandlingTask(task, true));
 		Timer timer = getTimerManager().schedule(futureTask, 0, delay);
 		futureTask.setTimer(timer);
@@ -113,6 +119,7 @@ public class TimerManagerTaskScheduler extends TimerManagerAccessor implements T
 			this.timer = timer;
 		}
 
+		@Override
 		public void timerExpired(Timer timer) {
 			runAndReset();
 		}
@@ -125,10 +132,12 @@ public class TimerManagerTaskScheduler extends TimerManagerAccessor implements T
 			return result;
 		}
 
+		@Override
 		public long getDelay(TimeUnit unit) {
 			return unit.convert(this.timer.getScheduledExecutionTime() - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
 		}
 
+		@Override
 		public int compareTo(Delayed other) {
 			if (this == other) {
 				return 0;
@@ -155,7 +164,7 @@ public class TimerManagerTaskScheduler extends TimerManagerAccessor implements T
 			this.trigger = trigger;
 		}
 
-		public ScheduledFuture schedule() {
+		public ScheduledFuture<?> schedule() {
 			this.scheduledExecutionTime = this.trigger.nextExecutionTime(this.triggerContext);
 			if (this.scheduledExecutionTime == null) {
 				return null;

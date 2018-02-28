@@ -26,7 +26,6 @@ import org.apache.poi.hssf.usermodel.HSSFCell;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.LocalizedResourceHelper;
@@ -35,7 +34,7 @@ import org.springframework.web.servlet.view.AbstractView;
 
 /**
  * Convenient superclass for Excel document views.
- * Compatible with Apache POI 3.0 as well as 3.5, as of Spring 3.0.
+ * Compatible with Apache POI 3.5 and higher, as of Spring 4.0.
  *
  * <p>Properties:
  * <ul>
@@ -92,7 +91,10 @@ import org.springframework.web.servlet.view.AbstractView;
  * @author Jean-Pierre Pawlak
  * @author Juergen Hoeller
  * @see AbstractPdfView
+ * @deprecated as of Spring 4.2, in favor of {@link AbstractXlsView} and its
+ * {@link AbstractXlsxView} and {@link AbstractXlsxStreamingView} variants
  */
+@Deprecated
 public abstract class AbstractExcelView extends AbstractView {
 
 	/** The content type for an Excel response */
@@ -172,8 +174,7 @@ public abstract class AbstractExcelView extends AbstractView {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Loading Excel workbook from " + inputFile);
 		}
-		POIFSFileSystem fs = new POIFSFileSystem(inputFile.getInputStream());
-		return new HSSFWorkbook(fs);
+		return new HSSFWorkbook(inputFile.getInputStream());
 	}
 
 	/**
@@ -203,9 +204,9 @@ public abstract class AbstractExcelView extends AbstractView {
 		if (sheetRow == null) {
 			sheetRow = sheet.createRow(row);
 		}
-		HSSFCell cell = sheetRow.getCell((short) col);
+		HSSFCell cell = sheetRow.getCell(col);
 		if (cell == null) {
-			cell = sheetRow.createCell((short) col);
+			cell = sheetRow.createCell(col);
 		}
 		return cell;
 	}

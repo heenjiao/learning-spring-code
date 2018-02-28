@@ -47,16 +47,18 @@ final class CollectionToCollectionConverter implements ConditionalGenericConvert
 	}
 
 
+	@Override
 	public Set<ConvertiblePair> getConvertibleTypes() {
 		return Collections.singleton(new ConvertiblePair(Collection.class, Collection.class));
 	}
 
+	@Override
 	public boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {
 		return ConversionUtils.canConvertElements(
 				sourceType.getElementTypeDescriptor(), targetType.getElementTypeDescriptor(), this.conversionService);
 	}
 
-	@SuppressWarnings("unchecked")
+	@Override
 	public Object convert(Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
 		if (source == null) {
 			return null;
@@ -74,7 +76,9 @@ final class CollectionToCollectionConverter implements ConditionalGenericConvert
 		}
 
 		// At this point, we need a collection copy in any case, even if just for finding out about element copies...
-		Collection<Object> target = CollectionFactory.createCollection(targetType.getType(), sourceCollection.size());
+		Collection<Object> target = CollectionFactory.createCollection(targetType.getType(),
+				(elementDesc != null ? elementDesc.getType() : null), sourceCollection.size());
+
 		if (elementDesc == null) {
 			target.addAll(sourceCollection);
 		}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +49,6 @@ import org.springframework.util.CollectionUtils;
  * @author Rob Harrop
  * @author Juergen Hoeller
  * @since 1.2
- * @see    FactoryBean
  * @see JMXConnectorServer
  * @see MBeanServer
  */
@@ -142,6 +141,7 @@ public class ConnectorServerFactoryBean extends MBeanRegistrationSupport
 	 * with the {@code MBeanServer}
 	 * @throws IOException if there is a problem starting the connector server
 	 */
+	@Override
 	public void afterPropertiesSet() throws JMException, IOException {
 		if (this.server == null) {
 			this.server = JmxUtils.locateMBeanServer();
@@ -200,14 +200,17 @@ public class ConnectorServerFactoryBean extends MBeanRegistrationSupport
 	}
 
 
+	@Override
 	public JMXConnectorServer getObject() {
 		return this.connectorServer;
 	}
 
+	@Override
 	public Class<? extends JMXConnectorServer> getObjectType() {
 		return (this.connectorServer != null ? this.connectorServer.getClass() : JMXConnectorServer.class);
 	}
 
+	@Override
 	public boolean isSingleton() {
 		return true;
 	}
@@ -218,6 +221,7 @@ public class ConnectorServerFactoryBean extends MBeanRegistrationSupport
 	 * Automatically called on {@code ApplicationContext} shutdown.
 	 * @throws IOException if there is an error stopping the connector server
 	 */
+	@Override
 	public void destroy() throws IOException {
 		if (logger.isInfoEnabled()) {
 			logger.info("Stopping JMX connector server: " + this.connectorServer);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2010 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.springframework.aop.aspectj;
 
+import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 
@@ -32,7 +33,9 @@ import org.springframework.util.TypeUtils;
  * @author Ramnivas Laddad
  * @since 2.0
  */
-public class AspectJAfterReturningAdvice extends AbstractAspectJAdvice implements AfterReturningAdvice, AfterAdvice {
+@SuppressWarnings("serial")
+public class AspectJAfterReturningAdvice extends AbstractAspectJAdvice
+		implements AfterReturningAdvice, AfterAdvice, Serializable {
 
 	public AspectJAfterReturningAdvice(
 			Method aspectJBeforeAdviceMethod, AspectJExpressionPointcut pointcut, AspectInstanceFactory aif) {
@@ -40,10 +43,13 @@ public class AspectJAfterReturningAdvice extends AbstractAspectJAdvice implement
 		super(aspectJBeforeAdviceMethod, pointcut, aif);
 	}
 
+
+	@Override
 	public boolean isBeforeAdvice() {
 		return false;
 	}
 
+	@Override
 	public boolean isAfterAdvice() {
 		return true;
 	}
@@ -53,11 +59,13 @@ public class AspectJAfterReturningAdvice extends AbstractAspectJAdvice implement
 		setReturningNameNoCheck(name);
 	}
 
+	@Override
 	public void afterReturning(Object returnValue, Method method, Object[] args, Object target) throws Throwable {
 		if (shouldInvokeOnReturnValueOf(method, returnValue)) {
 			invokeAdviceMethod(getJoinPointMatch(), returnValue, null);
 		}
 	}
+
 
 	/**
 	 * Following AspectJ semantics, if a returning clause was specified, then the
@@ -68,12 +76,34 @@ public class AspectJAfterReturningAdvice extends AbstractAspectJAdvice implement
 	 * @return whether to invoke the advice method for the given return value
 	 */
 	private boolean shouldInvokeOnReturnValueOf(Method method, Object returnValue) {
-		Class type = getDiscoveredReturningType();
+		Class<?> type = getDiscoveredReturningType();
 		Type genericType = getDiscoveredReturningGenericType();
-		// If we aren't dealing with a raw type, check if  generic parameters are assignable.
-		return (ClassUtils.isAssignableValue(type, returnValue) &&
+		// If we aren't dealing with a raw type, check if generic parameters are assignable.
+		return (matchesReturnValue(type, method, returnValue) &&
 				(genericType == null || genericType == type ||
 						TypeUtils.isAssignable(genericType, method.getGenericReturnType())));
+	}
+
+	/**
+	 * Following AspectJ semantics, if a return value is null (or return type is void),
+	 * then the return type of target method should be used to determine whether advice
+	 * is invoked or not. Also, even if the return type is void, if the type of argument
+	 * declared in the advice method is Object, then the advice must still get invoked.
+	 * @param type the type of argument declared in advice method
+	 * @param method the advice method
+	 * @param returnValue the return value of the target method
+	 * @return whether to invoke the advice method for the given return value and type
+	 */
+	private boolean matchesReturnValue(Class<?> type, Method method, Object returnValue) {
+		if (returnValue != null) {
+			return ClassUtils.isAssignableValue(type, returnValue);
+		}
+		else if (Object.class == type && void.class == method.getReturnType()) {
+			return true;
+		}
+		else {
+			return ClassUtils.isAssignable(type, method.getReturnType());
+		}
 	}
 
 }

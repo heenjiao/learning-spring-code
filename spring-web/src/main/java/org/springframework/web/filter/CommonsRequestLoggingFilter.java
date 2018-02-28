@@ -23,6 +23,7 @@ import javax.servlet.http.HttpServletRequest;
  * (and optionally the query string) to the Commons Log.
  *
  * @author Rob Harrop
+ * @author Juergen Hoeller
  * @since 1.2.5
  * @see #setIncludeQueryString
  * @see #setBeforeMessagePrefix
@@ -32,6 +33,11 @@ import javax.servlet.http.HttpServletRequest;
  * @see org.apache.commons.logging.Log#debug(Object)
  */
 public class CommonsRequestLoggingFilter extends AbstractRequestLoggingFilter {
+
+	@Override
+	protected boolean shouldLog(HttpServletRequest request) {
+		return logger.isDebugEnabled();
+	}
 
 	/**
 	 * Writes a log message before the request is processed.

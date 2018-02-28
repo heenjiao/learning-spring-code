@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.springframework.context.i18n.LocaleContextHolder;
 
 /**
- * Servlet 2.4+ listener that exposes the request to the current thread,
+ * Servlet listener that exposes the request to the current thread,
  * through both {@link org.springframework.context.i18n.LocaleContextHolder} and
  * {@link RequestContextHolder}. To be registered as listener in {@code web.xml}.
  *
@@ -49,6 +49,7 @@ public class RequestContextListener implements ServletRequestListener {
 			RequestContextListener.class.getName() + ".REQUEST_ATTRIBUTES";
 
 
+	@Override
 	public void requestInitialized(ServletRequestEvent requestEvent) {
 		if (!(requestEvent.getServletRequest() instanceof HttpServletRequest)) {
 			throw new IllegalArgumentException(
@@ -61,6 +62,7 @@ public class RequestContextListener implements ServletRequestListener {
 		RequestContextHolder.setRequestAttributes(attributes);
 	}
 
+	@Override
 	public void requestDestroyed(ServletRequestEvent requestEvent) {
 		ServletRequestAttributes attributes = null;
 		Object reqAttr = requestEvent.getServletRequest().getAttribute(REQUEST_ATTRIBUTES_ATTRIBUTE);

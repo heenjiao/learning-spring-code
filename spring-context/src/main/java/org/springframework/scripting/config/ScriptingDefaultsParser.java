@@ -28,13 +28,14 @@ import org.springframework.util.StringUtils;
  * @author Mark Fisher
  * @since 2.5
  */
-public class ScriptingDefaultsParser implements BeanDefinitionParser {
+class ScriptingDefaultsParser implements BeanDefinitionParser {
 
 	private static final String REFRESH_CHECK_DELAY_ATTRIBUTE = "refresh-check-delay";
 
 	private static final String PROXY_TARGET_CLASS_ATTRIBUTE = "proxy-target-class";
 
 
+	@Override
 	public BeanDefinition parse(Element element, ParserContext parserContext) {
 		BeanDefinition bd =
 				LangNamespaceUtils.registerScriptFactoryPostProcessorIfNecessary(parserContext.getRegistry());

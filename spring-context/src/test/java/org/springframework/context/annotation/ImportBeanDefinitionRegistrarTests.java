@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,6 @@
 
 package org.springframework.context.annotation;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
-
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -31,10 +28,15 @@ import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.context.EnvironmentAware;
 import org.springframework.context.MessageSource;
 import org.springframework.context.ResourceLoaderAware;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.type.AnnotationMetadata;
+
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
 /**
  * Integration tests for {@link ImportBeanDefinitionRegistrar}.
@@ -52,6 +54,7 @@ public class ImportBeanDefinitionRegistrarTests {
 		assertThat(SampleRegistrar.beanFactory, is((BeanFactory) context.getBeanFactory()));
 		assertThat(SampleRegistrar.classLoader, is(context.getBeanFactory().getBeanClassLoader()));
 		assertThat(SampleRegistrar.resourceLoader, is(notNullValue()));
+		assertThat(SampleRegistrar.environment, is((Environment) context.getEnvironment()));
 	}
 
 
@@ -69,11 +72,12 @@ public class ImportBeanDefinitionRegistrarTests {
 
 
 	static class SampleRegistrar implements ImportBeanDefinitionRegistrar, BeanClassLoaderAware, ResourceLoaderAware,
-			BeanFactoryAware {
+			BeanFactoryAware, EnvironmentAware {
 
 		static ClassLoader classLoader;
 		static ResourceLoader resourceLoader;
 		static BeanFactory beanFactory;
+		static Environment environment;
 
 		@Override
 		public void setBeanClassLoader(ClassLoader classLoader) {
@@ -88,6 +92,11 @@ public class ImportBeanDefinitionRegistrarTests {
 		@Override
 		public void setResourceLoader(ResourceLoader resourceLoader) {
 			SampleRegistrar.resourceLoader = resourceLoader;
+		}
+
+		@Override
+		public void setEnvironment(Environment environment) {
+			SampleRegistrar.environment = environment;
 		}
 
 		@Override

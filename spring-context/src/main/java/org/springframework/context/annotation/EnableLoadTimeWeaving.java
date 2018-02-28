@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,22 +29,28 @@ import org.springframework.instrument.classloading.LoadTimeWeaver;
  * Activates a Spring {@link LoadTimeWeaver} for this application context, available as
  * a bean with the name "loadTimeWeaver", similar to the {@code <context:load-time-weaver>}
  * element in Spring XML.
- * To be used
- * on @{@link org.springframework.context.annotation.Configuration Configuration} classes;
+ *
+ * <p>To be used on @{@link org.springframework.context.annotation.Configuration Configuration} classes;
  * the simplest possible example of which follows:
+ *
  * <pre class="code">
  * &#064;Configuration
  * &#064;EnableLoadTimeWeaving
  * public class AppConfig {
+ *
  *     // application-specific &#064;Bean definitions ...
  * }</pre>
  *
  * The example above is equivalent to the following Spring XML configuration:
+ *
  * <pre class="code">
  * {@code
  * <beans>
+ *
  *     <context:load-time-weaver/>
+ *
  *     <!-- application-specific <bean> definitions -->
+ *
  * </beans>
  * }</pre>
  *
@@ -55,22 +61,18 @@ import org.springframework.instrument.classloading.LoadTimeWeaver;
  * Spring's JPA bootstrap support.
  *
  * <h2>Customizing the {@code LoadTimeWeaver}</h2>
- * The default weaver is determined automatically. As of Spring 3.1: detecting
- * Sun's GlassFish, Oracle's OC4J, Spring's VM agent and any ClassLoader supported by
- * Spring's {@link
- * org.springframework.instrument.classloading.ReflectiveLoadTimeWeaver
- * ReflectiveLoadTimeWeaver} (for example, the {@link
- * org.springframework.instrument.classloading.tomcat.TomcatInstrumentableClassLoader
- * TomcatInstrumentableClassLoader}).
+ * The default weaver is determined automatically: see {@link DefaultContextLoadTimeWeaver}.
  *
  * <p>To customize the weaver used, the {@code @Configuration} class annotated with
  * {@code @EnableLoadTimeWeaving} may also implement the {@link LoadTimeWeavingConfigurer}
  * interface and return a custom {@code LoadTimeWeaver} instance through the
  * {@code #getLoadTimeWeaver} method:
+ *
  * <pre class="code">
  * &#064;Configuration
  * &#064;EnableLoadTimeWeaving
  * public class AppConfig implements LoadTimeWeavingConfigurer {
+ *
  *     &#064;Override
  *     public LoadTimeWeaver getLoadTimeWeaver() {
  *         MyLoadTimeWeaver ltw = new MyLoadTimeWeaver();
@@ -81,10 +83,13 @@ import org.springframework.instrument.classloading.LoadTimeWeaver;
  * }</pre>
  *
  * <p>The example above can be compared to the following Spring XML configuration:
+ *
  * <pre class="code">
  * {@code
  * <beans>
+ *
  *     <context:load-time-weaver weaverClass="com.acme.MyLoadTimeWeaver"/>
+ *
  * </beans>
  * }</pre>
  *
@@ -100,6 +105,7 @@ import org.springframework.instrument.classloading.LoadTimeWeaver;
  * be registered through {@link LoadTimeWeaver#addTransformer}. AspectJ weaving will be
  * activated by default if a "META-INF/aop.xml" resource is present on the classpath.
  * Example:
+ *
  * <pre class="code">
  * &#064;Configuration
  * &#064;EnableLoadTimeWeaving(aspectjWeaving=ENABLED)
@@ -107,10 +113,13 @@ import org.springframework.instrument.classloading.LoadTimeWeaver;
  * }</pre>
  *
  * <p>The example above can be compared to the following Spring XML configuration:
+ *
  * <pre class="code">
  * {@code
  * <beans>
+ *
  *     <context:load-time-weaver aspectj-weaving="on"/>
+ *
  * </beans>
  * }</pre>
  *
@@ -137,7 +146,8 @@ public @interface EnableLoadTimeWeaving {
 	 */
 	AspectJWeaving aspectjWeaving() default AspectJWeaving.AUTODETECT;
 
-	public enum AspectJWeaving {
+
+	enum AspectJWeaving {
 
 		/**
 		 * Switches on Spring-based AspectJ load-time weaving.
@@ -157,4 +167,5 @@ public @interface EnableLoadTimeWeaving {
 		 */
 		AUTODETECT;
 	}
+
 }

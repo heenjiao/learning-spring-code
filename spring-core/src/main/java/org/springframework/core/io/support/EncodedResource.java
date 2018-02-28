@@ -22,6 +22,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.Charset;
 
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
@@ -40,7 +41,7 @@ import org.springframework.util.ObjectUtils;
  * @see java.io.Reader
  * @see java.nio.charset.Charset
  */
-public class EncodedResource {
+public class EncodedResource implements InputStreamSource {
 
 	private final Resource resource;
 
@@ -148,6 +149,7 @@ public class EncodedResource {
 	 * @see #requiresReader()
 	 * @see #getReader()
 	 */
+	@Override
 	public InputStream getInputStream() throws IOException {
 		return this.resource.getInputStream();
 	}

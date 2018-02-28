@@ -38,13 +38,18 @@ import javax.servlet.ServletContextListener;
  * @see Log4jWebConfigurer
  * @see org.springframework.web.context.ContextLoaderListener
  * @see WebAppRootListener
+ * @deprecated as of Spring 4.2.1, in favor of Apache Log4j 2
+ * (following Apache's EOL declaration for log4j 1.x)
  */
+@Deprecated
 public class Log4jConfigListener implements ServletContextListener {
 
+	@Override
 	public void contextInitialized(ServletContextEvent event) {
 		Log4jWebConfigurer.initLogging(event.getServletContext());
 	}
 
+	@Override
 	public void contextDestroyed(ServletContextEvent event) {
 		Log4jWebConfigurer.shutdownLogging(event.getServletContext());
 	}

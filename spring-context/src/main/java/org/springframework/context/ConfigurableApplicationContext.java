@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2016 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
+import org.springframework.core.io.ProtocolResolver;
 
 /**
  * SPI interface to be implemented by most if not all application contexts.
@@ -102,17 +103,19 @@ public interface ConfigurableApplicationContext extends ApplicationContext, Life
 	void setParent(ApplicationContext parent);
 
 	/**
-	 * Return the Environment for this application context in configurable form.
-	 * @since 3.1
-	 */
-	ConfigurableEnvironment getEnvironment();
-
-	/**
 	 * Set the {@code Environment} for this application context.
 	 * @param environment the new environment
 	 * @since 3.1
 	 */
 	void setEnvironment(ConfigurableEnvironment environment);
+
+	/**
+	 * Return the {@code Environment} for this application context in configurable
+	 * form, allowing for further customization.
+	 * @since 3.1
+	 */
+	@Override
+	ConfigurableEnvironment getEnvironment();
 
 	/**
 	 * Add a new BeanFactoryPostProcessor that will get applied to the internal
@@ -133,6 +136,15 @@ public interface ConfigurableApplicationContext extends ApplicationContext, Life
 	 * @see org.springframework.context.event.ContextClosedEvent
 	 */
 	void addApplicationListener(ApplicationListener<?> listener);
+
+	/**
+	 * Register the given protocol resolver with this application context,
+	 * allowing for additional resource protocols to be handled.
+	 * <p>Any such resolver will be invoked ahead of this context's standard
+	 * resolution rules. It may therefore also override any default rules.
+	 * @since 4.3
+	 */
+	void addProtocolResolver(ProtocolResolver resolver);
 
 	/**
 	 * Load or refresh the persistent representation of the configuration,
@@ -164,6 +176,7 @@ public interface ConfigurableApplicationContext extends ApplicationContext, Life
 	 * <p>This method can be called multiple times without side effects: Subsequent
 	 * {@code close} calls on an already closed context will be ignored.
 	 */
+	@Override
 	void close();
 
 	/**

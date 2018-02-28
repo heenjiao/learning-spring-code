@@ -16,25 +16,26 @@
 
 package org.springframework.web.servlet.mvc.multiaction;
 
+import org.junit.Test;
+
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.*;
 
 import org.springframework.beans.FatalBeanException;
-import org.springframework.tests.sample.beans.TestBean;
 import org.springframework.context.ApplicationContextException;
 import org.springframework.mock.web.test.MockHttpServletRequest;
 import org.springframework.mock.web.test.MockHttpServletResponse;
 import org.springframework.mock.web.test.MockHttpSession;
+import org.springframework.tests.sample.beans.TestBean;
 import org.springframework.web.HttpSessionRequiredException;
 import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.servlet.ModelAndView;
@@ -46,9 +47,10 @@ import org.springframework.web.servlet.ModelAndView;
  * @author Rob Harrop
  * @author Sam Brannen
  */
-public class MultiActionControllerTests extends TestCase {
+public class MultiActionControllerTests {
 
-	public void testDefaultInternalPathMethodNameResolver() throws Exception {
+	@Test
+	public void defaultInternalPathMethodNameResolver() throws Exception {
 		doDefaultTestInternalPathMethodNameResolver("/foo.html", "foo");
 		doDefaultTestInternalPathMethodNameResolver("/foo/bar.html", "bar");
 		doDefaultTestInternalPathMethodNameResolver("/bugal.xyz", "bugal");
@@ -63,7 +65,8 @@ public class MultiActionControllerTests extends TestCase {
 		assertEquals("Wrong method name resolved", expected, actual);
 	}
 
-	public void testCustomizedInternalPathMethodNameResolver() throws Exception {
+	@Test
+	public void customizedInternalPathMethodNameResolver() throws Exception {
 		doTestCustomizedInternalPathMethodNameResolver("/foo.html", "my", null, "myfoo");
 		doTestCustomizedInternalPathMethodNameResolver("/foo/bar.html", null, "Handler", "barHandler");
 		doTestCustomizedInternalPathMethodNameResolver("/Bugal.xyz", "your", "Method", "yourBugalMethod");
@@ -86,7 +89,8 @@ public class MultiActionControllerTests extends TestCase {
 		assertEquals("Wrong method name resolved", expected, actual);
 	}
 
-	public void testParameterMethodNameResolver() throws NoSuchRequestHandlingMethodException {
+	@Test
+	public void parameterMethodNameResolver() throws NoSuchRequestHandlingMethodException {
 		ParameterMethodNameResolver mnr = new ParameterMethodNameResolver();
 
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/foo.html");
@@ -120,7 +124,8 @@ public class MultiActionControllerTests extends TestCase {
 		}
 	}
 
-	public void testParameterMethodNameResolverWithCustomParamName() throws NoSuchRequestHandlingMethodException {
+	@Test
+	public void parameterMethodNameResolverWithCustomParamName() throws NoSuchRequestHandlingMethodException {
 		ParameterMethodNameResolver mnr = new ParameterMethodNameResolver();
 		mnr.setParamName("myparam");
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/foo.html");
@@ -128,7 +133,8 @@ public class MultiActionControllerTests extends TestCase {
 		assertEquals("bar", mnr.getHandlerMethodName(request));
 	}
 
-	public void testParameterMethodNameResolverWithParamNames() throws NoSuchRequestHandlingMethodException {
+	@Test
+	public void parameterMethodNameResolverWithParamNames() throws NoSuchRequestHandlingMethodException {
 		ParameterMethodNameResolver resolver = new ParameterMethodNameResolver();
 		resolver.setDefaultMethodName("default");
 		resolver.setMethodParamNames(new String[] { "hello", "spring", "colin" });
@@ -182,7 +188,8 @@ public class MultiActionControllerTests extends TestCase {
 		assertEquals("goodbye", resolver.getHandlerMethodName(request));
 	}
 
-	public void testParameterMethodNameResolverWithDefaultMethodName() throws NoSuchRequestHandlingMethodException {
+	@Test
+	public void parameterMethodNameResolverWithDefaultMethodName() throws NoSuchRequestHandlingMethodException {
 		ParameterMethodNameResolver mnr = new ParameterMethodNameResolver();
 		mnr.setDefaultMethodName("foo");
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/foo.html");
@@ -192,7 +199,8 @@ public class MultiActionControllerTests extends TestCase {
 		assertEquals("foo", mnr.getHandlerMethodName(request));
 	}
 
-	public void testInvokesCorrectMethod() throws Exception {
+	@Test
+	public void invokesCorrectMethod() throws Exception {
 		TestMaController mc = new TestMaController();
 		HttpServletRequest request = new MockHttpServletRequest("GET", "/welcome.html");
 		HttpServletResponse response = new MockHttpServletResponse();
@@ -216,7 +224,8 @@ public class MultiActionControllerTests extends TestCase {
 		assertTrue("Only one method invoked", mc.getInvokedMethods() == 1);
 	}
 
-	public void testPathMatching() throws Exception {
+	@Test
+	public void pathMatching() throws Exception {
 		TestMaController mc = new TestMaController();
 		HttpServletRequest request = new MockHttpServletRequest("GET", "/welcome.html");
 		HttpServletResponse response = new MockHttpServletResponse();
@@ -244,7 +253,8 @@ public class MultiActionControllerTests extends TestCase {
 		assertTrue("No method invoked", mc.getInvokedMethods() == 0);
 	}
 
-	public void testInvokesCorrectMethodOnDelegate() throws Exception {
+	@Test
+	public void invokesCorrectMethodOnDelegate() throws Exception {
 		MultiActionController mac = new MultiActionController();
 		TestDelegate d = new TestDelegate();
 		mac.setDelegate(d);
@@ -255,7 +265,8 @@ public class MultiActionControllerTests extends TestCase {
 		assertTrue("Delegate was invoked", d.invoked);
 	}
 
-	public void testInvokesCorrectMethodWithSession() throws Exception {
+	@Test
+	public void invokesCorrectMethodWithSession() throws Exception {
 		TestMaController mc = new TestMaController();
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/inSession.html");
 		request.setSession(new MockHttpSession(null));
@@ -276,7 +287,8 @@ public class MultiActionControllerTests extends TestCase {
 		}
 	}
 
-	public void testInvokesCommandMethodNoSession() throws Exception {
+	@Test
+	public void invokesCommandMethodNoSession() throws Exception {
 		TestMaController mc = new TestMaController();
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/commandNoSession.html");
 		request.addParameter("name", "rod");
@@ -288,7 +300,8 @@ public class MultiActionControllerTests extends TestCase {
 		assertTrue("Only one method invoked", mc.getInvokedMethods() == 1);
 	}
 
-	public void testInvokesCommandMethodWithSession() throws Exception {
+	@Test
+	public void invokesCommandMethodWithSession() throws Exception {
 		TestMaController mc = new TestMaController();
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/commandInSession.html");
 		request.addParameter("name", "rod");
@@ -312,7 +325,8 @@ public class MultiActionControllerTests extends TestCase {
 		}
 	}
 
-	public void testSessionRequiredCatchable() throws Exception {
+	@Test
+	public void sessionRequiredCatchable() throws Exception {
 		HttpServletRequest request = new MockHttpServletRequest("GET", "/testSession.html");
 		HttpServletResponse response = new MockHttpServletResponse();
 		TestMaController contr = new TestSessionRequiredController();
@@ -347,7 +361,8 @@ public class MultiActionControllerTests extends TestCase {
 		testExceptionNoHandler(new TestMaController(), t);
 	}
 
-	public void testExceptionNoHandler() throws Exception {
+	@Test
+	public void exceptionNoHandler() throws Exception {
 		testExceptionNoHandler(new Exception());
 
 		// must go straight through
@@ -359,14 +374,16 @@ public class MultiActionControllerTests extends TestCase {
 		testExceptionNoHandler(new Error());
 	}
 
-	public void testLastModifiedDefault() throws Exception {
+	@Test
+	public void lastModifiedDefault() throws Exception {
 		TestMaController mc = new TestMaController();
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/welcome.html");
 		long lastMod = mc.getLastModified(request);
 		assertTrue("default last modified is -1", lastMod == -1L);
 	}
 
-	public void testLastModifiedWithMethod() throws Exception {
+	@Test
+	public void lastModifiedWithMethod() throws Exception {
 		LastModController mc = new LastModController();
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/welcome.html");
 		long lastMod = mc.getLastModified(request);
@@ -380,7 +397,8 @@ public class MultiActionControllerTests extends TestCase {
 		return mc.handleRequest(request, response);
 	}
 
-	public void testHandlerCaughtException() throws Exception {
+	@Test
+	public void handlerCaughtException() throws Exception {
 		TestMaController mc = new TestExceptionHandler();
 		ModelAndView mv = testHandlerCaughtException(mc, new Exception());
 		assertNotNull("ModelAndView must not be null", mv);
@@ -417,7 +435,8 @@ public class MultiActionControllerTests extends TestCase {
 		testExceptionNoHandler(mc, new Exception());
 	}
 
-	public void testHandlerReturnsMap() throws Exception {
+	@Test
+	public void handlerReturnsMap() throws Exception {
 		Map model = new HashMap();
 		model.put("message", "Hello World!");
 
@@ -432,7 +451,8 @@ public class MultiActionControllerTests extends TestCase {
 		assertEquals(model, mav.getModel());
 	}
 
-	public void testExceptionHandlerReturnsMap() throws Exception {
+	@Test
+	public void exceptionHandlerReturnsMap() throws Exception {
 		Map model = new HashMap();
 
 		MultiActionController mac = new ModelOnlyMultiActionController(model);
@@ -446,7 +466,8 @@ public class MultiActionControllerTests extends TestCase {
 		assertTrue(model.containsKey("exception"));
 	}
 
-	public void testCannotCallExceptionHandlerDirectly() throws Exception {
+	@Test
+	public void cannotCallExceptionHandlerDirectly() throws Exception {
 		Map model = new HashMap();
 
 		MultiActionController mac = new ModelOnlyMultiActionController(model);
@@ -457,7 +478,8 @@ public class MultiActionControllerTests extends TestCase {
 		assertEquals(HttpServletResponse.SC_NOT_FOUND, response.getStatus());
 	}
 
-	public void testHandlerReturnsVoid() throws Exception {
+	@Test
+	public void handlerReturnsVoid() throws Exception {
 		MultiActionController mac = new VoidMultiActionController();
 
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/welcome.html");
@@ -467,7 +489,8 @@ public class MultiActionControllerTests extends TestCase {
 		assertNull("ModelAndView must be null", mav);
 	}
 
-	public void testExceptionHandlerReturnsVoid() throws Exception {
+	@Test
+	public void exceptionHandlerReturnsVoid() throws Exception {
 		MultiActionController mac = new VoidMultiActionController();
 
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/index.html");
@@ -478,7 +501,8 @@ public class MultiActionControllerTests extends TestCase {
 		assertEquals("exception", response.getContentAsString());
 	}
 
-	public void testHandlerReturnsString() throws Exception {
+	@Test
+	public void handlerReturnsString() throws Exception {
 		MultiActionController mac = new StringMultiActionController();
 
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/welcome.html");
@@ -490,7 +514,8 @@ public class MultiActionControllerTests extends TestCase {
 		assertEquals("Verifying view name", "welcomeString", mav.getViewName());
 	}
 
-	public void testExceptionHandlerReturnsString() throws Exception {
+	@Test
+	public void exceptionHandlerReturnsString() throws Exception {
 		MultiActionController mac = new StringMultiActionController();
 
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/index.html");

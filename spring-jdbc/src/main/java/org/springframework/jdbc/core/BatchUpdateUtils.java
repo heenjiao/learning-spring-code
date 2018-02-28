@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2008 the original author or authors.
+ * Copyright 2002-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 
 package org.springframework.jdbc.core;
 
-import java.util.List;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.List;
 
 /**
  * Generic utility methods for working with JDBC batch statements. Mainly for internal use
@@ -33,11 +33,13 @@ public abstract class BatchUpdateUtils {
 				sql,
 				new BatchPreparedStatementSetter() {
 
+					@Override
 					public void setValues(PreparedStatement ps, int i) throws SQLException {
 						Object[] values = batchValues.get(i);
 						setStatementParameters(values, ps, columnTypes);
 					}
 
+					@Override
 					public int getBatchSize() {
 						return batchValues.size();
 					}

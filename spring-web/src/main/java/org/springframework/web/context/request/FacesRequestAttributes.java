@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,6 @@ package org.springframework.web.context.request;
 
 import java.lang.reflect.Method;
 import java.util.Map;
-import javax.faces.application.Application;
-import javax.faces.component.UIViewRoot;
 import javax.faces.context.ExternalContext;
 import javax.faces.context.FacesContext;
 import javax.portlet.PortletSession;
@@ -42,6 +40,8 @@ import org.springframework.web.util.WebUtils;
  * request scope nor for the session scope. If you rely on such implicit destruction
  * callbacks, consider defining a Spring {@link RequestContextListener} in your
  * {@code web.xml}.
+ *
+ * <p>Requires JSF 2.0 or higher, as of Spring 4.0.
  *
  * @author Juergen Hoeller
  * @since 2.5.2
@@ -106,6 +106,7 @@ public class FacesRequestAttributes implements RequestAttributes {
 	}
 
 
+	@Override
 	public Object getAttribute(String name, int scope) {
 		if (scope == SCOPE_GLOBAL_SESSION && portletApiPresent) {
 			return PortletSessionAccessor.getAttribute(name, getExternalContext());
@@ -115,6 +116,7 @@ public class FacesRequestAttributes implements RequestAttributes {
 		}
 	}
 
+	@Override
 	public void setAttribute(String name, Object value, int scope) {
 		if (scope == SCOPE_GLOBAL_SESSION && portletApiPresent) {
 			PortletSessionAccessor.setAttribute(name, value, getExternalContext());
@@ -124,6 +126,7 @@ public class FacesRequestAttributes implements RequestAttributes {
 		}
 	}
 
+	@Override
 	public void removeAttribute(String name, int scope) {
 		if (scope == SCOPE_GLOBAL_SESSION && portletApiPresent) {
 			PortletSessionAccessor.removeAttribute(name, getExternalContext());
@@ -133,6 +136,7 @@ public class FacesRequestAttributes implements RequestAttributes {
 		}
 	}
 
+	@Override
 	public String[] getAttributeNames(int scope) {
 		if (scope == SCOPE_GLOBAL_SESSION && portletApiPresent) {
 			return PortletSessionAccessor.getAttributeNames(getExternalContext());
@@ -142,6 +146,7 @@ public class FacesRequestAttributes implements RequestAttributes {
 		}
 	}
 
+	@Override
 	public void registerDestructionCallback(String name, Runnable callback, int scope) {
 		if (logger.isWarnEnabled()) {
 			logger.warn("Could not register destruction callback [" + callback + "] for attribute '" + name +
@@ -149,6 +154,7 @@ public class FacesRequestAttributes implements RequestAttributes {
 		}
 	}
 
+	@Override
 	public Object resolveReference(String key) {
 		if (REFERENCE_REQUEST.equals(key)) {
 			return getExternalContext().getRequest();
@@ -193,39 +199,25 @@ public class FacesRequestAttributes implements RequestAttributes {
 			return getFacesContext().getViewRoot();
 		}
 		else if ("viewScope".equals(key)) {
-			try {
-				return ReflectionUtils.invokeMethod(UIViewRoot.class.getMethod("getViewMap"), getFacesContext().getViewRoot());
-			}
-			catch (NoSuchMethodException ex) {
-				throw new IllegalStateException("JSF 2.0 API not available", ex);
-			}
+			return getFacesContext().getViewRoot().getViewMap();
 		}
 		else if ("flash".equals(key)) {
-			try {
-				return ReflectionUtils.invokeMethod(ExternalContext.class.getMethod("getFlash"), getExternalContext());
-			}
-			catch (NoSuchMethodException ex) {
-				throw new IllegalStateException("JSF 2.0 API not available", ex);
-			}
+			return getExternalContext().getFlash();
 		}
 		else if ("resource".equals(key)) {
-			try {
-				return ReflectionUtils.invokeMethod(Application.class.getMethod("getResourceHandler"), getFacesContext().getApplication());
-			}
-			catch (NoSuchMethodException ex) {
-				throw new IllegalStateException("JSF 2.0 API not available", ex);
-			}
+			return getFacesContext().getApplication().getResourceHandler();
 		}
 		else {
 			return null;
 		}
 	}
 
+	@Override
 	public String getSessionId() {
 		Object session = getExternalContext().getSession(true);
 		try {
 			// Both HttpSession and PortletSession have a getId() method.
-			Method getIdMethod = session.getClass().getMethod("getId", new Class[0]);
+			Method getIdMethod = session.getClass().getMethod("getId");
 			return ReflectionUtils.invokeMethod(getIdMethod, session).toString();
 		}
 		catch (NoSuchMethodException ex) {
@@ -233,13 +225,14 @@ public class FacesRequestAttributes implements RequestAttributes {
 		}
 	}
 
+	@Override
 	public Object getSessionMutex() {
-		// Enforce presence of a session first to allow listeners
-		// to create the mutex attribute, if any.
-		Object session = getExternalContext().getSession(true);
-		Object mutex = getExternalContext().getSessionMap().get(WebUtils.SESSION_MUTEX_ATTRIBUTE);
+		// Enforce presence of a session first to allow listeners to create the mutex attribute
+		ExternalContext externalContext = getExternalContext();
+		Object session = externalContext.getSession(true);
+		Object mutex = externalContext.getSessionMap().get(WebUtils.SESSION_MUTEX_ATTRIBUTE);
 		if (mutex == null) {
-			mutex = session;
+			mutex = (session != null ? session : externalContext);
 		}
 		return mutex;
 	}

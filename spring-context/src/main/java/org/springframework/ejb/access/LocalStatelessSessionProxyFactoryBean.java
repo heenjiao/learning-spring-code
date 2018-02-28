@@ -52,7 +52,7 @@ public class LocalStatelessSessionProxyFactoryBean extends LocalSlsbInvokerInter
 		implements FactoryBean<Object>, BeanClassLoaderAware {
 
 	/** The business interface of the EJB we're proxying */
-	private Class businessInterface;
+	private Class<?> businessInterface;
 
 	private ClassLoader beanClassLoader = ClassUtils.getDefaultClassLoader();
 
@@ -66,17 +66,18 @@ public class LocalStatelessSessionProxyFactoryBean extends LocalSlsbInvokerInter
 	 * Using a business methods interface is a best practice when implementing EJBs.
 	 * @param businessInterface set the business interface of the EJB
 	 */
-	public void setBusinessInterface(Class businessInterface) {
+	public void setBusinessInterface(Class<?> businessInterface) {
 		this.businessInterface = businessInterface;
 	}
 
 	/**
 	 * Return the business interface of the EJB we're proxying.
 	 */
-	public Class getBusinessInterface() {
+	public Class<?> getBusinessInterface() {
 		return this.businessInterface;
 	}
 
+	@Override
 	public void setBeanClassLoader(ClassLoader classLoader) {
 		this.beanClassLoader = classLoader;
 	}
@@ -91,14 +92,17 @@ public class LocalStatelessSessionProxyFactoryBean extends LocalSlsbInvokerInter
 	}
 
 
+	@Override
 	public Object getObject() {
 		return this.proxy;
 	}
 
+	@Override
 	public Class<?> getObjectType() {
 		return this.businessInterface;
 	}
 
+	@Override
 	public boolean isSingleton() {
 		return true;
 	}

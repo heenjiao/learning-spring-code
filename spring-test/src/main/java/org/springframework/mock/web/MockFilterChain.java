@@ -21,7 +21,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -30,8 +29,6 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
-import org.springframework.mock.web.MockFilterConfig;
-import org.springframework.mock.web.PassThroughFilterChain;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -119,6 +116,7 @@ public class MockFilterChain implements FilterChain {
 	 * Invoke registered {@link Filter}s and/or {@link Servlet} also saving the
 	 * request and response.
 	 */
+	@Override
 	public void doFilter(ServletRequest request, ServletResponse response) throws IOException, ServletException {
 		Assert.notNull(request, "Request must not be null");
 		Assert.notNull(response, "Response must not be null");
@@ -162,15 +160,18 @@ public class MockFilterChain implements FilterChain {
 			this.delegateServlet = servlet;
 		}
 
+		@Override
 		public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
 				throws IOException, ServletException {
 
 			this.delegateServlet.service(request, response);
 		}
 
+		@Override
 		public void init(FilterConfig filterConfig) throws ServletException {
 		}
 
+		@Override
 		public void destroy() {
 		}
 

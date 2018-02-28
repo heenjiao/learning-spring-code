@@ -43,6 +43,18 @@ public enum FilterType {
 	 */
 	ASSIGNABLE_TYPE,
 
+	/**
+	 * Filter candidates matching a given AspectJ type pattern expression.
+	 * @see org.springframework.core.type.filter.AspectJTypeFilter
+	 */
+	ASPECTJ,
+
+	/**
+	 * Filter candidates matching a given regex pattern.
+	 * @see org.springframework.core.type.filter.RegexPatternTypeFilter
+	 */
+	REGEX,
+
 	/** Filter candidates using a given custom
 	 * {@link org.springframework.core.type.filter.TypeFilter} implementation.
 	 */

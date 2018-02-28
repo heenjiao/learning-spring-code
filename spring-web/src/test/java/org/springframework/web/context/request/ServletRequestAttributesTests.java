@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.springframework.web.context.request;
 
 import java.io.Serializable;
+import java.math.BigInteger;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
@@ -77,8 +78,7 @@ public class ServletRequestAttributesTests {
 		request.setSession(session);
 		ServletRequestAttributes attrs = new ServletRequestAttributes(request);
 		attrs.setAttribute(KEY, VALUE, RequestAttributes.SCOPE_SESSION);
-		Object value = session.getAttribute(KEY);
-		assertSame(VALUE, value);
+		assertSame(VALUE, session.getAttribute(KEY));
 	}
 
 	@Test
@@ -88,11 +88,11 @@ public class ServletRequestAttributesTests {
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.setSession(session);
 		ServletRequestAttributes attrs = new ServletRequestAttributes(request);
+		assertSame(VALUE, attrs.getAttribute(KEY, RequestAttributes.SCOPE_SESSION));
 		attrs.requestCompleted();
 		request.close();
 		attrs.setAttribute(KEY, VALUE, RequestAttributes.SCOPE_SESSION);
-		Object value = session.getAttribute(KEY);
-		assertSame(VALUE, value);
+		assertSame(VALUE, session.getAttribute(KEY));
 	}
 
 	@Test
@@ -103,8 +103,7 @@ public class ServletRequestAttributesTests {
 		request.setSession(session);
 		ServletRequestAttributes attrs = new ServletRequestAttributes(request);
 		attrs.setAttribute(KEY, VALUE, RequestAttributes.SCOPE_GLOBAL_SESSION);
-		Object value = session.getAttribute(KEY);
-		assertSame(VALUE, value);
+		assertSame(VALUE, session.getAttribute(KEY));
 	}
 
 	@Test
@@ -114,11 +113,11 @@ public class ServletRequestAttributesTests {
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.setSession(session);
 		ServletRequestAttributes attrs = new ServletRequestAttributes(request);
+		assertSame(VALUE, attrs.getAttribute(KEY, RequestAttributes.SCOPE_GLOBAL_SESSION));
 		attrs.requestCompleted();
 		request.close();
 		attrs.setAttribute(KEY, VALUE, RequestAttributes.SCOPE_GLOBAL_SESSION);
-		Object value = session.getAttribute(KEY);
-		assertSame(VALUE, value);
+		assertSame(VALUE, session.getAttribute(KEY));
 	}
 
 	@Test
@@ -156,8 +155,8 @@ public class ServletRequestAttributesTests {
 	public void updateAccessedAttributes() throws Exception {
 		HttpServletRequest request = mock(HttpServletRequest.class);
 		HttpSession session = mock(HttpSession.class);
-		when(request.getSession(anyBoolean())).thenReturn(session);
-		when(session.getAttribute(KEY)).thenReturn(VALUE);
+		given(request.getSession(anyBoolean())).willReturn(session);
+		given(session.getAttribute(KEY)).willReturn(VALUE);
 
 		ServletRequestAttributes attrs = new ServletRequestAttributes(request);
 		assertSame(VALUE, attrs.getAttribute(KEY, RequestAttributes.SCOPE_SESSION));
@@ -165,6 +164,50 @@ public class ServletRequestAttributesTests {
 
 		verify(session, times(2)).getAttribute(KEY);
 		verify(session).setAttribute(KEY, VALUE);
+		verifyNoMoreInteractions(session);
+	}
+
+	@Test
+	public void skipImmutableString() {
+		doSkipImmutableValue("someString");
+	}
+
+	@Test
+	public void skipImmutableCharacter() {
+		doSkipImmutableValue(new Character('x'));
+	}
+
+	@Test
+	public void skipImmutableBoolean() {
+		doSkipImmutableValue(Boolean.TRUE);
+	}
+
+	@Test
+	public void skipImmutableInteger() {
+		doSkipImmutableValue(new Integer(1));
+	}
+
+	@Test
+	public void skipImmutableFloat() {
+		doSkipImmutableValue(new Float(1.1));
+	}
+
+	@Test
+	public void skipImmutableBigInteger() {
+		doSkipImmutableValue(new BigInteger("1"));
+	}
+
+	private void doSkipImmutableValue(Object immutableValue) {
+		HttpServletRequest request = mock(HttpServletRequest.class);
+		HttpSession session = mock(HttpSession.class);
+		given(request.getSession(anyBoolean())).willReturn(session);
+		given(session.getAttribute(KEY)).willReturn(immutableValue);
+
+		ServletRequestAttributes attrs = new ServletRequestAttributes(request);
+		attrs.getAttribute(KEY, RequestAttributes.SCOPE_SESSION);
+		attrs.requestCompleted();
+
+		verify(session, times(2)).getAttribute(KEY);
 		verifyNoMoreInteractions(session);
 	}
 

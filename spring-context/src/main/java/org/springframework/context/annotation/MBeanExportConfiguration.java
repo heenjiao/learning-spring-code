@@ -23,7 +23,9 @@ import javax.naming.NamingException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.context.EnvironmentAware;
 import org.springframework.core.annotation.AnnotationAttributes;
+import org.springframework.core.env.Environment;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.jmx.MBeanServerNotFoundException;
 import org.springframework.jmx.export.annotation.AnnotationMBeanExporter;
@@ -45,15 +47,18 @@ import org.springframework.util.StringUtils;
  * @see EnableMBeanExport
  */
 @Configuration
-public class MBeanExportConfiguration implements ImportAware, BeanFactoryAware {
+public class MBeanExportConfiguration implements ImportAware, EnvironmentAware, BeanFactoryAware {
 
 	private static final String MBEAN_EXPORTER_BEAN_NAME = "mbeanExporter";
 
 	private AnnotationAttributes enableMBeanExport;
 
+	private Environment environment;
+
 	private BeanFactory beanFactory;
 
 
+	@Override
 	public void setImportMetadata(AnnotationMetadata importMetadata) {
 		Map<String, Object> map = importMetadata.getAnnotationAttributes(EnableMBeanExport.class.getName());
 		this.enableMBeanExport = AnnotationAttributes.fromMap(map);
@@ -63,6 +68,12 @@ public class MBeanExportConfiguration implements ImportAware, BeanFactoryAware {
 		}
 	}
 
+	@Override
+	public void setEnvironment(Environment environment) {
+		this.environment = environment;
+	}
+
+	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
 		this.beanFactory = beanFactory;
 	}
@@ -80,6 +91,9 @@ public class MBeanExportConfiguration implements ImportAware, BeanFactoryAware {
 
 	private void setupDomain(AnnotationMBeanExporter exporter) {
 		String defaultDomain = this.enableMBeanExport.getString("defaultDomain");
+		if (defaultDomain != null && this.environment != null) {
+			defaultDomain = this.environment.resolvePlaceholders(defaultDomain);
+		}
 		if (StringUtils.hasText(defaultDomain)) {
 			exporter.setDefaultDomain(defaultDomain);
 		}
@@ -87,6 +101,9 @@ public class MBeanExportConfiguration implements ImportAware, BeanFactoryAware {
 
 	private void setupServer(AnnotationMBeanExporter exporter) {
 		String server = this.enableMBeanExport.getString("server");
+		if (server != null && this.environment != null) {
+			server = this.environment.resolvePlaceholders(server);
+		}
 		if (StringUtils.hasText(server)) {
 			exporter.setServer(this.beanFactory.getBean(server, MBeanServer.class));
 		}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2015 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.springframework.web.util;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.Collection;
 import java.util.Enumeration;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -32,7 +33,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import org.springframework.http.HttpRequest;
+import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
@@ -43,6 +47,7 @@ import org.springframework.util.StringUtils;
  *
  * @author Rod Johnson
  * @author Juergen Hoeller
+ * @author Sebastien Deleuze
  */
 public abstract class WebUtils {
 
@@ -107,6 +112,13 @@ public abstract class WebUtils {
 	public static final String HTML_ESCAPE_CONTEXT_PARAM = "defaultHtmlEscape";
 
 	/**
+	 * Use of response encoding for HTML escaping parameter at the servlet context level
+	 * (i.e. a context-param in {@code web.xml}): "responseEncodedHtmlEscape".
+	 * @since 4.1.2
+	 */
+	public static final String RESPONSE_ENCODED_HTML_ESCAPE_CONTEXT_PARAM = "responseEncodedHtmlEscape";
+
+	/**
 	 * Web app root key parameter at the servlet context level
 	 * (i.e. a context-param in {@code web.xml}): "webAppRootKey".
 	 */
@@ -126,7 +138,7 @@ public abstract class WebUtils {
 	 * Set a system property to the web application root directory.
 	 * The key of the system property can be defined with the "webAppRootKey"
 	 * context-param in {@code web.xml}. Default is "webapp.root".
-	 * <p>Can be used for tools that support substition with {@code System.getProperty}
+	 * <p>Can be used for tools that support substitution with {@code System.getProperty}
 	 * values, like log4j's "${key}" syntax within log file locations.
 	 * @param servletContext the servlet context of the web application
 	 * @throws IllegalStateException if the system property is already set,
@@ -175,7 +187,9 @@ public abstract class WebUtils {
 	 * (if any). Falls back to {@code false} in case of no explicit default given.
 	 * @param servletContext the servlet context of the web application
 	 * @return whether default HTML escaping is enabled (default is {@code false})
+	 * @deprecated as of Spring 4.1, in favor of {@link #getDefaultHtmlEscape}
 	 */
+	@Deprecated
 	public static boolean isDefaultHtmlEscape(ServletContext servletContext) {
 		if (servletContext == null) {
 			return false;
@@ -200,6 +214,28 @@ public abstract class WebUtils {
 			return null;
 		}
 		String param = servletContext.getInitParameter(HTML_ESCAPE_CONTEXT_PARAM);
+		return (StringUtils.hasText(param) ? Boolean.valueOf(param) : null);
+	}
+
+	/**
+	 * Return whether response encoding should be used when HTML escaping characters,
+	 * thus only escaping XML markup significant characters with UTF-* encodings.
+	 * This option is enabled for the web application with a ServletContext param,
+	 * i.e. the value of the "responseEncodedHtmlEscape" context-param in {@code web.xml}
+	 * (if any).
+	 * <p>This method differentiates between no param specified at all and
+	 * an actual boolean value specified, allowing to have a context-specific
+	 * default in case of no setting at the global level.
+	 * @param servletContext the servlet context of the web application
+	 * @return whether response encoding is to be used for HTML escaping
+	 * ({@code null} = no explicit default)
+	 * @since 4.1.2
+	 */
+	public static Boolean getResponseEncodedHtmlEscape(ServletContext servletContext) {
+		if (servletContext == null) {
+			return null;
+		}
+		String param = servletContext.getInitParameter(RESPONSE_ENCODED_HTML_ESCAPE_CONTEXT_PARAM);
 		return (StringUtils.hasText(param) ? Boolean.valueOf(param) : null);
 	}
 
@@ -241,7 +277,6 @@ public abstract class WebUtils {
 		}
 		return realPath;
 	}
-
 
 	/**
 	 * Determine the session id of the given request, if any.
@@ -317,7 +352,9 @@ public abstract class WebUtils {
 	 * @param clazz the class to instantiate for a new attribute
 	 * @return the value of the session attribute, newly created if not found
 	 * @throws IllegalArgumentException if the session attribute could not be instantiated
+	 * @deprecated as of Spring 4.3.2, in favor of custom code for such purposes
 	 */
+	@Deprecated
 	public static Object getOrCreateSessionAttribute(HttpSession session, String name, Class<?> clazz)
 			throws IllegalArgumentException {
 
@@ -428,27 +465,6 @@ public abstract class WebUtils {
 	}
 
 	/**
-	 * Expose the current request URI and paths as {@link javax.servlet.http.HttpServletRequest}
-	 * attributes under the keys defined in the Servlet 2.4 specification,
-	 * for containers that implement 2.3 or an earlier version of the Servlet API:
-	 * {@code javax.servlet.forward.request_uri},
-	 * {@code javax.servlet.forward.context_path},
-	 * {@code javax.servlet.forward.servlet_path},
-	 * {@code javax.servlet.forward.path_info},
-	 * {@code javax.servlet.forward.query_string}.
-	 * <p>Does not override values if already present, to not cause conflicts
-	 * with the attributes exposed by Servlet 2.4+ containers themselves.
-	 * @param request current servlet request
-	 */
-	public static void exposeForwardRequestAttributes(HttpServletRequest request) {
-		exposeRequestAttributeIfNotPresent(request, FORWARD_REQUEST_URI_ATTRIBUTE, request.getRequestURI());
-		exposeRequestAttributeIfNotPresent(request, FORWARD_CONTEXT_PATH_ATTRIBUTE, request.getContextPath());
-		exposeRequestAttributeIfNotPresent(request, FORWARD_SERVLET_PATH_ATTRIBUTE, request.getServletPath());
-		exposeRequestAttributeIfNotPresent(request, FORWARD_PATH_INFO_ATTRIBUTE, request.getPathInfo());
-		exposeRequestAttributeIfNotPresent(request, FORWARD_QUERY_STRING_ATTRIBUTE, request.getQueryString());
-	}
-
-	/**
 	 * Expose the Servlet spec's error attributes as {@link javax.servlet.http.HttpServletRequest}
 	 * attributes under the keys defined in the Servlet 2.3 specification, for error pages that
 	 * are rendered directly rather than through the Servlet container's error page resolution:
@@ -512,7 +528,9 @@ public abstract class WebUtils {
 	 * and the values as corresponding attribute values. Keys need to be Strings.
 	 * @param request current HTTP request
 	 * @param attributes the attributes Map
+	 * @deprecated as of Spring 4.3.2, in favor of custom code for such purposes
 	 */
+	@Deprecated
 	public static void exposeRequestAttributes(ServletRequest request, Map<String, ?> attributes) {
 		Assert.notNull(request, "Request must not be null");
 		Assert.notNull(attributes, "Attributes Map must not be null");
@@ -642,13 +660,13 @@ public abstract class WebUtils {
 	 */
 	public static Map<String, Object> getParametersStartingWith(ServletRequest request, String prefix) {
 		Assert.notNull(request, "Request must not be null");
-		Enumeration paramNames = request.getParameterNames();
+		Enumeration<String> paramNames = request.getParameterNames();
 		Map<String, Object> params = new TreeMap<String, Object>();
 		if (prefix == null) {
 			prefix = "";
 		}
 		while (paramNames != null && paramNames.hasMoreElements()) {
-			String paramName = (String) paramNames.nextElement();
+			String paramName = paramNames.nextElement();
 			if ("".equals(prefix) || paramName.startsWith(prefix)) {
 				String unprefixed = paramName.substring(prefix.length());
 				String[] values = request.getParameterValues(paramName);
@@ -674,11 +692,13 @@ public abstract class WebUtils {
 	 * @param currentPage the current page, to be returned as fallback
 	 * if no target page specified
 	 * @return the page specified in the request, or current page if not found
+	 * @deprecated as of Spring 4.3.2, in favor of custom code for such purposes
 	 */
+	@Deprecated
 	public static int getTargetPage(ServletRequest request, String paramPrefix, int currentPage) {
-		Enumeration paramNames = request.getParameterNames();
+		Enumeration<String> paramNames = request.getParameterNames();
 		while (paramNames.hasMoreElements()) {
-			String paramName = (String) paramNames.nextElement();
+			String paramName = paramNames.nextElement();
 			if (paramName.startsWith(paramPrefix)) {
 				for (int i = 0; i < WebUtils.SUBMIT_IMAGE_SUFFIXES.length; i++) {
 					String suffix = WebUtils.SUBMIT_IMAGE_SUFFIXES[i];
@@ -698,7 +718,9 @@ public abstract class WebUtils {
 	 * Correctly resolves nested paths such as "/products/view.html" as well.
 	 * @param urlPath the request URL path (e.g. "/index.html")
 	 * @return the extracted URI filename (e.g. "index")
+	 * @deprecated as of Spring 4.3.2, in favor of custom code for such purposes
 	 */
+	@Deprecated
 	public static String extractFilenameFromUrlPath(String urlPath) {
 		String filename = extractFullFilenameFromUrlPath(urlPath);
 		int dotIndex = filename.lastIndexOf('.');
@@ -714,7 +736,10 @@ public abstract class WebUtils {
 	 * "/products/view.html" and remove any path and or query parameters.
 	 * @param urlPath the request URL path (e.g. "/products/index.html")
 	 * @return the extracted URI filename (e.g. "index.html")
+	 * @deprecated as of Spring 4.3.2, in favor of custom code for such purposes
+	 * (or {@link UriUtils#extractFileExtension} for the file extension use case)
 	 */
+	@Deprecated
 	public static String extractFullFilenameFromUrlPath(String urlPath) {
 		int end = urlPath.indexOf('?');
 		if (end == -1) {
@@ -760,4 +785,72 @@ public abstract class WebUtils {
 		}
 		return result;
 	}
+
+	/**
+	 * Check the given request origin against a list of allowed origins.
+	 * A list containing "*" means that all origins are allowed.
+	 * An empty list means only same origin is allowed.
+	 * @return {@code true} if the request origin is valid, {@code false} otherwise
+	 * @since 4.1.5
+	 * @see <a href="https://tools.ietf.org/html/rfc6454">RFC 6454: The Web Origin Concept</a>
+	 */
+	public static boolean isValidOrigin(HttpRequest request, Collection<String> allowedOrigins) {
+		Assert.notNull(request, "Request must not be null");
+		Assert.notNull(allowedOrigins, "Allowed origins must not be null");
+
+		String origin = request.getHeaders().getOrigin();
+		if (origin == null || allowedOrigins.contains("*")) {
+			return true;
+		}
+		else if (CollectionUtils.isEmpty(allowedOrigins)) {
+			return isSameOrigin(request);
+		}
+		else {
+			return allowedOrigins.contains(origin);
+		}
+	}
+
+	/**
+	 * Check if the request is a same-origin one, based on {@code Origin}, {@code Host},
+	 * {@code Forwarded} and {@code X-Forwarded-Host} headers.
+	 * @return {@code true} if the request is a same-origin one, {@code false} in case
+	 * of cross-origin request.
+	 * @since 4.2
+	 */
+	public static boolean isSameOrigin(HttpRequest request) {
+		String origin = request.getHeaders().getOrigin();
+		if (origin == null) {
+			return true;
+		}
+		UriComponentsBuilder urlBuilder;
+		if (request instanceof ServletServerHttpRequest) {
+			// Build more efficiently if we can: we only need scheme, host, port for origin comparison
+			HttpServletRequest servletRequest = ((ServletServerHttpRequest) request).getServletRequest();
+			urlBuilder = new UriComponentsBuilder().
+					scheme(servletRequest.getScheme()).
+					host(servletRequest.getServerName()).
+					port(servletRequest.getServerPort()).
+					adaptFromForwardedHeaders(request.getHeaders());
+		}
+		else {
+			urlBuilder = UriComponentsBuilder.fromHttpRequest(request);
+		}
+		UriComponents actualUrl = urlBuilder.build();
+		UriComponents originUrl = UriComponentsBuilder.fromOriginHeader(origin).build();
+		return (actualUrl.getHost().equals(originUrl.getHost()) && getPort(actualUrl) == getPort(originUrl));
+	}
+
+	private static int getPort(UriComponents uri) {
+		int port = uri.getPort();
+		if (port == -1) {
+			if ("http".equals(uri.getScheme()) || "ws".equals(uri.getScheme())) {
+				port = 80;
+			}
+			else if ("https".equals(uri.getScheme()) || "wss".equals(uri.getScheme())) {
+				port = 443;
+			}
+		}
+		return port;
+	}
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,6 +60,7 @@ import org.springframework.web.context.request.async.WebAsyncUtils;
  * @author Juergen Hoeller
  * @since 3.1
  * @see OpenSessionInViewFilter
+ * @see OpenSessionInterceptor
  * @see org.springframework.orm.hibernate4.HibernateTransactionManager
  * @see org.springframework.transaction.support.TransactionSynchronizationManager
  * @see org.hibernate.SessionFactory#getCurrentSession()
@@ -98,6 +99,7 @@ public class OpenSessionInViewInterceptor implements AsyncWebRequestInterceptor 
 	 * Open a new Hibernate {@code Session} according and bind it to the thread via the
 	 * {@link org.springframework.transaction.support.TransactionSynchronizationManager}.
 	 */
+	@Override
 	public void preHandle(WebRequest request) throws DataAccessException {
 		String participateAttributeName = getParticipateAttributeName();
 
@@ -127,6 +129,7 @@ public class OpenSessionInViewInterceptor implements AsyncWebRequestInterceptor 
 		}
 	}
 
+	@Override
 	public void postHandle(WebRequest request, ModelMap model) {
 	}
 
@@ -134,13 +137,13 @@ public class OpenSessionInViewInterceptor implements AsyncWebRequestInterceptor 
 	 * Unbind the Hibernate {@code Session} from the thread and close it).
 	 * @see org.springframework.transaction.support.TransactionSynchronizationManager
 	 */
+	@Override
 	public void afterCompletion(WebRequest request, Exception ex) throws DataAccessException {
 		if (!decrementParticipateCount(request)) {
 			SessionHolder sessionHolder =
 					(SessionHolder) TransactionSynchronizationManager.unbindResource(getSessionFactory());
 			logger.debug("Closing Hibernate Session in OpenSessionInViewInterceptor");
 			SessionFactoryUtils.closeSession(sessionHolder.getSession());
-
 		}
 	}
 
@@ -160,6 +163,7 @@ public class OpenSessionInViewInterceptor implements AsyncWebRequestInterceptor 
 		return true;
 	}
 
+	@Override
 	public void afterConcurrentHandlingStarted(WebRequest request) {
 		if (!decrementParticipateCount(request)) {
 			TransactionSynchronizationManager.unbindResource(getSessionFactory());

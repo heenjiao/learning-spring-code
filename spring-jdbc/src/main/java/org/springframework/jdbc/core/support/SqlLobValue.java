@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -168,8 +168,8 @@ public class SqlLobValue implements DisposableSqlTypeValue {
 	/**
 	 * Set the specified content via the LobCreator.
 	 */
-	public void setTypeValue(PreparedStatement ps, int paramIndex, int sqlType, String typeName)
-			throws SQLException {
+	@Override
+	public void setTypeValue(PreparedStatement ps, int paramIndex, int sqlType, String typeName) throws SQLException {
 		if (sqlType == Types.BLOB) {
 			if (this.content instanceof byte[] || this.content == null) {
 				this.lobCreator.setBlobAsBytes(ps, paramIndex, (byte[]) this.content);
@@ -208,6 +208,7 @@ public class SqlLobValue implements DisposableSqlTypeValue {
 	/**
 	 * Close the LobCreator, if any.
 	 */
+	@Override
 	public void cleanup() {
 		this.lobCreator.close();
 	}

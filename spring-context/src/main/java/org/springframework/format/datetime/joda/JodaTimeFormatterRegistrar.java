@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,10 +22,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.LocalDate;
 import org.joda.time.LocalDateTime;
 import org.joda.time.LocalTime;
+import org.joda.time.MonthDay;
+import org.joda.time.Period;
 import org.joda.time.ReadableInstant;
+import org.joda.time.YearMonth;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
@@ -34,9 +38,12 @@ import org.springframework.format.FormatterRegistry;
 import org.springframework.format.Parser;
 import org.springframework.format.Printer;
 import org.springframework.format.annotation.DateTimeFormat.ISO;
+import org.springframework.util.ClassUtils;
 
 /**
  * Configures Joda-Time's formatting system for use with Spring.
+ *
+ * <p><b>NOTE:</b> Spring's Joda-Time support requires Joda-Time 2.x, as of Spring 4.0.
  *
  * @author Keith Donald
  * @author Juergen Hoeller
@@ -52,8 +59,16 @@ import org.springframework.format.annotation.DateTimeFormat.ISO;
  */
 public class JodaTimeFormatterRegistrar implements FormatterRegistrar {
 
-	private static enum Type {DATE, TIME, DATE_TIME}
+	private enum Type {DATE, TIME, DATE_TIME}
 
+
+	/**
+	 * Strictly speaking, this should not be necessary since we formally require JodaTime 2.x.
+	 * However, since Joda-Time formatters are being registered automatically, we defensively
+	 * adapt to Joda-Time 1.x when encountered on the classpath. To be removed in Spring 5.0.
+	 */
+	private static final boolean jodaTime2Available = ClassUtils.isPresent(
+			"org.joda.time.YearMonth", JodaTimeFormatterRegistrar.class.getClassLoader());
 
 	/**
 	 * User defined formatters.
@@ -117,9 +132,9 @@ public class JodaTimeFormatterRegistrar implements FormatterRegistrar {
 	 * the {@link #setDateStyle(String) dateStyle} and
 	 * {@link #setUseIsoFormat(boolean) useIsoFormat} properties will be ignored.
 	 * @param formatter the formatter to use
+	 * @since 3.2
 	 * @see #setTimeFormatter
 	 * @see #setDateTimeFormatter
-	 * @since 3.2
 	 */
 	public void setDateFormatter(DateTimeFormatter formatter) {
 		this.formatters.put(Type.DATE, formatter);
@@ -131,9 +146,9 @@ public class JodaTimeFormatterRegistrar implements FormatterRegistrar {
 	 * the {@link #setTimeStyle(String) timeStyle} and
 	 * {@link #setUseIsoFormat(boolean) useIsoFormat} properties will be ignored.
 	 * @param formatter the formatter to use
+	 * @since 3.2
 	 * @see #setDateFormatter
 	 * @see #setDateTimeFormatter
-	 * @since 3.2
 	 */
 	public void setTimeFormatter(DateTimeFormatter formatter) {
 		this.formatters.put(Type.TIME, formatter);
@@ -146,15 +161,16 @@ public class JodaTimeFormatterRegistrar implements FormatterRegistrar {
 	 * the {@link #setDateTimeStyle(String) dateTimeStyle} and
 	 * {@link #setUseIsoFormat(boolean) useIsoFormat} properties will be ignored.
 	 * @param formatter the formatter to use
+	 * @since 3.2
 	 * @see #setDateFormatter
 	 * @see #setTimeFormatter
-	 * @since 3.2
 	 */
 	public void setDateTimeFormatter(DateTimeFormatter formatter) {
 		this.formatters.put(Type.DATE_TIME, formatter);
 	}
 
 
+	@Override
 	public void registerFormatters(FormatterRegistry registry) {
 		JodaTimeConverters.registerConverters(registry);
 
@@ -164,17 +180,17 @@ public class JodaTimeFormatterRegistrar implements FormatterRegistrar {
 
 		addFormatterForFields(registry,
 				new ReadablePartialPrinter(dateFormatter),
-				new DateTimeParser(dateFormatter),
+				new LocalDateParser(dateFormatter),
 				LocalDate.class);
 
 		addFormatterForFields(registry,
 				new ReadablePartialPrinter(timeFormatter),
-				new DateTimeParser(timeFormatter),
+				new LocalTimeParser(timeFormatter),
 				LocalTime.class);
 
 		addFormatterForFields(registry,
 				new ReadablePartialPrinter(dateTimeFormatter),
-				new DateTimeParser(dateTimeFormatter),
+				new LocalDateTimeParser(dateTimeFormatter),
 				LocalDateTime.class);
 
 		addFormatterForFields(registry,
@@ -189,6 +205,12 @@ public class JodaTimeFormatterRegistrar implements FormatterRegistrar {
 					new ReadableInstantPrinter(dateTimeFormatter),
 					new DateTimeParser(dateTimeFormatter),
 					Date.class, Calendar.class);
+		}
+
+		registry.addFormatterForFieldType(Period.class, new PeriodFormatter());
+		registry.addFormatterForFieldType(Duration.class, new DurationFormatter());
+		if (jodaTime2Available) {
+			JodaTime2Delegate.registerAdditionalFormatters(registry);
 		}
 
 		registry.addFormatterForFieldAnnotation(new JodaDateTimeFormatAnnotationFormatterFactory());
@@ -216,6 +238,18 @@ public class JodaTimeFormatterRegistrar implements FormatterRegistrar {
 
 		for (Class<?> fieldType : fieldTypes) {
 			registry.addFormatterForFieldType(fieldType, printer, parser);
+		}
+	}
+
+
+	/**
+	 * Inner class to avoid a hard dependency on Joda-Time 2.x.
+	 */
+	private static class JodaTime2Delegate {
+
+		public static void registerAdditionalFormatters(FormatterRegistry registry) {
+			registry.addFormatterForFieldType(YearMonth.class, new YearMonthFormatter());
+			registry.addFormatterForFieldType(MonthDay.class, new MonthDayFormatter());
 		}
 	}
 

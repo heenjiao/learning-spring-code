@@ -29,14 +29,19 @@ import org.springframework.jca.work.WorkManagerTaskExecutor;
  * {@link org.springframework.scheduling.commonj.WorkManagerTaskExecutor}
  * adapter for WebLogic and WebSphere.
  *
- * <p><b>Note: This class does not work on JBoss 7 or higher.</b>
- * There is no known immediate replacement, since JBoss does not want
- * its JCA WorkManager to be exposed anymore.
+ * <p>This class does not work on JBoss 7 or higher. There is no known
+ * immediate replacement, since JBoss does not want its JCA WorkManager
+ * to be exposed anymore. As of JBoss/WildFly 8, a
+ * {@link org.springframework.scheduling.concurrent.DefaultManagedTaskExecutor}
+ * may be used, following JSR-236 support in Java EE 7.
  *
  * @author Juergen Hoeller
  * @since 2.5.2
  * @see org.jboss.resource.work.JBossWorkManagerMBean
+ * @deprecated as of Spring 4.0, since there are no fully supported versions
+ * of JBoss that this class works with anymore
  */
+@Deprecated
 public class JBossWorkManagerTaskExecutor extends WorkManagerTaskExecutor {
 
 	/**

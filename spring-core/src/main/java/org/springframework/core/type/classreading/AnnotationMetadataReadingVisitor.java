@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package org.springframework.core.type.classreading;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -27,8 +28,11 @@ import org.springframework.asm.MethodVisitor;
 import org.springframework.asm.Opcodes;
 import org.springframework.asm.Type;
 import org.springframework.core.annotation.AnnotationAttributes;
+import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.MethodMetadata;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 /**
  * ASM class visitor which looks for the class name and implemented types as
@@ -38,19 +42,27 @@ import org.springframework.core.type.MethodMetadata;
  * @author Juergen Hoeller
  * @author Mark Fisher
  * @author Costin Leau
+ * @author Phillip Webb
+ * @author Sam Brannen
  * @since 2.5
  */
-final class AnnotationMetadataReadingVisitor extends ClassMetadataReadingVisitor implements AnnotationMetadata {
+public class AnnotationMetadataReadingVisitor extends ClassMetadataReadingVisitor implements AnnotationMetadata {
 
-	private final ClassLoader classLoader;
+	protected final ClassLoader classLoader;
 
-	private final Set<String> annotationSet = new LinkedHashSet<String>(4);
+	protected final Set<String> annotationSet = new LinkedHashSet<String>(4);
 
-	private final Map<String, Set<String>> metaAnnotationMap = new LinkedHashMap<String, Set<String>>(4);
+	protected final Map<String, Set<String>> metaAnnotationMap = new LinkedHashMap<String, Set<String>>(4);
 
-	private final Map<String, AnnotationAttributes> attributeMap = new LinkedHashMap<String, AnnotationAttributes>(4);
+	/**
+	 * Declared as a {@link LinkedMultiValueMap} instead of a {@link MultiValueMap}
+	 * to ensure that the hierarchical ordering of the entries is preserved.
+	 * @see AnnotationReadingVisitorUtils#getMergedAnnotationAttributes
+	 */
+	protected final LinkedMultiValueMap<String, AnnotationAttributes> attributesMap =
+			new LinkedMultiValueMap<String, AnnotationAttributes>(4);
 
-	private final Set<MethodMetadata> methodMetadataSet = new LinkedHashSet<MethodMetadata>(4);
+	protected final Set<MethodMetadata> methodMetadataSet = new LinkedHashSet<MethodMetadata>(4);
 
 
 	public AnnotationMetadataReadingVisitor(ClassLoader classLoader) {
@@ -65,29 +77,35 @@ final class AnnotationMetadataReadingVisitor extends ClassMetadataReadingVisitor
 		if ((access & Opcodes.ACC_BRIDGE) != 0) {
 			return super.visitMethod(access, name, desc, signature, exceptions);
 		}
-		return new MethodMetadataReadingVisitor(name, access, getClassName(), this.classLoader, this.methodMetadataSet);
+		return new MethodMetadataReadingVisitor(name, access, getClassName(),
+				Type.getReturnType(desc).getClassName(), this.classLoader, this.methodMetadataSet);
 	}
 
 	@Override
 	public AnnotationVisitor visitAnnotation(final String desc, boolean visible) {
 		String className = Type.getType(desc).getClassName();
 		this.annotationSet.add(className);
-		return new AnnotationAttributesReadingVisitor(className, this.attributeMap, this.metaAnnotationMap, this.classLoader);
+		return new AnnotationAttributesReadingVisitor(
+				className, this.attributesMap, this.metaAnnotationMap, this.classLoader);
 	}
 
 
+	@Override
 	public Set<String> getAnnotationTypes() {
 		return this.annotationSet;
 	}
 
-	public Set<String> getMetaAnnotationTypes(String annotationType) {
-		return this.metaAnnotationMap.get(annotationType);
+	@Override
+	public Set<String> getMetaAnnotationTypes(String annotationName) {
+		return this.metaAnnotationMap.get(annotationName);
 	}
 
-	public boolean hasAnnotation(String annotationType) {
-		return this.annotationSet.contains(annotationType);
+	@Override
+	public boolean hasAnnotation(String annotationName) {
+		return this.annotationSet.contains(annotationName);
 	}
 
+	@Override
 	public boolean hasMetaAnnotation(String metaAnnotationType) {
 		Collection<Set<String>> allMetaTypes = this.metaAnnotationMap.values();
 		for (Set<String> metaTypes : allMetaTypes) {
@@ -98,84 +116,61 @@ final class AnnotationMetadataReadingVisitor extends ClassMetadataReadingVisitor
 		return false;
 	}
 
-	public boolean isAnnotated(String annotationType) {
-		return this.attributeMap.containsKey(annotationType);
+	@Override
+	public boolean isAnnotated(String annotationName) {
+		return (!AnnotationUtils.isInJavaLangAnnotationPackage(annotationName) &&
+				this.attributesMap.containsKey(annotationName));
 	}
 
-	public AnnotationAttributes getAnnotationAttributes(String annotationType) {
-		return getAnnotationAttributes(annotationType, false);
+	@Override
+	public AnnotationAttributes getAnnotationAttributes(String annotationName) {
+		return getAnnotationAttributes(annotationName, false);
 	}
 
-	public AnnotationAttributes getAnnotationAttributes(String annotationType, boolean classValuesAsString) {
-		AnnotationAttributes raw = this.attributeMap.get(annotationType);
-		return convertClassValues(raw, classValuesAsString);
+	@Override
+	public AnnotationAttributes getAnnotationAttributes(String annotationName, boolean classValuesAsString) {
+		AnnotationAttributes raw = AnnotationReadingVisitorUtils.getMergedAnnotationAttributes(
+				this.attributesMap, this.metaAnnotationMap, annotationName);
+		return AnnotationReadingVisitorUtils.convertClassValues(
+				"class '" + getClassName() + "'", this.classLoader, raw, classValuesAsString);
 	}
 
-	private AnnotationAttributes convertClassValues(AnnotationAttributes original, boolean classValuesAsString) {
-		if (original == null) {
+	@Override
+	public MultiValueMap<String, Object> getAllAnnotationAttributes(String annotationName) {
+		return getAllAnnotationAttributes(annotationName, false);
+	}
+
+	@Override
+	public MultiValueMap<String, Object> getAllAnnotationAttributes(String annotationName, boolean classValuesAsString) {
+		MultiValueMap<String, Object> allAttributes = new LinkedMultiValueMap<String, Object>();
+		List<AnnotationAttributes> attributes = this.attributesMap.get(annotationName);
+		if (attributes == null) {
 			return null;
 		}
-		AnnotationAttributes result = new AnnotationAttributes(original.size());
-		for (Map.Entry<String, Object> entry : original.entrySet()) {
-			try {
-				Object value = entry.getValue();
-				if (value instanceof AnnotationAttributes) {
-					value = convertClassValues((AnnotationAttributes) value, classValuesAsString);
-				}
-				else if (value instanceof AnnotationAttributes[]) {
-					AnnotationAttributes[] values = (AnnotationAttributes[])value;
-					for (int i = 0; i < values.length; i++) {
-						values[i] = convertClassValues(values[i], classValuesAsString);
-					}
-				}
-				else if (value instanceof Type) {
-					value = (classValuesAsString ? ((Type) value).getClassName() :
-							this.classLoader.loadClass(((Type) value).getClassName()));
-				}
-				else if (value instanceof Type[]) {
-					Type[] array = (Type[]) value;
-					Object[] convArray = (classValuesAsString ? new String[array.length] : new Class[array.length]);
-					for (int i = 0; i < array.length; i++) {
-						convArray[i] = (classValuesAsString ? array[i].getClassName() :
-								this.classLoader.loadClass(array[i].getClassName()));
-					}
-					value = convArray;
-				}
-				else if (classValuesAsString) {
-					if (value instanceof Class) {
-						value = ((Class<?>) value).getName();
-					}
-					else if (value instanceof Class[]) {
-						Class<?>[] clazzArray = (Class[]) value;
-						String[] newValue = new String[clazzArray.length];
-						for (int i = 0; i < clazzArray.length; i++) {
-							newValue[i] = clazzArray[i].getName();
-						}
-						value = newValue;
-					}
-				}
-				result.put(entry.getKey(), value);
-			}
-			catch (Exception ex) {
-				// Class not found - can't resolve class reference in annotation attribute.
+		for (AnnotationAttributes raw : attributes) {
+			for (Map.Entry<String, Object> entry : AnnotationReadingVisitorUtils.convertClassValues(
+					"class '" + getClassName() + "'", this.classLoader, raw, classValuesAsString).entrySet()) {
+				allAttributes.add(entry.getKey(), entry.getValue());
 			}
 		}
-		return result;
+		return allAttributes;
 	}
 
-	public boolean hasAnnotatedMethods(String annotationType) {
+	@Override
+	public boolean hasAnnotatedMethods(String annotationName) {
 		for (MethodMetadata methodMetadata : this.methodMetadataSet) {
-			if (methodMetadata.isAnnotated(annotationType)) {
+			if (methodMetadata.isAnnotated(annotationName)) {
 				return true;
 			}
 		}
 		return false;
 	}
 
-	public Set<MethodMetadata> getAnnotatedMethods(String annotationType) {
+	@Override
+	public Set<MethodMetadata> getAnnotatedMethods(String annotationName) {
 		Set<MethodMetadata> annotatedMethods = new LinkedHashSet<MethodMetadata>(4);
 		for (MethodMetadata methodMetadata : this.methodMetadataSet) {
-			if (methodMetadata.isAnnotated(annotationType)) {
+			if (methodMetadata.isAnnotated(annotationName)) {
 				annotatedMethods.add(methodMetadata);
 			}
 		}

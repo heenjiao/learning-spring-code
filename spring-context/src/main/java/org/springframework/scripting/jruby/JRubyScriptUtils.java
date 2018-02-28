@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import java.util.List;
 
 import org.jruby.Ruby;
 import org.jruby.RubyArray;
-import org.jruby.RubyException;
 import org.jruby.RubyNil;
 import org.jruby.ast.ClassNode;
 import org.jruby.ast.Colon2Node;
@@ -45,13 +44,18 @@ import org.springframework.util.StringUtils;
 /**
  * Utility methods for handling JRuby-scripted objects.
  *
- * <p>As of Spring 3.0, this class requires JRuby 1.1 or higher.
+ * <p>Note: Spring 4.0 supports JRuby 1.5 and higher, with 1.7.x recommended.
+ * As of Spring 4.2, JRuby 9.0.0.0 is supported as well but primarily through
+ * {@link org.springframework.scripting.support.StandardScriptFactory}.
  *
  * @author Rob Harrop
  * @author Juergen Hoeller
  * @author Rick Evans
  * @since 2.0
+ * @deprecated in favor of JRuby support via the JSR-223 abstraction
+ * ({@link org.springframework.scripting.support.StandardScriptFactory})
  */
+@Deprecated
 public abstract class JRubyScriptUtils {
 
 	/**
@@ -75,13 +79,11 @@ public abstract class JRubyScriptUtils {
 	 * @return the scripted Java object
 	 * @throws JumpException in case of JRuby parsing failure
 	 */
-	@SuppressWarnings("deprecation")
 	public static Object createJRubyObject(String scriptSource, Class<?>[] interfaces, ClassLoader classLoader) {
 		Ruby ruby = initializeRuntime();
 
 		Node scriptRootNode = ruby.parseEval(scriptSource, "", null, 0);
-		// Keep using the deprecated runNormally variant for JRuby 1.1/1.2 compatibility...
-        IRubyObject rubyObject = ruby.runNormally(scriptRootNode, false);
+        IRubyObject rubyObject = ruby.runNormally(scriptRootNode);
 
 		if (rubyObject instanceof RubyNil) {
 			String className = findClassName(scriptRootNode);
@@ -98,6 +100,7 @@ public abstract class JRubyScriptUtils {
 	/**
 	 * Initializes an instance of the {@link org.jruby.Ruby} runtime.
 	 */
+	@SuppressWarnings("unchecked")
 	private static Ruby initializeRuntime() {
 		return JavaEmbedUtils.initialize(Collections.EMPTY_LIST);
 	}
@@ -164,6 +167,7 @@ public abstract class JRubyScriptUtils {
 			this.ruby = ruby;
 		}
 
+		@Override
 		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 			if (ReflectionUtils.isEqualsMethod(method)) {
 				return (isProxyForSameRubyObject(args[0]));
@@ -232,9 +236,6 @@ public abstract class JRubyScriptUtils {
 	/**
 	 * Exception thrown in response to a JRuby {@link RaiseException}
 	 * being thrown from a JRuby method invocation.
-	 * <p>Introduced because early versions of the {@code RaiseException} class did
-	 * not have useful {@link Object#toString()}, {@link Throwable#getMessage()},
-	 * and {@link Throwable#printStackTrace} implementations.
 	 */
 	@SuppressWarnings("serial")
 	public static class JRubyExecutionException extends NestedRuntimeException {
@@ -245,12 +246,7 @@ public abstract class JRubyScriptUtils {
 		 * @param ex the cause (must not be {@code null})
 		 */
 		public JRubyExecutionException(RaiseException ex) {
-			super(buildMessage(ex), ex);
-		}
-
-		private static String buildMessage(RaiseException ex) {
-			RubyException rubyEx = ex.getException();
-			return (rubyEx != null && rubyEx.message != null ? rubyEx.message.toString() : "Unexpected JRuby error");
+			super(ex.getMessage(), ex);
 		}
 	}
 

@@ -16,6 +16,9 @@
 
 package org.springframework.web.servlet.handler;
 
+import org.junit.Before;
+import org.junit.Test;
+
 import org.springframework.mock.web.test.MockHttpServletRequest;
 import org.springframework.mock.web.test.MockServletContext;
 import org.springframework.web.context.ConfigurableWebApplicationContext;
@@ -24,8 +27,6 @@ import org.springframework.web.servlet.HandlerExecutionChain;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.HandlerMapping;
 
-import org.junit.Before;
-import org.junit.Test;
 import static org.junit.Assert.*;
 
 /**
@@ -125,7 +126,7 @@ public class PathMatchingUrlHandlerMappingTests {
 		hec = getHandler(req);
 		assertTrue("Handler is correct bean", hec != null && hec.getHandler() == bean);
 
-		// should match because because exact pattern is there
+		// should match because exact pattern is there
 		req = new MockHttpServletRequest("GET", "/administrator/another/bla.xml");
 		hec = getHandler(req);
 		assertTrue("Handler is correct bean", hec != null && hec.getHandler() == bean);

@@ -34,7 +34,7 @@ import org.springframework.web.context.request.ServletWebRequest;
  *
  * <p>The servlet and all filters involved in an async request must have async
  * support enabled using the Servlet API or by adding an
- * {@code <async-support>true</async-support>} element to servlet and filter
+ * {@code <async-supported>true</async-supported>} element to servlet and filter
  * declarations in {@code web.xml}.
  *
  * @author Rossen Stoyanchev
@@ -67,19 +67,23 @@ public class StandardServletAsyncWebRequest extends ServletWebRequest implements
 	 * In Servlet 3 async processing, the timeout period begins after the
 	 * container processing thread has exited.
 	 */
+	@Override
 	public void setTimeout(Long timeout) {
 		Assert.state(!isAsyncStarted(), "Cannot change the timeout with concurrent handling in progress");
 		this.timeout = timeout;
 	}
 
+	@Override
 	public void addTimeoutHandler(Runnable timeoutHandler) {
 		this.timeoutHandlers.add(timeoutHandler);
 	}
 
+	@Override
 	public void addCompletionHandler(Runnable runnable) {
 		this.completionHandlers.add(runnable);
 	}
 
+	@Override
 	public boolean isAsyncStarted() {
 		return (this.asyncContext != null && getRequest().isAsyncStarted());
 	}
@@ -89,10 +93,12 @@ public class StandardServletAsyncWebRequest extends ServletWebRequest implements
 	 * <p>It is important to avoid use of request and response objects after async
 	 * processing has completed. Servlet containers often re-use them.
 	 */
+	@Override
 	public boolean isAsyncComplete() {
 		return this.asyncCompleted.get();
 	}
 
+	@Override
 	public void startAsync() {
 		Assert.state(getRequest().isAsyncSupported(),
 				"Async support must be enabled on a servlet and for all filters involved " +
@@ -111,6 +117,7 @@ public class StandardServletAsyncWebRequest extends ServletWebRequest implements
 		}
 	}
 
+	@Override
 	public void dispatch() {
 		Assert.notNull(this.asyncContext, "Cannot dispatch without an AsyncContext");
 		this.asyncContext.dispatch();
@@ -121,18 +128,23 @@ public class StandardServletAsyncWebRequest extends ServletWebRequest implements
 	// Implementation of AsyncListener methods
 	// ---------------------------------------------------------------------
 
+	@Override
 	public void onStartAsync(AsyncEvent event) throws IOException {
 	}
 
+	@Override
 	public void onError(AsyncEvent event) throws IOException {
+		onComplete(event);
 	}
 
+	@Override
 	public void onTimeout(AsyncEvent event) throws IOException {
 		for (Runnable handler : this.timeoutHandlers) {
 			handler.run();
 		}
 	}
 
+	@Override
 	public void onComplete(AsyncEvent event) throws IOException {
 		for (Runnable handler : this.completionHandlers) {
 			handler.run();

@@ -18,16 +18,16 @@ package org.springframework.aop.support;
 
 import java.io.Serializable;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Arrays;
 
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.PatternMatchUtils;
 
 /**
  * Pointcut bean for simple method name matches, as alternative to regexp patterns.
- * Does not handle overloaded methods: all methods *with a given name will be eligible.
+ * Does not handle overloaded methods: all methods with a given name will be eligible.
  *
  * @author Juergen Hoeller
  * @author Rod Johnson

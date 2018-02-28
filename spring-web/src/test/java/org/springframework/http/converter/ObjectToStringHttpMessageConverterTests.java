@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,6 @@
 
 package org.springframework.http.converter;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
@@ -31,6 +24,7 @@ import java.util.Locale;
 
 import org.junit.Before;
 import org.junit.Test;
+
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.core.io.Resource;
@@ -39,6 +33,8 @@ import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.http.server.ServletServerHttpResponse;
 import org.springframework.mock.web.test.MockHttpServletRequest;
 import org.springframework.mock.web.test.MockHttpServletResponse;
+
+import static org.junit.Assert.*;
 
 /**
  * Test cases for {@link ObjectToStringHttpMessageConverter} class.
@@ -127,28 +123,21 @@ public class ObjectToStringHttpMessageConverterTests {
 	@Test
 	public void read() throws IOException {
 		MockHttpServletRequest request = new MockHttpServletRequest();
-
 		request.setContentType(MediaType.TEXT_PLAIN_VALUE);
 
 		Short shortValue = Short.valueOf((short) 781);
-
 		request.setContent(shortValue.toString().getBytes(
 				StringHttpMessageConverter.DEFAULT_CHARSET));
-
 		assertEquals(shortValue, this.converter.read(Short.class, new ServletServerHttpRequest(request)));
 
 		Float floatValue = Float.valueOf(123);
-
 		request.setCharacterEncoding("UTF-16");
 		request.setContent(floatValue.toString().getBytes("UTF-16"));
-
 		assertEquals(floatValue, this.converter.read(Float.class, new ServletServerHttpRequest(request)));
 
 		Long longValue = Long.valueOf(55819182821331L);
-
 		request.setCharacterEncoding("UTF-8");
 		request.setContent(longValue.toString().getBytes("UTF-8"));
-
 		assertEquals(longValue, this.converter.read(Long.class, new ServletServerHttpRequest(request)));
 	}
 

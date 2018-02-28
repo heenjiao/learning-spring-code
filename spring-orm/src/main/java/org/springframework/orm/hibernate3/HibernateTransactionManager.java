@@ -110,7 +110,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * support nested transactions! Hence, do not expect Hibernate access code to
  * semantically participate in a nested transaction.</i>
  *
- * <p>Requires Hibernate 3.2 or later, as of Spring 3.0.
+ * <p>Requires Hibernate 3.6.x, as of Spring 4.0.
  *
  * @author Juergen Hoeller
  * @since 1.2
@@ -128,7 +128,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * @see org.springframework.jdbc.core.JdbcTemplate
  * @see org.springframework.jdbc.datasource.DataSourceTransactionManager
  * @see org.springframework.transaction.jta.JtaTransactionManager
+ * @deprecated as of Spring 4.3, in favor of Hibernate 4.x/5.x
  */
+@Deprecated
 @SuppressWarnings("serial")
 public class HibernateTransactionManager extends AbstractPlatformTransactionManager
 		implements ResourceTransactionManager, BeanFactoryAware, InitializingBean {
@@ -395,10 +397,12 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
 	 * bean names. It does not need to be set for any other mode of operation.
 	 * @see #setEntityInterceptorBeanName
 	 */
+	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
 		this.beanFactory = beanFactory;
 	}
 
+	@Override
 	public void afterPropertiesSet() {
 		if (getSessionFactory() == null) {
 			throw new IllegalArgumentException("Property 'sessionFactory' is required");
@@ -422,6 +426,7 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
 	}
 
 
+	@Override
 	public Object getResourceFactory() {
 		return getSessionFactory();
 	}
@@ -789,7 +794,7 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
 		if (getJdbcExceptionTranslator() != null && ex instanceof JDBCException) {
 			return convertJdbcAccessException((JDBCException) ex, getJdbcExceptionTranslator());
 		}
-		else if (GenericJDBCException.class.equals(ex.getClass())) {
+		else if (GenericJDBCException.class == ex.getClass()) {
 			return convertJdbcAccessException((GenericJDBCException) ex, getDefaultJdbcExceptionTranslator());
 		}
 		return SessionFactoryUtils.convertHibernateAccessException(ex);
@@ -883,6 +888,7 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
 			}
 		}
 
+		@Override
 		public boolean isRollbackOnly() {
 			return this.sessionHolder.isRollbackOnly() ||
 					(hasConnectionHolder() && getConnectionHolder().isRollbackOnly());

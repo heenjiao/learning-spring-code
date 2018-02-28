@@ -46,7 +46,7 @@ import org.springframework.util.ClassUtils;
 @SuppressWarnings("serial")
 public class AspectJAwareAdvisorAutoProxyCreator extends AbstractAdvisorAutoProxyCreator {
 
-	private static final Comparator DEFAULT_PRECEDENCE_COMPARATOR = new AspectJPrecedenceComparator();
+	private static final Comparator<Advisor> DEFAULT_PRECEDENCE_COMPARATOR = new AspectJPrecedenceComparator();
 
 
 	/**
@@ -98,7 +98,7 @@ public class AspectJAwareAdvisorAutoProxyCreator extends AbstractAdvisorAutoProx
 	}
 
 	@Override
-	protected boolean shouldSkip(Class beanClass, String beanName) {
+	protected boolean shouldSkip(Class<?> beanClass, String beanName) {
 		// TODO: Consider optimization by caching the list of the aspect names
 		List<Advisor> candidateAdvisors = findCandidateAdvisors();
 		for (Advisor advisor : candidateAdvisors) {
@@ -126,11 +126,13 @@ public class AspectJAwareAdvisorAutoProxyCreator extends AbstractAdvisorAutoProx
 			this.comparator = comparator;
 		}
 
+		@Override
 		public int compareTo(Object obj) {
 			Advisor otherAdvisor = ((PartiallyComparableAdvisorHolder) obj).advisor;
 			return this.comparator.compare(this.advisor, otherAdvisor);
 		}
 
+		@Override
 		public int fallbackCompareTo(Object obj) {
 			return 0;
 		}

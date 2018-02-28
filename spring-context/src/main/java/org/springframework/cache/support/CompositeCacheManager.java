@@ -77,7 +77,6 @@ public class CompositeCacheManager implements CacheManager, InitializingBean {
 	 * Specify the CacheManagers to delegate to.
 	 */
 	public void setCacheManagers(Collection<CacheManager> cacheManagers) {
-		this.cacheManagers.clear();  // just here to preserve compatibility with previous behavior
 		this.cacheManagers.addAll(cacheManagers);
 	}
 
@@ -90,6 +89,7 @@ public class CompositeCacheManager implements CacheManager, InitializingBean {
 		this.fallbackToNoOpCache = fallbackToNoOpCache;
 	}
 
+	@Override
 	public void afterPropertiesSet() {
 		if (this.fallbackToNoOpCache) {
 			this.cacheManagers.add(new NoOpCacheManager());
@@ -97,6 +97,7 @@ public class CompositeCacheManager implements CacheManager, InitializingBean {
 	}
 
 
+	@Override
 	public Cache getCache(String name) {
 		for (CacheManager cacheManager : this.cacheManagers) {
 			Cache cache = cacheManager.getCache(name);
@@ -107,6 +108,7 @@ public class CompositeCacheManager implements CacheManager, InitializingBean {
 		return null;
 	}
 
+	@Override
 	public Collection<String> getCacheNames() {
 		Set<String> names = new LinkedHashSet<String>();
 		for (CacheManager manager : this.cacheManagers) {

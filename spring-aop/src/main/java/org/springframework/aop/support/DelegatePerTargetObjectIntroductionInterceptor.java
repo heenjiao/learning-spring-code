@@ -59,15 +59,15 @@ public class DelegatePerTargetObjectIntroductionInterceptor extends Introduction
 	 */
 	private final Map<Object, Object> delegateMap = new WeakHashMap<Object, Object>();
 
-	private Class defaultImplType;
+	private Class<?> defaultImplType;
 
-	private Class interfaceType;
+	private Class<?> interfaceType;
 
 
-	public DelegatePerTargetObjectIntroductionInterceptor(Class defaultImplType, Class interfaceType) {
+	public DelegatePerTargetObjectIntroductionInterceptor(Class<?> defaultImplType, Class<?> interfaceType) {
 		this.defaultImplType = defaultImplType;
 		this.interfaceType = interfaceType;
-		// cCeate a new delegate now (but don't store it in the map).
+		// Create a new delegate now (but don't store it in the map).
 		// We do this for two reasons:
 		// 1) to fail early if there is a problem instantiating delegates
 		// 2) to populate the interface map once and once only
@@ -83,6 +83,7 @@ public class DelegatePerTargetObjectIntroductionInterceptor extends Introduction
 	 * behaviour in around advice. However, subclasses should invoke this
 	 * method, which handles introduced interfaces and forwarding to the target.
 	 */
+	@Override
 	public Object invoke(MethodInvocation mi) throws Throwable {
 		if (isMethodOnIntroducedInterface(mi)) {
 			Object delegate = getIntroductionDelegateFor(mi.getThis());

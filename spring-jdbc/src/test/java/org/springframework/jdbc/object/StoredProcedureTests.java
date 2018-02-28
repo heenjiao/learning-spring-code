@@ -26,7 +26,6 @@ import java.sql.Types;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import javax.sql.DataSource;
 
 import org.junit.After;
@@ -34,6 +33,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.jdbc.BadSqlGrammarException;
@@ -81,7 +81,7 @@ public class StoredProcedureTests {
 
 	@After
 	public void verifyClosed() throws Exception {
-		if(verifyClosedAfter) {
+		if (verifyClosedAfter) {
 			verify(callableStatement).close();
 			verify(connection, atLeastOnce()).close();
 		}
@@ -189,7 +189,7 @@ public class StoredProcedureTests {
 		TestJdbcTemplate t = new TestJdbcTemplate();
 		t.setDataSource(dataSource);
 		// Will fail without the following, because we're not able to get a connection
-		// from the DataSource here if we need to to create an ExceptionTranslator
+		// from the DataSource here if we need to create an ExceptionTranslator
 		t.setExceptionTranslator(new SQLStateSQLExceptionTranslator());
 		StoredProcedureConfiguredViaJdbcTemplate sp = new StoredProcedureConfiguredViaJdbcTemplate(t);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,14 +73,17 @@ public class StaticWebApplicationContext extends StaticApplicationContext
 	/**
 	 * Set the ServletContext that this WebApplicationContext runs in.
 	 */
+	@Override
 	public void setServletContext(ServletContext servletContext) {
 		this.servletContext = servletContext;
 	}
 
+	@Override
 	public ServletContext getServletContext() {
 		return this.servletContext;
 	}
 
+	@Override
 	public void setServletConfig(ServletConfig servletConfig) {
 		this.servletConfig = servletConfig;
 		if (servletConfig != null && this.servletContext == null) {
@@ -88,10 +91,12 @@ public class StaticWebApplicationContext extends StaticApplicationContext
 		}
 	}
 
+	@Override
 	public ServletConfig getServletConfig() {
 		return this.servletConfig;
 	}
 
+	@Override
 	public void setNamespace(String namespace) {
 		this.namespace = namespace;
 		if (namespace != null) {
@@ -99,6 +104,7 @@ public class StaticWebApplicationContext extends StaticApplicationContext
 		}
 	}
 
+	@Override
 	public String getNamespace() {
 		return this.namespace;
 	}
@@ -107,6 +113,7 @@ public class StaticWebApplicationContext extends StaticApplicationContext
 	 * The {@link StaticWebApplicationContext} class does not support this method.
 	 * @throws UnsupportedOperationException <b>always</b>
 	 */
+	@Override
 	public void setConfigLocation(String configLocation) {
 		if (configLocation != null) {
 			throw new UnsupportedOperationException("StaticWebApplicationContext does not support config locations");
@@ -117,12 +124,14 @@ public class StaticWebApplicationContext extends StaticApplicationContext
 	 * The {@link StaticWebApplicationContext} class does not support this method.
 	 * @throws UnsupportedOperationException <b>always</b>
 	 */
-	public void setConfigLocations(String[] configLocations) {
+	@Override
+	public void setConfigLocations(String... configLocations) {
 		if (configLocations != null) {
 			throw new UnsupportedOperationException("StaticWebApplicationContext does not support config locations");
 		}
 	}
 
+	@Override
 	public String[] getConfigLocations() {
 		return null;
 	}
@@ -181,6 +190,7 @@ public class StaticWebApplicationContext extends StaticApplicationContext
 				this.servletContext, this.servletConfig);
 	}
 
+	@Override
 	public Theme getTheme(String themeName) {
 		return this.themeSource.getTheme(themeName);
 	}

@@ -50,6 +50,8 @@ class WebLogicClassPreProcessorAdapter implements InvocationHandler {
 		this.loader = loader;
 	}
 
+
+	@Override
 	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 		String name = method.getName();
 		if ("equals".equals(name)) {

@@ -28,8 +28,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-import static org.junit.Assert.*;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 /**
  * @author Rob Harrop
@@ -222,6 +223,7 @@ public class CollectionUtilsTests {
 			this.name = name;
 		}
 
+		@Override
 		public boolean equals(Object rhs) {
 			if (this == rhs) {
 				return true;
@@ -233,6 +235,7 @@ public class CollectionUtilsTests {
 			return this.name.equals(instance.name);
 		}
 
+		@Override
 		public int hashCode() {
 			return this.name.hashCode();
 		}

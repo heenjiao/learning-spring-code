@@ -84,12 +84,15 @@ public abstract class AbstractXmlApplicationContext extends AbstractRefreshableC
 		// Configure the bean definition reader with this context's
 		// resource loading environment.
 		beanDefinitionReader.setEnvironment(this.getEnvironment());
+		//为bean读取器设置spring类资源加载器
 		beanDefinitionReader.setResourceLoader(this);
+		//为bean读取器设置SAX xml解析器 DOM4J
 		beanDefinitionReader.setEntityResolver(new ResourceEntityResolver(this));
 
 		// Allow a subclass to provide custom initialization of the reader,
 		// then proceed with actually loading the bean definitions.
 		initBeanDefinitionReader(beanDefinitionReader);
+		//真正的加载资源方法
 		loadBeanDefinitions(beanDefinitionReader);
 	}
 
@@ -118,10 +121,16 @@ public abstract class AbstractXmlApplicationContext extends AbstractRefreshableC
 	 * @see #getResourcePatternResolver
 	 */
 	protected void loadBeanDefinitions(XmlBeanDefinitionReader reader) throws BeansException, IOException {
+		//获取bean定义资源的定位
+		//这里使用了一个委派模式 调用子类的获取bean定义资源定位的方法
+		//该方法在ClassPathXmlApplicationContext中进行实现
+		//FileSystemXmlApplicationContext没有使用该方法
 		Resource[] configResources = getConfigResources();
 		if (configResources != null) {
+			//xml bean 读取器调用其父类AbstractBeanDefinitionReader 读取定位的Bean定义资源
 			reader.loadBeanDefinitions(configResources);
 		}
+		//如果子类中获取的bean定义资源定位为空 则获取fileSystemXmlApplicationContext 构造方法setConfigLocation方法设置的资源
 		String[] configLocations = getConfigLocations();
 		if (configLocations != null) {
 			reader.loadBeanDefinitions(configLocations);

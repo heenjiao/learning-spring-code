@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,14 +29,14 @@ import org.springframework.util.Assert;
  */
 public class SimpleAspectInstanceFactory implements AspectInstanceFactory {
 
-	private final Class aspectClass;
+	private final Class<?> aspectClass;
 
 
 	/**
 	 * Create a new SimpleAspectInstanceFactory for the given aspect class.
 	 * @param aspectClass the aspect class
 	 */
-	public SimpleAspectInstanceFactory(Class aspectClass) {
+	public SimpleAspectInstanceFactory(Class<?> aspectClass) {
 		Assert.notNull(aspectClass, "Aspect class must not be null");
 		this.aspectClass = aspectClass;
 	}
@@ -44,23 +44,27 @@ public class SimpleAspectInstanceFactory implements AspectInstanceFactory {
 	/**
 	 * Return the specified aspect class (never {@code null}).
 	 */
-	public final Class getAspectClass() {
+	public final Class<?> getAspectClass() {
 		return this.aspectClass;
 	}
 
 
+	@Override
 	public final Object getAspectInstance() {
 		try {
 			return this.aspectClass.newInstance();
 		}
 		catch (InstantiationException ex) {
-			throw new AopConfigException("Unable to instantiate aspect class [" + this.aspectClass.getName() + "]", ex);
+			throw new AopConfigException(
+					"Unable to instantiate aspect class: " + this.aspectClass.getName(), ex);
 		}
 		catch (IllegalAccessException ex) {
-			throw new AopConfigException("Cannot access element class [" + this.aspectClass.getName() + "]", ex);
+			throw new AopConfigException(
+					"Could not access aspect constructor: " + this.aspectClass.getName(), ex);
 		}
 	}
 
+	@Override
 	public ClassLoader getAspectClassLoader() {
 		return this.aspectClass.getClassLoader();
 	}
@@ -73,6 +77,7 @@ public class SimpleAspectInstanceFactory implements AspectInstanceFactory {
 	 * @see org.springframework.core.Ordered
 	 * @see #getOrderForAspectClass
 	 */
+	@Override
 	public int getOrder() {
 		return getOrderForAspectClass(this.aspectClass);
 	}

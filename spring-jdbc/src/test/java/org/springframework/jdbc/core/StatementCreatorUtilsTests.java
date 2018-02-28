@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,10 +38,12 @@ public class StatementCreatorUtilsTests {
 
 	private PreparedStatement preparedStatement;
 
+
 	@Before
 	public void setUp() {
 		preparedStatement = mock(PreparedStatement.class);
 	}
+
 
 	@Test
 	public void testSetParameterValueWithNullAndType() throws SQLException {
@@ -101,7 +103,6 @@ public class StatementCreatorUtilsTests {
 		given(pmd.getParameterType(1)).willReturn(Types.SMALLINT);
 		StatementCreatorUtils.setParameterValue(preparedStatement, 1, SqlTypeValue.TYPE_UNKNOWN, null, null);
 		verify(pmd).getParameterType(1);
-		verify(preparedStatement, never()).getConnection();
 		verify(preparedStatement).setNull(1, Types.SMALLINT);
 		assertTrue(StatementCreatorUtils.driversWithNoSupportForGetParameterType.isEmpty());
 	}
@@ -109,7 +110,7 @@ public class StatementCreatorUtilsTests {
 	@Test
 	public void testSetParameterValueWithNullAndGetParameterTypeWorkingButNotForOtherDriver() throws SQLException {
 		StatementCreatorUtils.driversWithNoSupportForGetParameterType.clear();
-		StatementCreatorUtils.driversWithNoSupportForGetParameterType.put("Oracle JDBC Driver", Boolean.TRUE);
+		StatementCreatorUtils.driversWithNoSupportForGetParameterType.add("Oracle JDBC Driver");
 		Connection con = mock(Connection.class);
 		DatabaseMetaData dbmd = mock(DatabaseMetaData.class);
 		ParameterMetaData pmd = mock(ParameterMetaData.class);
@@ -260,6 +261,23 @@ public class StatementCreatorUtilsTests {
 		java.util.Calendar cal = new GregorianCalendar();
 		StatementCreatorUtils.setParameterValue(preparedStatement, 1, SqlTypeValue.TYPE_UNKNOWN, null, cal);
 		verify(preparedStatement).setTimestamp(1, new java.sql.Timestamp(cal.getTime().getTime()), cal);
+	}
+
+	@Test  // SPR-8571
+	public void testSetParameterValueWithStringAndVendorSpecificType() throws SQLException {
+		Connection con = mock(Connection.class);
+		DatabaseMetaData dbmd = mock(DatabaseMetaData.class);
+		given(preparedStatement.getConnection()).willReturn(con);
+		given(dbmd.getDatabaseProductName()).willReturn("Oracle");
+		given(con.getMetaData()).willReturn(dbmd);
+		StatementCreatorUtils.setParameterValue(preparedStatement, 1, Types.OTHER, null, "test");
+		verify(preparedStatement).setString(1, "test");
+	}
+
+	@Test  // SPR-8571
+	public void testSetParameterValueWithNullAndVendorSpecificType() throws SQLException {
+		StatementCreatorUtils.setParameterValue(preparedStatement, 1, Types.OTHER, null, null);
+		verify(preparedStatement).setNull(1, Types.NULL);
 	}
 
 }

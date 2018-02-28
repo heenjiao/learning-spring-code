@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2011 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,52 +20,71 @@ import java.lang.instrument.ClassFileTransformer;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
-import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
 
 /**
- * JBoss 7 adapter.
+ * Reflective wrapper around a JBoss 7 class loader methods
+ * (discovered and called through reflection) for load-time weaving.
  *
  * @author Costin Leau
+ * @author Juergen Hoeller
  * @since 3.1
  */
 class JBossModulesAdapter implements JBossClassLoaderAdapter {
 
-	private static final String TRANSFORMER_FIELD_NAME = "transformer";
-	private static final String TRANSFORMER_ADD_METHOD_NAME = "addTransformer";
-	private static final String DELEGATING_TRANSFORMER_CLASS_NAME = "org.jboss.as.server.deployment.module.DelegatingClassFileTransformer";
+	private static final String DELEGATING_TRANSFORMER_CLASS_NAME =
+			"org.jboss.as.server.deployment.module.DelegatingClassFileTransformer";
+
+
 	private final ClassLoader classLoader;
+
 	private final Method addTransformer;
+
 	private final Object delegatingTransformer;
 
-	public JBossModulesAdapter(ClassLoader loader) {
-		this.classLoader = loader;
 
+	public JBossModulesAdapter(ClassLoader classLoader) {
+		this.classLoader = classLoader;
 		try {
-			Field transformers = ReflectionUtils.findField(classLoader.getClass(), TRANSFORMER_FIELD_NAME);
-			transformers.setAccessible(true);
-
-			delegatingTransformer = transformers.get(classLoader);
-
-			Assert.state(delegatingTransformer.getClass().getName().equals(DELEGATING_TRANSFORMER_CLASS_NAME),
-					"Transformer not of the expected type: " + delegatingTransformer.getClass().getName());
-			addTransformer = ReflectionUtils.findMethod(delegatingTransformer.getClass(), TRANSFORMER_ADD_METHOD_NAME,
-					ClassFileTransformer.class);
-			addTransformer.setAccessible(true);
-		} catch (Exception ex) {
-			throw new IllegalStateException("Could not initialize JBoss 7 LoadTimeWeaver", ex);
+			Field transformer = ReflectionUtils.findField(classLoader.getClass(), "transformer");
+			if (transformer == null) {
+				throw new IllegalArgumentException("Could not find 'transformer' field on JBoss ClassLoader: " +
+						classLoader.getClass().getName());
+			}
+			transformer.setAccessible(true);
+			this.delegatingTransformer = transformer.get(classLoader);
+			if (!this.delegatingTransformer.getClass().getName().equals(DELEGATING_TRANSFORMER_CLASS_NAME)) {
+				throw new IllegalStateException(
+						"Transformer not of the expected type DelegatingClassFileTransformer: " +
+						this.delegatingTransformer.getClass().getName());
+			}
+			this.addTransformer = ReflectionUtils.findMethod(this.delegatingTransformer.getClass(),
+					"addTransformer", ClassFileTransformer.class);
+			if (this.addTransformer == null) {
+				throw new IllegalArgumentException(
+						"Could not find 'addTransformer' method on JBoss DelegatingClassFileTransformer: " +
+						this.delegatingTransformer.getClass().getName());
+			}
+			this.addTransformer.setAccessible(true);
+		}
+		catch (Throwable ex) {
+			throw new IllegalStateException("Could not initialize JBoss LoadTimeWeaver", ex);
 		}
 	}
 
+	@Override
 	public void addTransformer(ClassFileTransformer transformer) {
 		try {
-			addTransformer.invoke(delegatingTransformer, transformer);
-		} catch (Exception ex) {
-			throw new IllegalStateException("Could not add transformer on JBoss 7 classloader " + classLoader, ex);
+			this.addTransformer.invoke(this.delegatingTransformer, transformer);
+		}
+		catch (Throwable ex) {
+			throw new IllegalStateException("Could not add transformer on JBoss 7 ClassLoader " + this.classLoader, ex);
 		}
 	}
 
+	@Override
 	public ClassLoader getInstrumentableClassLoader() {
-		return classLoader;
+		return this.classLoader;
 	}
+
 }

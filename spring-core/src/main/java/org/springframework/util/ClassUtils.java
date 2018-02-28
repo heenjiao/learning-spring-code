@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2016 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -75,13 +76,13 @@ public abstract class ClassUtils {
 	 * Map with primitive wrapper type as key and corresponding primitive
 	 * type as value, for example: Integer.class -> int.class.
 	 */
-	private static final Map<Class<?>, Class<?>> primitiveWrapperTypeMap = new HashMap<Class<?>, Class<?>>(8);
+	private static final Map<Class<?>, Class<?>> primitiveWrapperTypeMap = new IdentityHashMap<Class<?>, Class<?>>(8);
 
 	/**
 	 * Map with primitive type as key and corresponding wrapper
 	 * type as value, for example: int.class -> Integer.class.
 	 */
-	private static final Map<Class<?>, Class<?>> primitiveTypeToWrapperMap = new HashMap<Class<?>, Class<?>>(8);
+	private static final Map<Class<?>, Class<?>> primitiveTypeToWrapperMap = new IdentityHashMap<Class<?>, Class<?>>(8);
 
 	/**
 	 * Map with primitive type name as key and corresponding primitive
@@ -194,25 +195,6 @@ public abstract class ClassUtils {
 		else {
 			return null;
 		}
-	}
-
-	/**
-	 * Replacement for {@code Class.forName()} that also returns Class instances
-	 * for primitives (like "int") and array class names (like "String[]").
-	 * <p>Always uses the default class loader: that is, preferably the thread context
-	 * class loader, or the ClassLoader that loaded the ClassUtils class as fallback.
-	 * @param name the name of the Class
-	 * @return Class instance for the supplied name
-	 * @throws ClassNotFoundException if the class was not found
-	 * @throws LinkageError if the class file could not be loaded
-	 * @see Class#forName(String, boolean, ClassLoader)
-	 * @see #getDefaultClassLoader()
-	 * @deprecated as of Spring 3.0, in favor of specifying a ClassLoader explicitly:
-	 * see {@link #forName(String, ClassLoader)}
-	 */
-	@Deprecated
-	public static Class<?> forName(String name) throws ClassNotFoundException, LinkageError {
-		return forName(name, getDefaultClassLoader());
 	}
 
 	/**
@@ -336,19 +318,6 @@ public abstract class ClassUtils {
 	 * and can be loaded. Will return {@code false} if either the class or
 	 * one of its dependencies is not present or cannot be loaded.
 	 * @param className the name of the class to check
-	 * @return whether the specified class is present
-	 * @deprecated as of Spring 2.5, in favor of {@link #isPresent(String, ClassLoader)}
-	 */
-	@Deprecated
-	public static boolean isPresent(String className) {
-		return isPresent(className, getDefaultClassLoader());
-	}
-
-	/**
-	 * Determine whether the {@link Class} identified by the supplied name is present
-	 * and can be loaded. Will return {@code false} if either the class or
-	 * one of its dependencies is not present or cannot be loaded.
-	 * @param className the name of the class to check
 	 * @param classLoader the class loader to use
 	 * (may be {@code null}, which indicates the default class loader)
 	 * @return whether the specified class is present
@@ -385,7 +354,7 @@ public abstract class ClassUtils {
 	public static Class<?> getUserClass(Class<?> clazz) {
 		if (clazz != null && clazz.getName().contains(CGLIB_CLASS_SEPARATOR)) {
 			Class<?> superclass = clazz.getSuperclass();
-			if (superclass != null && !Object.class.equals(superclass)) {
+			if (superclass != null && Object.class != superclass) {
 				return superclass;
 			}
 		}
@@ -542,8 +511,21 @@ public abstract class ClassUtils {
 	 * @return the qualified name of the method
 	 */
 	public static String getQualifiedMethodName(Method method) {
+		return getQualifiedMethodName(method, null);
+	}
+
+	/**
+	 * Return the qualified name of the given method, consisting of
+	 * fully qualified interface/class name + "." + method name.
+	 * @param method the method
+	 * @param clazz the clazz that the method is being invoked on
+	 * (may be {@code null} to indicate the method's declaring class)
+	 * @return the qualified name of the method
+	 * @since 4.3.4
+	 */
+	public static String getQualifiedMethodName(Method method, Class<?> clazz) {
 		Assert.notNull(method, "Method must not be null");
-		return method.getDeclaringClass().getName() + "." + method.getName();
+		return (clazz != null ? clazz : method.getDeclaringClass()).getName() + '.' + method.getName();
 	}
 
 	/**
@@ -671,10 +653,10 @@ public abstract class ClassUtils {
 				return candidates.iterator().next();
 			}
 			else if (candidates.isEmpty()) {
-				throw new IllegalStateException("Expected method not found: " + clazz + "." + methodName);
+				throw new IllegalStateException("Expected method not found: " + clazz.getName() + '.' + methodName);
 			}
 			else {
-				throw new IllegalStateException("No unique method found: " + clazz + "." + methodName);
+				throw new IllegalStateException("No unique method found: " + clazz.getName() + '.' + methodName);
 			}
 		}
 	}
@@ -793,7 +775,7 @@ public abstract class ClassUtils {
 	 */
 	public static Method getMostSpecificMethod(Method method, Class<?> targetClass) {
 		if (method != null && isOverridable(method, targetClass) &&
-				targetClass != null && !targetClass.equals(method.getDeclaringClass())) {
+				targetClass != null && targetClass != method.getDeclaringClass()) {
 			try {
 				if (Modifier.isPublic(method.getModifiers())) {
 					try {
@@ -814,6 +796,26 @@ public abstract class ClassUtils {
 			}
 		}
 		return method;
+	}
+
+	/**
+	 * Determine whether the given method is declared by the user or at least pointing to
+	 * a user-declared method.
+	 * <p>Checks {@link Method#isSynthetic()} (for implementation methods) as well as the
+	 * {@code GroovyObject} interface (for interface methods; on an implementation class,
+	 * implementations of the {@code GroovyObject} methods will be marked as synthetic anyway).
+	 * Note that, despite being synthetic, bridge methods ({@link Method#isBridge()}) are considered
+	 * as user-level methods since they are eventually pointing to a user-declared generic method.
+	 * @param method the method to check
+	 * @return {@code true} if the method can be considered as user-declared; [@code false} otherwise
+	 */
+	public static boolean isUserLevelMethod(Method method) {
+		Assert.notNull(method, "Method must not be null");
+		return (method.isBridge() || (!method.isSynthetic() && !isGroovyObjectMethod(method)));
+	}
+
+	private static boolean isGroovyObjectMethod(Method method) {
+		return method.getDeclaringClass().getName().equals("groovy.lang.GroovyObject");
 	}
 
 	/**
@@ -925,7 +927,7 @@ public abstract class ClassUtils {
 		}
 		if (lhsType.isPrimitive()) {
 			Class<?> resolvedPrimitive = primitiveWrapperTypeMap.get(rhsType);
-			if (resolvedPrimitive != null && lhsType.equals(resolvedPrimitive)) {
+			if (lhsType == resolvedPrimitive) {
 				return true;
 			}
 		}
@@ -991,7 +993,7 @@ public abstract class ClassUtils {
 	public static String addResourcePathToPackagePath(Class<?> clazz, String resourceName) {
 		Assert.notNull(resourceName, "Resource name must not be null");
 		if (!resourceName.startsWith("/")) {
-			return classPackageAsResourcePath(clazz) + "/" + resourceName;
+			return classPackageAsResourcePath(clazz) + '/' + resourceName;
 		}
 		return classPackageAsResourcePath(clazz) + resourceName;
 	}
@@ -1032,7 +1034,7 @@ public abstract class ClassUtils {
 	 * @return a String of form "[com.foo.Bar, com.foo.Baz]"
 	 * @see java.util.AbstractCollection#toString()
 	 */
-	public static String classNamesToString(Class... classes) {
+	public static String classNamesToString(Class<?>... classes) {
 		return classNamesToString(Arrays.asList(classes));
 	}
 
@@ -1045,13 +1047,13 @@ public abstract class ClassUtils {
 	 * @return a String of form "[com.foo.Bar, com.foo.Baz]"
 	 * @see java.util.AbstractCollection#toString()
 	 */
-	public static String classNamesToString(Collection<Class> classes) {
+	public static String classNamesToString(Collection<Class<?>> classes) {
 		if (CollectionUtils.isEmpty(classes)) {
 			return "[]";
 		}
 		StringBuilder sb = new StringBuilder("[");
-		for (Iterator<Class> it = classes.iterator(); it.hasNext(); ) {
-			Class clazz = it.next();
+		for (Iterator<Class<?>> it = classes.iterator(); it.hasNext(); ) {
+			Class<?> clazz = it.next();
 			sb.append(clazz.getName());
 			if (it.hasNext()) {
 				sb.append(", ");
@@ -1076,10 +1078,10 @@ public abstract class ClassUtils {
 	}
 
 	/**
-	 * Return all interfaces that the given instance implements as array,
+	 * Return all interfaces that the given instance implements as an array,
 	 * including ones implemented by superclasses.
 	 * @param instance the instance to analyze for interfaces
-	 * @return all interfaces that the given instance implements as array
+	 * @return all interfaces that the given instance implements as an array
 	 */
 	public static Class<?>[] getAllInterfaces(Object instance) {
 		Assert.notNull(instance, "Instance must not be null");
@@ -1087,67 +1089,67 @@ public abstract class ClassUtils {
 	}
 
 	/**
-	 * Return all interfaces that the given class implements as array,
+	 * Return all interfaces that the given class implements as an array,
 	 * including ones implemented by superclasses.
 	 * <p>If the class itself is an interface, it gets returned as sole interface.
 	 * @param clazz the class to analyze for interfaces
-	 * @return all interfaces that the given object implements as array
+	 * @return all interfaces that the given object implements as an array
 	 */
 	public static Class<?>[] getAllInterfacesForClass(Class<?> clazz) {
 		return getAllInterfacesForClass(clazz, null);
 	}
 
 	/**
-	 * Return all interfaces that the given class implements as array,
+	 * Return all interfaces that the given class implements as an array,
 	 * including ones implemented by superclasses.
 	 * <p>If the class itself is an interface, it gets returned as sole interface.
 	 * @param clazz the class to analyze for interfaces
 	 * @param classLoader the ClassLoader that the interfaces need to be visible in
 	 * (may be {@code null} when accepting all declared interfaces)
-	 * @return all interfaces that the given object implements as array
+	 * @return all interfaces that the given object implements as an array
 	 */
 	public static Class<?>[] getAllInterfacesForClass(Class<?> clazz, ClassLoader classLoader) {
-		Set<Class> ifcs = getAllInterfacesForClassAsSet(clazz, classLoader);
-		return ifcs.toArray(new Class[ifcs.size()]);
+		Set<Class<?>> ifcs = getAllInterfacesForClassAsSet(clazz, classLoader);
+		return ifcs.toArray(new Class<?>[ifcs.size()]);
 	}
 
 	/**
-	 * Return all interfaces that the given instance implements as Set,
+	 * Return all interfaces that the given instance implements as a Set,
 	 * including ones implemented by superclasses.
 	 * @param instance the instance to analyze for interfaces
-	 * @return all interfaces that the given instance implements as Set
+	 * @return all interfaces that the given instance implements as a Set
 	 */
-	public static Set<Class> getAllInterfacesAsSet(Object instance) {
+	public static Set<Class<?>> getAllInterfacesAsSet(Object instance) {
 		Assert.notNull(instance, "Instance must not be null");
 		return getAllInterfacesForClassAsSet(instance.getClass());
 	}
 
 	/**
-	 * Return all interfaces that the given class implements as Set,
+	 * Return all interfaces that the given class implements as a Set,
 	 * including ones implemented by superclasses.
 	 * <p>If the class itself is an interface, it gets returned as sole interface.
 	 * @param clazz the class to analyze for interfaces
-	 * @return all interfaces that the given object implements as Set
+	 * @return all interfaces that the given object implements as a Set
 	 */
-	public static Set<Class> getAllInterfacesForClassAsSet(Class clazz) {
+	public static Set<Class<?>> getAllInterfacesForClassAsSet(Class<?> clazz) {
 		return getAllInterfacesForClassAsSet(clazz, null);
 	}
 
 	/**
-	 * Return all interfaces that the given class implements as Set,
+	 * Return all interfaces that the given class implements as a Set,
 	 * including ones implemented by superclasses.
 	 * <p>If the class itself is an interface, it gets returned as sole interface.
 	 * @param clazz the class to analyze for interfaces
 	 * @param classLoader the ClassLoader that the interfaces need to be visible in
 	 * (may be {@code null} when accepting all declared interfaces)
-	 * @return all interfaces that the given object implements as Set
+	 * @return all interfaces that the given object implements as a Set
 	 */
-	public static Set<Class> getAllInterfacesForClassAsSet(Class clazz, ClassLoader classLoader) {
+	public static Set<Class<?>> getAllInterfacesForClassAsSet(Class<?> clazz, ClassLoader classLoader) {
 		Assert.notNull(clazz, "Class must not be null");
 		if (clazz.isInterface() && isVisible(clazz, classLoader)) {
-			return Collections.singleton(clazz);
+			return Collections.<Class<?>>singleton(clazz);
 		}
-		Set<Class> interfaces = new LinkedHashSet<Class>();
+		Set<Class<?>> interfaces = new LinkedHashSet<Class<?>>();
 		while (clazz != null) {
 			Class<?>[] ifcs = clazz.getInterfaces();
 			for (Class<?> ifc : ifcs) {
@@ -1197,7 +1199,7 @@ public abstract class ClassUtils {
 		Class<?> ancestor = clazz1;
 		do {
 			ancestor = ancestor.getSuperclass();
-			if (ancestor == null || Object.class.equals(ancestor)) {
+			if (ancestor == null || Object.class == ancestor) {
 				return null;
 			}
 		}

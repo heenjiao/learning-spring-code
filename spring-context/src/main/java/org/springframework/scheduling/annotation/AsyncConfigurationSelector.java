@@ -18,7 +18,6 @@ package org.springframework.scheduling.annotation;
 
 import org.springframework.context.annotation.AdviceMode;
 import org.springframework.context.annotation.AdviceModeImportSelector;
-import org.springframework.context.annotation.AnnotationConfigUtils;
 
 /**
  * Selects which implementation of {@link AbstractAsyncConfiguration} should be used based
@@ -31,17 +30,21 @@ import org.springframework.context.annotation.AnnotationConfigUtils;
  */
 public class AsyncConfigurationSelector extends AdviceModeImportSelector<EnableAsync> {
 
+	private static final String ASYNC_EXECUTION_ASPECT_CONFIGURATION_CLASS_NAME =
+			"org.springframework.scheduling.aspectj.AspectJAsyncConfiguration";
+
 	/**
 	 * {@inheritDoc}
 	 * @return {@link ProxyAsyncConfiguration} or {@code AspectJAsyncConfiguration} for
 	 * {@code PROXY} and {@code ASPECTJ} values of {@link EnableAsync#mode()}, respectively
 	 */
+	@Override
 	public String[] selectImports(AdviceMode adviceMode) {
 		switch (adviceMode) {
 			case PROXY:
 				return new String[] { ProxyAsyncConfiguration.class.getName() };
 			case ASPECTJ:
-				return new String[] { AnnotationConfigUtils.ASYNC_EXECUTION_ASPECT_CONFIGURATION_CLASS_NAME };
+				return new String[] { ASYNC_EXECUTION_ASPECT_CONFIGURATION_CLASS_NAME };
 			default:
 				return null;
 		}

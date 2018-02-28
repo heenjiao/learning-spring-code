@@ -35,6 +35,7 @@ import org.springframework.aop.support.DefaultPointcutAdvisor;
  * of the Spring reference documentation for more information.
  *
  * @author Costin Leau
+ * @since 3.1
  * @see org.springframework.aop.framework.ProxyFactoryBean
  * @see CacheInterceptor
  */
@@ -42,7 +43,9 @@ import org.springframework.aop.support.DefaultPointcutAdvisor;
 public class CacheProxyFactoryBean extends AbstractSingletonProxyFactoryBean {
 
 	private final CacheInterceptor cachingInterceptor = new CacheInterceptor();
+
 	private Pointcut pointcut;
+
 
 	/**
 	 * Set a pointcut, i.e a bean that can cause conditional invocation
@@ -58,12 +61,11 @@ public class CacheProxyFactoryBean extends AbstractSingletonProxyFactoryBean {
 	@Override
 	protected Object createMainInterceptor() {
 		this.cachingInterceptor.afterPropertiesSet();
-		if (this.pointcut != null) {
-			return new DefaultPointcutAdvisor(this.pointcut, this.cachingInterceptor);
-		} else {
+		if (this.pointcut == null) {
 			// Rely on default pointcut.
 			throw new UnsupportedOperationException();
 		}
+		return new DefaultPointcutAdvisor(this.pointcut, this.cachingInterceptor);
 	}
 
 	/**

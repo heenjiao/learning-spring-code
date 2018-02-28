@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -150,6 +150,7 @@ public class CallableStatementCreatorFactory {
 			this.inParameters = inParams;
 		}
 
+		@Override
 		public CallableStatement createCallableStatement(Connection con) throws SQLException {
 			// If we were given a ParameterMapper, we must let the mapper do its thing to create the Map.
 			if (this.inParameterMapper != null) {
@@ -218,10 +219,12 @@ public class CallableStatementCreatorFactory {
 			return cs;
 		}
 
+		@Override
 		public String getSql() {
 			return callString;
 		}
 
+		@Override
 		public void cleanupParameters() {
 			if (this.inParameters != null) {
 				StatementCreatorUtils.cleanupParameters(this.inParameters.values());
@@ -230,10 +233,7 @@ public class CallableStatementCreatorFactory {
 
 		@Override
 		public String toString() {
-			StringBuilder sb = new StringBuilder();
-			sb.append("CallableStatementCreatorFactory.CallableStatementCreatorImpl: sql=[");
-			sb.append(callString).append("]; parameters=").append(this.inParameters);
-			return sb.toString();
+			return "CallableStatementCreator: sql=[" + callString + "]; parameters=" + this.inParameters;
 		}
 	}
 

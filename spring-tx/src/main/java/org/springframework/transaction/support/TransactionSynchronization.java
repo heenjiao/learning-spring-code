@@ -16,6 +16,8 @@
 
 package org.springframework.transaction.support;
 
+import java.io.Flushable;
+
 /**
  * Interface for transaction synchronization callbacks.
  * Supported by AbstractPlatformTransactionManager.
@@ -33,7 +35,7 @@ package org.springframework.transaction.support;
  * @see AbstractPlatformTransactionManager
  * @see org.springframework.jdbc.datasource.DataSourceUtils#CONNECTION_SYNCHRONIZATION_ORDER
  */
-public interface TransactionSynchronization {
+public interface TransactionSynchronization extends Flushable {
 
 	/** Completion status in case of proper commit */
 	int STATUS_COMMITTED = 0;
@@ -64,6 +66,7 @@ public interface TransactionSynchronization {
 	 * for example, a Hibernate/JPA session.
 	 * @see org.springframework.transaction.TransactionStatus#flush()
 	 */
+	@Override
 	void flush();
 
 	/**

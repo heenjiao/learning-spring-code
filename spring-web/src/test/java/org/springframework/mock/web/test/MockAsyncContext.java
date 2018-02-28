@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.springframework.mock.web.test;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import javax.servlet.AsyncContext;
 import javax.servlet.AsyncEvent;
 import javax.servlet.AsyncListener;
@@ -30,6 +30,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.BeanUtils;
+import org.springframework.util.Assert;
 import org.springframework.web.util.WebUtils;
 
 /**
@@ -50,10 +51,18 @@ public class MockAsyncContext implements AsyncContext {
 
 	private long timeout = 10 * 1000L;	// 10 seconds is Tomcat's default
 
+	private final List<Runnable> dispatchHandlers = new ArrayList<Runnable>();
+
 
 	public MockAsyncContext(ServletRequest request, ServletResponse response) {
 		this.request = (HttpServletRequest) request;
 		this.response = (HttpServletResponse) response;
+	}
+
+
+	public void addDispatchHandler(Runnable handler) {
+		Assert.notNull(handler, "Dispatch handler must not be null");
+		this.dispatchHandlers.add(handler);
 	}
 
 	@Override
@@ -68,11 +77,7 @@ public class MockAsyncContext implements AsyncContext {
 
 	@Override
 	public boolean hasOriginalRequestAndResponse() {
-		return (this.request instanceof MockHttpServletRequest) && (this.response instanceof MockHttpServletResponse);
-	}
-
-	public String getDispatchedPath() {
-		return this.dispatchedPath;
+		return (this.request instanceof MockHttpServletRequest && this.response instanceof MockHttpServletResponse);
 	}
 
 	@Override
@@ -88,6 +93,13 @@ public class MockAsyncContext implements AsyncContext {
 	@Override
 	public void dispatch(ServletContext context, String path) {
 		this.dispatchedPath = path;
+		for (Runnable r : this.dispatchHandlers) {
+			r.run();
+		}
+	}
+
+	public String getDispatchedPath() {
+		return this.dispatchedPath;
 	}
 
 	@Override
@@ -100,8 +112,8 @@ public class MockAsyncContext implements AsyncContext {
 			try {
 				listener.onComplete(new AsyncEvent(this, this.request, this.response));
 			}
-			catch (IOException e) {
-				throw new IllegalStateException("AsyncListener failure", e);
+			catch (IOException ex) {
+				throw new IllegalStateException("AsyncListener failure", ex);
 			}
 		}
 	}
@@ -109,10 +121,6 @@ public class MockAsyncContext implements AsyncContext {
 	@Override
 	public void start(Runnable runnable) {
 		runnable.run();
-	}
-
-	public List<AsyncListener> getListeners() {
-		return this.listeners;
 	}
 
 	@Override
@@ -125,19 +133,23 @@ public class MockAsyncContext implements AsyncContext {
 		this.listeners.add(listener);
 	}
 
+	public List<AsyncListener> getListeners() {
+		return this.listeners;
+	}
+
 	@Override
 	public <T extends AsyncListener> T createListener(Class<T> clazz) throws ServletException {
 		return BeanUtils.instantiateClass(clazz);
 	}
 
 	@Override
-	public long getTimeout() {
-		return this.timeout;
+	public void setTimeout(long timeout) {
+		this.timeout = timeout;
 	}
 
 	@Override
-	public void setTimeout(long timeout) {
-		this.timeout = timeout;
+	public long getTimeout() {
+		return this.timeout;
 	}
 
 }

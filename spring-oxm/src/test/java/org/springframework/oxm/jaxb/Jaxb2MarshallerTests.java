@@ -22,7 +22,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.Collections;
-
 import javax.activation.DataHandler;
 import javax.activation.FileDataSource;
 import javax.xml.bind.JAXBElement;
@@ -36,12 +35,18 @@ import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
 import org.junit.Test;
+
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
+
+import org.xml.sax.Attributes;
+import org.xml.sax.ContentHandler;
+import org.xml.sax.InputSource;
+import org.xml.sax.Locator;
+
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.oxm.AbstractMarshallerTests;
-import org.springframework.oxm.Marshaller;
 import org.springframework.oxm.UncategorizedMappingException;
 import org.springframework.oxm.XmlMappingException;
 import org.springframework.oxm.jaxb.test.FlightType;
@@ -50,31 +55,29 @@ import org.springframework.oxm.jaxb.test.ObjectFactory;
 import org.springframework.oxm.mime.MimeContainer;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.util.ReflectionUtils;
-import org.xml.sax.Attributes;
-import org.xml.sax.ContentHandler;
-import org.xml.sax.InputSource;
-import org.xml.sax.Locator;
 
-
-import static org.junit.Assert.*;
-import static org.custommonkey.xmlunit.XMLAssert.assertXMLEqual;
+import static org.custommonkey.xmlunit.XMLAssert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.BDDMockito.*;
 
 /**
  * @author Arjen Poutsma
  * @author Biju Kunjummen
+ * @author Sam Brannen
  */
-public class Jaxb2MarshallerTests extends AbstractMarshallerTests {
+public class Jaxb2MarshallerTests extends AbstractMarshallerTests<Jaxb2Marshaller> {
 
 	private static final String CONTEXT_PATH = "org.springframework.oxm.jaxb.test";
 
-	private Jaxb2Marshaller marshaller;
-
 	private Flights flights;
 
+
 	@Override
-	public Marshaller createMarshaller() throws Exception {
-		marshaller = new Jaxb2Marshaller();
+	protected Jaxb2Marshaller createMarshaller() throws Exception {
+		Jaxb2Marshaller marshaller = new Jaxb2Marshaller();
 		marshaller.setContextPath(CONTEXT_PATH);
 		marshaller.afterPropertiesSet();
 		return marshaller;
@@ -88,6 +91,7 @@ public class Jaxb2MarshallerTests extends AbstractMarshallerTests {
 		flights.getFlight().add(flight);
 		return flights;
 	}
+
 
 	@Test
 	public void marshalSAXResult() throws Exception {
@@ -294,7 +298,7 @@ public class Jaxb2MarshallerTests extends AbstractMarshallerTests {
 	public void marshalAWrappedObjectHoldingAnXmlElementDeclElement() throws Exception {
 		// SPR-10714
 		marshaller = new Jaxb2Marshaller();
-		marshaller.setPackagesToScan(new String[] { "org.springframework.oxm.jaxb" });
+		marshaller.setPackagesToScan(new String[]{"org.springframework.oxm.jaxb"});
 		marshaller.afterPropertiesSet();
 		Airplane airplane = new Airplane();
 		airplane.setName("test");
@@ -331,8 +335,8 @@ public class Jaxb2MarshallerTests extends AbstractMarshallerTests {
 		// 2. external-general-entities and dtd support enabled
 
 		reset(unmarshaller);
-		marshaller.setSupportDtd(true);
 		marshaller.setProcessExternalEntities(true);
+		marshaller.setSupportDtd(true);
 
 		marshaller.unmarshal(new StreamSource("1"));
 		verify(unmarshaller).unmarshal(sourceCaptor.capture());
@@ -345,7 +349,7 @@ public class Jaxb2MarshallerTests extends AbstractMarshallerTests {
 	// SPR-10806
 
 	@Test
-	public void unmarshalSaxSourceExternalEntities() throws Exception {
+	public void unmarshalSaxSourceWithXmlOptions() throws Exception {
 
 		final javax.xml.bind.Unmarshaller unmarshaller = mock(javax.xml.bind.Unmarshaller.class);
 		Jaxb2Marshaller marshaller = new Jaxb2Marshaller() {
@@ -368,8 +372,8 @@ public class Jaxb2MarshallerTests extends AbstractMarshallerTests {
 		// 2. external-general-entities and dtd support enabled
 
 		reset(unmarshaller);
-		marshaller.setSupportDtd(true);
 		marshaller.setProcessExternalEntities(true);
+		marshaller.setSupportDtd(true);
 
 		marshaller.unmarshal(new SAXSource(new InputSource("1")));
 		verify(unmarshaller).unmarshal(sourceCaptor.capture());
@@ -385,7 +389,6 @@ public class Jaxb2MarshallerTests extends AbstractMarshallerTests {
 	public static class DummyRootElement {
 
 		private DummyType t = new DummyType();
-
 	}
 
 	@XmlType
@@ -393,7 +396,6 @@ public class Jaxb2MarshallerTests extends AbstractMarshallerTests {
 	public static class DummyType {
 
 		private String s = "Hello";
-
 	}
 
 	@SuppressWarnings("unused")

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -115,27 +115,19 @@ public class GenericWebApplicationContext extends GenericApplicationContext
 	/**
 	 * Set the ServletContext that this WebApplicationContext runs in.
 	 */
+	@Override
 	public void setServletContext(ServletContext servletContext) {
 		this.servletContext = servletContext;
 	}
 
+	@Override
 	public ServletContext getServletContext() {
 		return this.servletContext;
 	}
 
 	@Override
 	public String getApplicationName() {
-		if (this.servletContext == null) {
-			return "";
-		}
-		if (this.servletContext.getMajorVersion() == 2 && this.servletContext.getMinorVersion() < 5) {
-			String name = this.servletContext.getServletContextName();
-			return (name != null ? name : "");
-		}
-		else {
-			// Servlet 2.5 available
-			return this.servletContext.getContextPath();
-		}
+		return (this.servletContext != null ? this.servletContext.getContextPath() : "");
 	}
 
 	/**
@@ -197,6 +189,7 @@ public class GenericWebApplicationContext extends GenericApplicationContext
 		}
 	}
 
+	@Override
 	public Theme getTheme(String themeName) {
 		return this.themeSource.getTheme(themeName);
 	}
@@ -206,24 +199,29 @@ public class GenericWebApplicationContext extends GenericApplicationContext
 	// Pseudo-implementation of ConfigurableWebApplicationContext
 	// ---------------------------------------------------------------------
 
+	@Override
 	public void setServletConfig(ServletConfig servletConfig) {
 		// no-op
 	}
 
+	@Override
 	public ServletConfig getServletConfig() {
 		throw new UnsupportedOperationException(
 				"GenericWebApplicationContext does not support getServletConfig()");
 	}
 
+	@Override
 	public void setNamespace(String namespace) {
 		// no-op
 	}
 
+	@Override
 	public String getNamespace() {
 		throw new UnsupportedOperationException(
 				"GenericWebApplicationContext does not support getNamespace()");
 	}
 
+	@Override
 	public void setConfigLocation(String configLocation) {
 		if (StringUtils.hasText(configLocation)) {
 			throw new UnsupportedOperationException(
@@ -232,7 +230,8 @@ public class GenericWebApplicationContext extends GenericApplicationContext
 		}
 	}
 
-	public void setConfigLocations(String[] configLocations) {
+	@Override
+	public void setConfigLocations(String... configLocations) {
 		if (!ObjectUtils.isEmpty(configLocations)) {
 			throw new UnsupportedOperationException(
 					"GenericWebApplicationContext does not support setConfigLocations(). " +
@@ -240,6 +239,7 @@ public class GenericWebApplicationContext extends GenericApplicationContext
 		}
 	}
 
+	@Override
 	public String[] getConfigLocations() {
 		throw new UnsupportedOperationException(
 				"GenericWebApplicationContext does not support getConfigLocations()");

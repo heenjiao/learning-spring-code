@@ -18,7 +18,6 @@ package org.springframework.web.servlet.handler;
 
 import java.util.Collections;
 import java.util.List;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -42,6 +41,7 @@ public class HandlerExceptionResolverComposite implements HandlerExceptionResolv
 		this.order = order;
 	}
 
+	@Override
 	public int getOrder() {
 		return this.order;
 	}
@@ -64,6 +64,7 @@ public class HandlerExceptionResolverComposite implements HandlerExceptionResolv
 	 * Resolve the exception by iterating over the list of configured exception resolvers.
 	 * The first one to return a ModelAndView instance wins. Otherwise {@code null} is returned.
 	 */
+	@Override
 	public ModelAndView resolveException(HttpServletRequest request,
 										 HttpServletResponse response,
 										 Object handler,

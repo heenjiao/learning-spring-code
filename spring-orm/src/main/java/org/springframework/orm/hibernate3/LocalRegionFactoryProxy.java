@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.springframework.orm.hibernate3;
 
-import java.lang.reflect.Method;
 import java.util.Properties;
 
 import org.hibernate.cache.CacheDataDescription;
@@ -29,20 +28,17 @@ import org.hibernate.cache.TimestampsRegion;
 import org.hibernate.cache.access.AccessType;
 import org.hibernate.cfg.Settings;
 
-import org.springframework.util.ReflectionUtils;
-
 /**
  * Proxy for a Hibernate RegionFactory, delegating to a Spring-managed
  * RegionFactory instance, determined by LocalSessionFactoryBean's
  * "cacheRegionFactory" property.
  *
- * <p>Compatible with Hibernate 3.3 as well as Hibernate 3.5's version
- * of the RegionFactory SPI.
- *
  * @author Juergen Hoeller
  * @since 3.0
  * @see LocalSessionFactoryBean#setCacheRegionFactory
+ * @deprecated as of Spring 4.3, in favor of Hibernate 4.x/5.x
  */
+@Deprecated
 public class LocalRegionFactoryProxy implements RegionFactory {
 
 	private final RegionFactory regionFactory;
@@ -70,50 +66,53 @@ public class LocalRegionFactoryProxy implements RegionFactory {
 	}
 
 
+	@Override
 	public void start(Settings settings, Properties properties) throws CacheException {
 		this.regionFactory.start(settings, properties);
 	}
 
+	@Override
 	public void stop() {
 		this.regionFactory.stop();
 	}
 
+	@Override
 	public boolean isMinimalPutsEnabledByDefault() {
 		return this.regionFactory.isMinimalPutsEnabledByDefault();
 	}
 
+	@Override
 	public AccessType getDefaultAccessType() {
-		try {
-			Method method = RegionFactory.class.getMethod("getDefaultAccessType");
-			return (AccessType) ReflectionUtils.invokeMethod(method, this.regionFactory);
-		}
-		catch (NoSuchMethodException ex) {
-			throw new IllegalStateException("getDefaultAccessType requires Hibernate 3.5+");
-		}
+		return this.regionFactory.getDefaultAccessType();
 	}
 
+	@Override
 	public long nextTimestamp() {
 		return this.regionFactory.nextTimestamp();
 	}
 
+	@Override
 	public EntityRegion buildEntityRegion(String regionName, Properties properties, CacheDataDescription metadata)
 			throws CacheException {
 
 		return this.regionFactory.buildEntityRegion(regionName, properties, metadata);
 	}
 
+	@Override
 	public CollectionRegion buildCollectionRegion(String regionName, Properties properties,
 			CacheDataDescription metadata) throws CacheException {
 
 		return this.regionFactory.buildCollectionRegion(regionName, properties, metadata);
 	}
 
+	@Override
 	public QueryResultsRegion buildQueryResultsRegion(String regionName, Properties properties)
 			throws CacheException {
 
 		return this.regionFactory.buildQueryResultsRegion(regionName, properties);
 	}
 
+	@Override
 	public TimestampsRegion buildTimestampsRegion(String regionName, Properties properties)
 			throws CacheException {
 

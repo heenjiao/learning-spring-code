@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import org.springframework.jdbc.core.namedparam.SqlParameterSource;
  * as it can easily be mocked or stubbed.
  *
  * @author Thomas Risberg
+ * @author Stephane Nicoll
  * @since 2.5
  */
 public interface SimpleJdbcCallOperations {
@@ -92,24 +93,20 @@ public interface SimpleJdbcCallOperations {
 	 * @param parameterName the name of the returned results and/or the name of the ref cursor parameter
 	 * @param rowMapper the RowMapper implementation that will map the data returned for each row
 	 * */
-	SimpleJdbcCallOperations returningResultSet(String parameterName, RowMapper rowMapper);
-
-	/**
-	 * Used to specify when a ResultSet is returned by the stored procedure and you want it mapped
-	 * by a RowMapper. The results will be returned using the parameter name specified. Multiple
-	 * ResultSets must be declared in the correct order. If the database you are using uses ref cursors
-	 * then the name specified must match the name of the parameter declared for the procedure in the
-	 * database.
-	 * @deprecated in favor of {@link #returningResultSet(String, org.springframework.jdbc.core.RowMapper)}
-	 */
-	@Deprecated
-	SimpleJdbcCallOperations returningResultSet(String parameterName, ParameterizedRowMapper rowMapper);
+	SimpleJdbcCallOperations returningResultSet(String parameterName, RowMapper<?> rowMapper);
 
 	/**
 	 * Turn off any processing of parameter meta data information obtained via JDBC.
 	 * @return the instance of this SimpleJdbcCall
 	 */
 	SimpleJdbcCallOperations withoutProcedureColumnMetaDataAccess();
+
+	/**
+	 * Indicates that parameters should be bound by name.
+	 * @return the instance of this SimpleJdbcCall
+	 * @since 4.2
+	 */
+	SimpleJdbcCallOperations withNamedBinding();
 
 
 	/**

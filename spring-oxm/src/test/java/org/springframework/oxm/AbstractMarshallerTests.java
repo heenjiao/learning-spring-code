@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2010 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.springframework.oxm;
 
 import java.io.ByteArrayOutputStream;
 import java.io.StringWriter;
+
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.stream.XMLEventWriter;
@@ -28,11 +29,11 @@ import javax.xml.transform.dom.DOMResult;
 import javax.xml.transform.stax.StAXResult;
 import javax.xml.transform.stream.StreamResult;
 
-import static org.custommonkey.xmlunit.XMLAssert.*;
 import org.custommonkey.xmlunit.XMLUnit;
-import static org.junit.Assert.assertTrue;
+
 import org.junit.Before;
 import org.junit.Test;
+
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -40,18 +41,22 @@ import org.w3c.dom.Text;
 
 import org.springframework.util.xml.StaxUtils;
 
+import static org.custommonkey.xmlunit.XMLAssert.*;
+import static org.junit.Assert.assertTrue;
+
 /**
  * @author Arjen Poutsma
+ * @author Sam Brannen
  */
-public abstract class AbstractMarshallerTests {
-
-	protected Marshaller marshaller;
-
-	protected Object flights;
+public abstract class AbstractMarshallerTests<M extends Marshaller> {
 
 	protected static final String EXPECTED_STRING =
 			"<tns:flights xmlns:tns=\"http://samples.springframework.org/flight\">" +
 					"<tns:flight><tns:number>42</tns:number></tns:flight></tns:flights>";
+
+	protected M marshaller;
+
+	protected Object flights;
 
 	@Before
 	public final void setUp() throws Exception {
@@ -60,7 +65,7 @@ public abstract class AbstractMarshallerTests {
 		XMLUnit.setIgnoreWhitespace(true);
 	}
 
-	protected abstract Marshaller createMarshaller() throws Exception;
+	protected abstract M createMarshaller() throws Exception;
 
 	protected abstract Object createFlights();
 
@@ -167,4 +172,5 @@ public abstract class AbstractMarshallerTests {
 		marshaller.marshal(flights, result);
 		assertXMLEqual("Marshaller writes invalid StreamResult", EXPECTED_STRING, writer.toString());
 	}
+
 }

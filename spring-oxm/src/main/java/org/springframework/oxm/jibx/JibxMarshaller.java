@@ -203,6 +203,7 @@ public class JibxMarshaller extends AbstractMarshaller implements InitializingBe
 	}
 
 
+	@Override
 	public void afterPropertiesSet() throws JiBXException {
 		if (this.targetClass != null) {
 			if (StringUtils.hasLength(this.bindingName)) {
@@ -233,10 +234,11 @@ public class JibxMarshaller extends AbstractMarshaller implements InitializingBe
 	}
 
 
+	@Override
 	public boolean supports(Class<?> clazz) {
 		Assert.notNull(clazz, "Class must not be null");
 		if (this.targetClass != null) {
-			return this.targetClass.equals(clazz);
+			return (this.targetClass == clazz);
 		}
 		String[] mappedClasses = this.bindingFactory.getMappedClasses();
 		String className = clazz.getName();

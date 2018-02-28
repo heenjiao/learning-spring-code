@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,21 @@
 
 package org.springframework.web.bind.support;
 
+import java.util.List;
+import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.Part;
+
 import org.springframework.beans.MutablePropertyValues;
+import org.springframework.util.ClassUtils;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.MultipartRequest;
 
 /**
@@ -50,6 +60,7 @@ import org.springframework.web.multipart.MultipartRequest;
  * ...</pre>
  *
  * @author Juergen Hoeller
+ * @author Brian Clozel
  * @since 2.5.2
  * @see #bind(org.springframework.web.context.request.WebRequest)
  * @see #registerCustomEditor
@@ -58,6 +69,9 @@ import org.springframework.web.multipart.MultipartRequest;
  * @see #setFieldMarkerPrefix
  */
 public class WebRequestDataBinder extends WebDataBinder {
+
+	private static final boolean servlet3Parts = ClassUtils.hasMethod(HttpServletRequest.class, "getParts");
+
 
 	/**
 	 * Create a new WebRequestDataBinder instance, with default object name.
@@ -89,24 +103,37 @@ public class WebRequestDataBinder extends WebDataBinder {
 	 * <p>Multipart files are bound via their parameter name, just like normal
 	 * HTTP parameters: i.e. "uploadedFile" to an "uploadedFile" bean property,
 	 * invoking a "setUploadedFile" setter method.
-	 * <p>The type of the target property for a multipart file can be MultipartFile,
+	 * <p>The type of the target property for a multipart file can be Part, MultipartFile,
 	 * byte[], or String. The latter two receive the contents of the uploaded file;
 	 * all metadata like original file name, content type, etc are lost in those cases.
 	 * @param request request with parameters to bind (can be multipart)
 	 * @see org.springframework.web.multipart.MultipartRequest
 	 * @see org.springframework.web.multipart.MultipartFile
-	 * @see #bindMultipartFiles
+	 * @see javax.servlet.http.Part
 	 * @see #bind(org.springframework.beans.PropertyValues)
 	 */
 	public void bind(WebRequest request) {
 		MutablePropertyValues mpvs = new MutablePropertyValues(request.getParameterMap());
-		if (request instanceof NativeWebRequest) {
+		if (isMultipartRequest(request) && request instanceof NativeWebRequest) {
 			MultipartRequest multipartRequest = ((NativeWebRequest) request).getNativeRequest(MultipartRequest.class);
 			if (multipartRequest != null) {
 				bindMultipart(multipartRequest.getMultiFileMap(), mpvs);
 			}
+			else if (servlet3Parts) {
+				HttpServletRequest serlvetRequest = ((NativeWebRequest) request).getNativeRequest(HttpServletRequest.class);
+				new Servlet3MultipartHelper(isBindEmptyMultipartFiles()).bindParts(serlvetRequest, mpvs);
+			}
 		}
 		doBind(mpvs);
+	}
+
+	/**
+	 * Check if the request is a multipart request (by checking its Content-Type header).
+	 * @param request request with parameters to bind
+	 */
+	private boolean isMultipartRequest(WebRequest request) {
+		String contentType = request.getHeader("Content-Type");
+		return (contentType != null && StringUtils.startsWithIgnoreCase(contentType, "multipart"));
 	}
 
 	/**
@@ -118,6 +145,43 @@ public class WebRequestDataBinder extends WebDataBinder {
 	public void closeNoCatch() throws BindException {
 		if (getBindingResult().hasErrors()) {
 			throw new BindException(getBindingResult());
+		}
+	}
+
+
+	/**
+	 * Encapsulate Part binding code for Servlet 3.0+ only containers.
+	 * @see javax.servlet.http.Part
+	 */
+	private static class Servlet3MultipartHelper {
+
+		private final boolean bindEmptyMultipartFiles;
+
+		public Servlet3MultipartHelper(boolean bindEmptyMultipartFiles) {
+			this.bindEmptyMultipartFiles = bindEmptyMultipartFiles;
+		}
+
+		public void bindParts(HttpServletRequest request, MutablePropertyValues mpvs) {
+			try {
+				MultiValueMap<String, Part> map = new LinkedMultiValueMap<String, Part>();
+				for (Part part : request.getParts()) {
+					map.add(part.getName(), part);
+				}
+				for (Map.Entry<String, List<Part>> entry: map.entrySet()) {
+					if (entry.getValue().size() == 1) {
+						Part part = entry.getValue().get(0);
+						if (this.bindEmptyMultipartFiles || part.getSize() > 0) {
+							mpvs.add(entry.getKey(), part);
+						}
+					}
+					else {
+						mpvs.add(entry.getKey(), entry.getValue());
+					}
+				}
+			}
+			catch (Exception ex) {
+				throw new MultipartException("Failed to get request parts", ex);
+			}
 		}
 	}
 

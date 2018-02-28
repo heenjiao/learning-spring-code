@@ -21,9 +21,12 @@ import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.nio.charset.Charset;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 import javax.xml.transform.Source;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.sax.SAXSource;
+import javax.xml.transform.stax.StAXSource;
 import javax.xml.transform.stream.StreamSource;
 
 import org.junit.Before;
@@ -50,6 +53,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
+// Do NOT statically import org.junit.Assert.*, since XMLAssert extends junit.framework.Assert
+
 /**
  * @author Arjen Poutsma
  * @author Rossen Stoyanchev
@@ -70,6 +75,7 @@ public class SourceHttpMessageConverterTests {
 	public void setUp() throws IOException {
 		converter = new SourceHttpMessageConverter<Source>();
 		Resource external = new ClassPathResource("external.txt", getClass());
+
 		bodyExternal = "<!DOCTYPE root SYSTEM \"http://192.168.28.42/1.jsp\" [" +
 				"  <!ELEMENT root ANY >\n" +
 				"  <!ENTITY ext SYSTEM \"" + external.getURI() + "\" >]><root>&ext;</root>";
@@ -196,6 +202,76 @@ public class SourceHttpMessageConverterTests {
 	}
 
 	@Test
+	public void readStAXSource() throws Exception {
+		MockHttpInputMessage inputMessage = new MockHttpInputMessage(BODY.getBytes("UTF-8"));
+		inputMessage.getHeaders().setContentType(new MediaType("application", "xml"));
+		StAXSource result = (StAXSource) converter.read(StAXSource.class, inputMessage);
+		XMLStreamReader streamReader = result.getXMLStreamReader();
+		assertTrue(streamReader.hasNext());
+		streamReader.nextTag();
+		String s = streamReader.getLocalName();
+		assertEquals("root", s);
+		s = streamReader.getElementText();
+		assertEquals("Hello World", s);
+		streamReader.close();
+	}
+
+	@Test
+	public void readStAXSourceExternal() throws Exception {
+		MockHttpInputMessage inputMessage = new MockHttpInputMessage(bodyExternal.getBytes("UTF-8"));
+		inputMessage.getHeaders().setContentType(new MediaType("application", "xml"));
+		converter.setSupportDtd(true);
+		StAXSource result = (StAXSource) converter.read(StAXSource.class, inputMessage);
+		XMLStreamReader streamReader = result.getXMLStreamReader();
+		assertTrue(streamReader.hasNext());
+		streamReader.next();
+		streamReader.next();
+		String s = streamReader.getLocalName();
+		assertEquals("root", s);
+		try {
+			s = streamReader.getElementText();
+			assertNotEquals("Foo Bar", s);
+		}
+		catch (XMLStreamException ex) {
+			// Some parsers raise a parse exception
+		}
+		streamReader.close();
+	}
+
+	@Test
+	public void readStAXSourceWithXmlBomb() throws Exception {
+		// https://en.wikipedia.org/wiki/Billion_laughs
+		// https://msdn.microsoft.com/en-us/magazine/ee335713.aspx
+		String content = "<?xml version=\"1.0\"?>\n" +
+				"<!DOCTYPE lolz [\n" +
+				" <!ENTITY lol \"lol\">\n" +
+				" <!ELEMENT lolz (#PCDATA)>\n" +
+				" <!ENTITY lol1 \"&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;\">\n" +
+				" <!ENTITY lol2 \"&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;\">\n" +
+				" <!ENTITY lol3 \"&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;\">\n" +
+				" <!ENTITY lol4 \"&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;\">\n" +
+				" <!ENTITY lol5 \"&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;\">\n" +
+				" <!ENTITY lol6 \"&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;\">\n" +
+				" <!ENTITY lol7 \"&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;\">\n" +
+				" <!ENTITY lol8 \"&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;\">\n" +
+				" <!ENTITY lol9 \"&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;\">\n" +
+				"]>\n" +
+				"<root>&lol9;</root>";
+		MockHttpInputMessage inputMessage = new MockHttpInputMessage(content.getBytes("UTF-8"));
+		StAXSource result = (StAXSource) this.converter.read(StAXSource.class, inputMessage);
+
+		XMLStreamReader streamReader = result.getXMLStreamReader();
+		assertTrue(streamReader.hasNext());
+		streamReader.next();
+		streamReader.next();
+		String s = streamReader.getLocalName();
+		assertEquals("root", s);
+
+		this.thrown.expectMessage("\"lol9\"");
+		s = streamReader.getElementText();
+	}
+
+	@Test
 	public void readStreamSource() throws Exception {
 		MockHttpInputMessage inputMessage = new MockHttpInputMessage(BODY.getBytes("UTF-8"));
 		inputMessage.getHeaders().setContentType(new MediaType("application", "xml"));
@@ -235,6 +311,7 @@ public class SourceHttpMessageConverterTests {
 	public void writeSAXSource() throws Exception {
 		String xml = "<root>Hello World</root>";
 		SAXSource saxSource = new SAXSource(new InputSource(new StringReader(xml)));
+
 		MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
 		converter.write(saxSource, null, outputMessage);
 		assertXMLEqual("Invalid result", "<root>Hello World</root>",
@@ -247,6 +324,7 @@ public class SourceHttpMessageConverterTests {
 	public void writeStreamSource() throws Exception {
 		String xml = "<root>Hello World</root>";
 		StreamSource streamSource = new StreamSource(new StringReader(xml));
+
 		MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
 		converter.write(streamSource, null, outputMessage);
 		assertXMLEqual("Invalid result", "<root>Hello World</root>",

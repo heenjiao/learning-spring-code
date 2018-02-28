@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ import org.springframework.util.ObjectUtils;
  * @see LazyInitTargetSource
  * @see PrototypeTargetSource
  * @see ThreadLocalTargetSource
- * @see CommonsPoolTargetSource
+ * @see CommonsPool2TargetSource
  */
 public abstract class AbstractBeanFactoryBasedTargetSource implements TargetSource, BeanFactoryAware, Serializable {
 
@@ -103,6 +103,7 @@ public abstract class AbstractBeanFactoryBasedTargetSource implements TargetSour
 	 * Set the owning BeanFactory. We need to save a reference so that we can
 	 * use the {@code getBean} method on every invocation.
 	 */
+	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
 		if (this.targetBeanName == null) {
 			throw new IllegalStateException("Property 'targetBeanName' is required");
@@ -118,6 +119,7 @@ public abstract class AbstractBeanFactoryBasedTargetSource implements TargetSour
 	}
 
 
+	@Override
 	public synchronized Class<?> getTargetClass() {
 		if (this.targetClass == null && this.beanFactory != null) {
 			// Determine type of the target bean.
@@ -135,10 +137,12 @@ public abstract class AbstractBeanFactoryBasedTargetSource implements TargetSour
 		return this.targetClass;
 	}
 
+	@Override
 	public boolean isStatic() {
 		return false;
 	}
 
+	@Override
 	public void releaseTarget(Object target) throws Exception {
 		// Nothing to do here.
 	}
@@ -161,7 +165,7 @@ public abstract class AbstractBeanFactoryBasedTargetSource implements TargetSour
 		if (this == other) {
 			return true;
 		}
-		if (other == null || !getClass().equals(other.getClass())) {
+		if (other == null || getClass() != other.getClass()) {
 			return false;
 		}
 		AbstractBeanFactoryBasedTargetSource otherTargetSource = (AbstractBeanFactoryBasedTargetSource) other;

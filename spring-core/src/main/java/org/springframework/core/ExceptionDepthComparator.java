@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2011 the original author or authors.
+ * Copyright 2002-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,19 +55,20 @@ public class ExceptionDepthComparator implements Comparator<Class<? extends Thro
 	}
 
 
+	@Override
 	public int compare(Class<? extends Throwable> o1, Class<? extends Throwable> o2) {
 		int depth1 = getDepth(o1, this.targetException, 0);
 		int depth2 = getDepth(o2, this.targetException, 0);
 		return (depth1 - depth2);
 	}
 
-	private int getDepth(Class declaredException, Class exceptionToMatch, int depth) {
-		if (declaredException.equals(exceptionToMatch)) {
+	private int getDepth(Class<?> declaredException, Class<?> exceptionToMatch, int depth) {
+		if (exceptionToMatch.equals(declaredException)) {
 			// Found it!
 			return depth;
 		}
 		// If we've gone as far as we can go and haven't found it...
-		if (Throwable.class.equals(exceptionToMatch)) {
+		if (exceptionToMatch == Throwable.class) {
 			return Integer.MAX_VALUE;
 		}
 		return getDepth(declaredException, exceptionToMatch.getSuperclass(), depth + 1);

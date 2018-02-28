@@ -93,6 +93,11 @@ public class ServletWrappingController extends AbstractController
 	private Servlet servletInstance;
 
 
+	public ServletWrappingController() {
+		super(false);
+	}
+
+
 	/**
 	 * Set the class of the servlet to wrap.
 	 * Needs to implement {@code javax.servlet.Servlet}.
@@ -118,6 +123,7 @@ public class ServletWrappingController extends AbstractController
 		this.initParameters = initParameters;
 	}
 
+	@Override
 	public void setBeanName(String name) {
 		this.beanName = name;
 	}
@@ -127,6 +133,7 @@ public class ServletWrappingController extends AbstractController
 	 * Initialize the wrapped Servlet instance.
 	 * @see javax.servlet.Servlet#init(javax.servlet.ServletConfig)
 	 */
+	@Override
 	public void afterPropertiesSet() throws Exception {
 		if (this.servletClass == null) {
 			throw new IllegalArgumentException("'servletClass' is required");
@@ -156,6 +163,7 @@ public class ServletWrappingController extends AbstractController
 	 * Destroy the wrapped Servlet instance.
 	 * @see javax.servlet.Servlet#destroy()
 	 */
+	@Override
 	public void destroy() {
 		this.servletInstance.destroy();
 	}
@@ -168,20 +176,25 @@ public class ServletWrappingController extends AbstractController
 	 */
 	private class DelegatingServletConfig implements ServletConfig {
 
+		@Override
 		public String getServletName() {
 			return servletName;
 		}
 
+		@Override
 		public ServletContext getServletContext() {
 			return ServletWrappingController.this.getServletContext();
 		}
 
+		@Override
 		public String getInitParameter(String paramName) {
 			return initParameters.getProperty(paramName);
 		}
 
-		public Enumeration getInitParameterNames() {
-			return initParameters.keys();
+		@Override
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		public Enumeration<String> getInitParameterNames() {
+			return (Enumeration) initParameters.keys();
 		}
 	}
 

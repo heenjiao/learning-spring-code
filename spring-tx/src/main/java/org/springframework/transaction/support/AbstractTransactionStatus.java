@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,6 +56,7 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 	// Handling of current transaction state
 	//---------------------------------------------------------------------
 
+	@Override
 	public void setRollbackOnly() {
 		this.rollbackOnly = true;
 	}
@@ -67,6 +68,7 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 	 * @see #isLocalRollbackOnly()
 	 * @see #isGlobalRollbackOnly()
 	 */
+	@Override
 	public boolean isRollbackOnly() {
 		return (isLocalRollbackOnly() || isGlobalRollbackOnly());
 	}
@@ -92,6 +94,7 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 	/**
 	 * This implementations is empty, considering flush as a no-op.
 	 */
+	@Override
 	public void flush() {
 	}
 
@@ -102,6 +105,7 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 		this.completed = true;
 	}
 
+	@Override
 	public boolean isCompleted() {
 		return this.completed;
 	}
@@ -126,6 +130,7 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 		return this.savepoint;
 	}
 
+	@Override
 	public boolean hasSavepoint() {
 		return (this.savepoint != null);
 	}
@@ -140,13 +145,16 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 	}
 
 	/**
-	 * Roll back to the savepoint that is held for the transaction.
+	 * Roll back to the savepoint that is held for the transaction
+	 * and release the savepoint right afterwards.
 	 */
 	public void rollbackToHeldSavepoint() throws TransactionException {
 		if (!hasSavepoint()) {
-			throw new TransactionUsageException("No savepoint associated with current transaction");
+			throw new TransactionUsageException(
+					"Cannot roll back to savepoint - no savepoint associated with current transaction");
 		}
 		getSavepointManager().rollbackToSavepoint(getSavepoint());
+		getSavepointManager().releaseSavepoint(getSavepoint());
 		setSavepoint(null);
 	}
 
@@ -155,7 +163,8 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 	 */
 	public void releaseHeldSavepoint() throws TransactionException {
 		if (!hasSavepoint()) {
-			throw new TransactionUsageException("No savepoint associated with current transaction");
+			throw new TransactionUsageException(
+					"Cannot release savepoint - no savepoint associated with current transaction");
 		}
 		getSavepointManager().releaseSavepoint(getSavepoint());
 		setSavepoint(null);
@@ -172,6 +181,7 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 	 * @see #getSavepointManager()
 	 * @see org.springframework.transaction.SavepointManager
 	 */
+	@Override
 	public Object createSavepoint() throws TransactionException {
 		return getSavepointManager().createSavepoint();
 	}
@@ -183,6 +193,7 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 	 * @see #getSavepointManager()
 	 * @see org.springframework.transaction.SavepointManager
 	 */
+	@Override
 	public void rollbackToSavepoint(Object savepoint) throws TransactionException {
 		getSavepointManager().rollbackToSavepoint(savepoint);
 	}
@@ -193,6 +204,7 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 	 * @see #getSavepointManager()
 	 * @see org.springframework.transaction.SavepointManager
 	 */
+	@Override
 	public void releaseSavepoint(Object savepoint) throws TransactionException {
 		getSavepointManager().releaseSavepoint(savepoint);
 	}

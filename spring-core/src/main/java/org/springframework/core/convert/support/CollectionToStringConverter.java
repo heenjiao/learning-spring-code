@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2011 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,24 +36,30 @@ final class CollectionToStringConverter implements ConditionalGenericConverter {
 
 	private final ConversionService conversionService;
 
+
 	public CollectionToStringConverter(ConversionService conversionService) {
 		this.conversionService = conversionService;
 	}
 
+
+	@Override
 	public Set<ConvertiblePair> getConvertibleTypes() {
 		return Collections.singleton(new ConvertiblePair(Collection.class, String.class));
 	}
 
+	@Override
 	public boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {
-		return ConversionUtils.canConvertElements(sourceType.getElementTypeDescriptor(), targetType, this.conversionService);
+		return ConversionUtils.canConvertElements(
+				sourceType.getElementTypeDescriptor(), targetType, this.conversionService);
 	}
 
+	@Override
 	public Object convert(Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
 		if (source == null) {
 			return null;
 		}
 		Collection<?> sourceCollection = (Collection<?>) source;
-		if (sourceCollection.size() == 0) {
+		if (sourceCollection.isEmpty()) {
 			return "";
 		}
 		StringBuilder sb = new StringBuilder();
@@ -62,7 +68,8 @@ final class CollectionToStringConverter implements ConditionalGenericConverter {
 			if (i > 0) {
 				sb.append(DELIMITER);
 			}
-			Object targetElement = this.conversionService.convert(sourceElement, sourceType.elementTypeDescriptor(sourceElement), targetType);
+			Object targetElement = this.conversionService.convert(
+					sourceElement, sourceType.elementTypeDescriptor(sourceElement), targetType);
 			sb.append(targetElement);
 			i++;
 		}

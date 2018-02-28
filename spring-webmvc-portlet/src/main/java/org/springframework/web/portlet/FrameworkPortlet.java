@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -432,6 +432,7 @@ public abstract class FrameworkPortlet extends GenericPortletBean
 	 * triggering a refresh of this servlet's context-dependent state.
 	 * @param event the incoming ApplicationContext event
 	 */
+	@Override
 	public void onApplicationEvent(ContextRefreshedEvent event) {
 		this.refreshEventReceived = true;
 		onRefresh(event.getApplicationContext());
@@ -516,9 +517,10 @@ public abstract class FrameworkPortlet extends GenericPortletBean
 		// Expose current RequestAttributes to current thread.
 		RequestAttributes previousRequestAttributes = RequestContextHolder.getRequestAttributes();
 		PortletRequestAttributes requestAttributes = null;
-		if (previousRequestAttributes == null || previousRequestAttributes.getClass().equals(PortletRequestAttributes.class) ||
-				previousRequestAttributes.getClass().equals(ServletRequestAttributes.class)) {
-			requestAttributes = new PortletRequestAttributes(request);
+		if (previousRequestAttributes == null ||
+				PortletRequestAttributes.class == previousRequestAttributes.getClass() ||
+				ServletRequestAttributes.class == previousRequestAttributes.getClass()) {
+			requestAttributes = new PortletRequestAttributes(request, response);
 			RequestContextHolder.setRequestAttributes(requestAttributes, this.threadContextInheritable);
 		}
 
@@ -623,7 +625,7 @@ public abstract class FrameworkPortlet extends GenericPortletBean
 		}
 
 		// Try the Portlet USER_INFO map.
-		Map userInfo = (Map) request.getAttribute(PortletRequest.USER_INFO);
+		Map<?, ?> userInfo = (Map<?, ?>) request.getAttribute(PortletRequest.USER_INFO);
 		if (userInfo != null) {
 			for (int i = 0, n = this.userinfoUsernameAttributes.length; i < n; i++) {
 				userName = (String) userInfo.get(this.userinfoUsernameAttributes[i]);

@@ -29,13 +29,24 @@ import org.springframework.util.Assert;
  * @author Thomas Risberg
  * @author Juergen Hoeller
  * @since 3.0
+ * @see #setRowMapper
  * @see #setRowMapperClass
  */
 public class GenericSqlQuery<T> extends SqlQuery<T> {
 
+	private RowMapper<T> rowMapper;
+
 	@SuppressWarnings("rawtypes")
 	private Class<? extends RowMapper> rowMapperClass;
 
+
+	/**
+	 * Set a specific {@link RowMapper} instance to use for this query.
+	 * @since 4.3.2
+	 */
+	public void setRowMapper(RowMapper<T> rowMapper) {
+		this.rowMapper = rowMapper;
+	}
 
 	/**
 	 * Set a {@link RowMapper} class for this query, creating a fresh
@@ -46,16 +57,18 @@ public class GenericSqlQuery<T> extends SqlQuery<T> {
 		this.rowMapperClass = rowMapperClass;
 	}
 
+	@Override
 	public void afterPropertiesSet() {
 		super.afterPropertiesSet();
-		Assert.notNull(this.rowMapperClass, "'rowMapperClass' is required");
+		Assert.isTrue(this.rowMapper != null || this.rowMapperClass != null,
+				"'rowMapper' or 'rowMapperClass' is required");
 	}
 
 
 	@Override
 	@SuppressWarnings("unchecked")
-	protected RowMapper<T> newRowMapper(Object[] parameters, Map context) {
-		return BeanUtils.instantiateClass(this.rowMapperClass);
+	protected RowMapper<T> newRowMapper(Object[] parameters, Map<?, ?> context) {
+		return (this.rowMapper != null ? this.rowMapper : BeanUtils.instantiateClass(this.rowMapperClass));
 	}
 
 }

@@ -30,7 +30,7 @@ import org.springframework.aop.support.AopUtils;
  *
  * <p>Usage example:
  *
- * <pre>
+ * <pre class="code">
  * &lt;bean id=&quot;sessionFactory&quot; class=&quot;org.springframework.orm.hibernate3.LocalSessionFactoryBean&quot;&gt;
  *   ...
  *   &lt;property name=&quot;entityInterceptor&quot;&gt;
@@ -41,7 +41,9 @@ import org.springframework.aop.support.AopUtils;
  * @author Costin Leau
  * @author Juergen Hoeller
  * @since 2.0
+ * @deprecated as of Spring 4.3, in favor of Hibernate 4.x/5.x
  */
+@Deprecated
 @SuppressWarnings("serial")
 public class ScopedBeanInterceptor extends EmptyInterceptor {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,10 @@
 package org.springframework.http.client;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.URI;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.util.Assert;
 import org.springframework.util.StreamUtils;
 
 /**
@@ -37,15 +35,16 @@ final class BufferingClientHttpRequestWrapper extends AbstractBufferingClientHtt
 
 
 	BufferingClientHttpRequestWrapper(ClientHttpRequest request) {
-		Assert.notNull(request, "'request' must not be null");
 		this.request = request;
 	}
 
 
+	@Override
 	public HttpMethod getMethod() {
 		return this.request.getMethod();
 	}
 
+	@Override
 	public URI getURI() {
 		return this.request.getURI();
 	}

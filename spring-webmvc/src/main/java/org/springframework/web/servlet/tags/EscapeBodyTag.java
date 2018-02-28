@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,10 @@
 package org.springframework.web.servlet.tags;
 
 import java.io.IOException;
-
 import javax.servlet.jsp.JspException;
 import javax.servlet.jsp.tagext.BodyContent;
 import javax.servlet.jsp.tagext.BodyTag;
 
-import org.springframework.web.util.ExpressionEvaluationUtils;
-import org.springframework.web.util.HtmlUtils;
 import org.springframework.web.util.JavaScriptUtils;
 
 /**
@@ -55,9 +52,8 @@ public class EscapeBodyTag extends HtmlEscapingAwareTag implements BodyTag {
 	 * Set JavaScript escaping for this tag, as boolean value.
 	 * Default is "false".
 	 */
-	public void setJavaScriptEscape(String javaScriptEscape) throws JspException {
-		this.javaScriptEscape =
-				ExpressionEvaluationUtils.evaluateBoolean("javaScriptEscape", javaScriptEscape, pageContext);
+	public void setJavaScriptEscape(boolean javaScriptEscape) throws JspException {
+		this.javaScriptEscape = javaScriptEscape;
 	}
 
 
@@ -67,10 +63,12 @@ public class EscapeBodyTag extends HtmlEscapingAwareTag implements BodyTag {
 		return EVAL_BODY_BUFFERED;
 	}
 
+	@Override
 	public void doInitBody() {
 		// do nothing
 	}
 
+	@Override
 	public void setBodyContent(BodyContent bodyContent) {
 		this.bodyContent = bodyContent;
 	}
@@ -80,7 +78,7 @@ public class EscapeBodyTag extends HtmlEscapingAwareTag implements BodyTag {
 		try {
 			String content = readBodyContent();
 			// HTML and/or JavaScript escape, if demanded
-			content = isHtmlEscape() ? HtmlUtils.htmlEscape(content) : content;
+			content = htmlEscape(content);
 			content = this.javaScriptEscape ? JavaScriptUtils.javaScriptEscape(content) : content;
 			writeBodyContent(content);
 		}

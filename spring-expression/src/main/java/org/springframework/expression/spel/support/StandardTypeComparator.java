@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,13 @@
 
 package org.springframework.expression.spel.support;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+
 import org.springframework.expression.TypeComparator;
 import org.springframework.expression.spel.SpelEvaluationException;
 import org.springframework.expression.spel.SpelMessage;
+import org.springframework.util.NumberUtils;
 
 /**
  * A simple basic {@link TypeComparator} implementation.
@@ -26,10 +30,12 @@ import org.springframework.expression.spel.SpelMessage;
  *
  * @author Andy Clement
  * @author Juergen Hoeller
+ * @author Giovanni Dall'Oglio Risso
  * @since 3.0
  */
 public class StandardTypeComparator implements TypeComparator {
 
+	@Override
 	public boolean canCompare(Object left, Object right) {
 		if (left == null || right == null) {
 			return true;
@@ -43,6 +49,7 @@ public class StandardTypeComparator implements TypeComparator {
 		return false;
 	}
 
+	@Override
 	@SuppressWarnings("unchecked")
 	public int compare(Object left, Object right) throws SpelEvaluationException {
 		// If one is null, check if the other is
@@ -58,25 +65,47 @@ public class StandardTypeComparator implements TypeComparator {
 			Number leftNumber = (Number) left;
 			Number rightNumber = (Number) right;
 
-			if (leftNumber instanceof Double || rightNumber instanceof Double) {
+			if (leftNumber instanceof BigDecimal || rightNumber instanceof BigDecimal) {
+				BigDecimal leftBigDecimal = NumberUtils.convertNumberToTargetClass(leftNumber, BigDecimal.class);
+				BigDecimal rightBigDecimal = NumberUtils.convertNumberToTargetClass(rightNumber, BigDecimal.class);
+				return leftBigDecimal.compareTo(rightBigDecimal);
+			}
+			else if (leftNumber instanceof Double || rightNumber instanceof Double) {
 				return Double.compare(leftNumber.doubleValue(), rightNumber.doubleValue());
 			}
 			else if (leftNumber instanceof Float || rightNumber instanceof Float) {
 				return Float.compare(leftNumber.floatValue(), rightNumber.floatValue());
 			}
+			else if (leftNumber instanceof BigInteger || rightNumber instanceof BigInteger) {
+				BigInteger leftBigInteger = NumberUtils.convertNumberToTargetClass(leftNumber, BigInteger.class);
+				BigInteger rightBigInteger = NumberUtils.convertNumberToTargetClass(rightNumber, BigInteger.class);
+				return leftBigInteger.compareTo(rightBigInteger);
+			}
 			else if (leftNumber instanceof Long || rightNumber instanceof Long) {
 				// Don't call Long.compare here - only available on JDK 1.7+
 				return compare(leftNumber.longValue(), rightNumber.longValue());
 			}
-			else {
+			else if (leftNumber instanceof Integer || rightNumber instanceof Integer) {
 				// Don't call Integer.compare here - only available on JDK 1.7+
 				return compare(leftNumber.intValue(), rightNumber.intValue());
+			}
+			else if (leftNumber instanceof Short || rightNumber instanceof Short) {
+				// Don't call Short.compare here - only available on JDK 1.7+
+				return compare(leftNumber.shortValue(), rightNumber.shortValue());
+			}
+			else if (leftNumber instanceof Byte || rightNumber instanceof Byte) {
+				// Don't call Short.compare here - only available on JDK 1.7+
+				return compare(leftNumber.byteValue(), rightNumber.byteValue());
+			}
+			else {
+				// Unknown Number subtypes -> best guess is double multiplication
+				return Double.compare(leftNumber.doubleValue(), rightNumber.doubleValue());
 			}
 		}
 
 		try {
 			if (left instanceof Comparable) {
-				return ((Comparable) left).compareTo(right);
+				return ((Comparable<Object>) left).compareTo(right);
 			}
 		}
 		catch (ClassCastException ex) {
@@ -87,12 +116,20 @@ public class StandardTypeComparator implements TypeComparator {
 	}
 
 
+	private static int compare(long x, long y) {
+		return (x < y ? -1 : (x > y ? 1 : 0));
+	}
+
 	private static int compare(int x, int y) {
 		return (x < y ? -1 : (x > y ? 1 : 0));
 	}
 
-	private static int compare(long x, long y) {
-		return (x < y ? -1 : (x > y ? 1 : 0));
+	private static int compare(short x, short y) {
+		return x - y;
+	}
+
+	private static int compare(byte x, byte y) {
+		return x - y;
 	}
 
 }

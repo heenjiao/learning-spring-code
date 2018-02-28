@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,9 @@
 
 package org.springframework.web.servlet.mvc.method.annotation;
 
-import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Writer;
 import java.lang.reflect.Method;
-
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
 
@@ -44,11 +42,12 @@ import org.springframework.web.method.support.ModelAndViewContainer;
  */
 public class ServletResponseMethodArgumentResolver implements HandlerMethodArgumentResolver {
 
+	@Override
 	public boolean supportsParameter(MethodParameter parameter) {
 		Class<?> paramType = parameter.getParameterType();
-		return ServletResponse.class.isAssignableFrom(paramType)
-				|| OutputStream.class.isAssignableFrom(paramType)
-				|| Writer.class.isAssignableFrom(paramType);
+		return (ServletResponse.class.isAssignableFrom(paramType) ||
+				OutputStream.class.isAssignableFrom(paramType) ||
+				Writer.class.isAssignableFrom(paramType));
 	}
 
 	/**
@@ -57,10 +56,9 @@ public class ServletResponseMethodArgumentResolver implements HandlerMethodArgum
 	 * to the response. If subsequently the underlying method returns
 	 * {@code null}, the request is considered directly handled.
 	 */
-	public Object resolveArgument(
-			MethodParameter parameter, ModelAndViewContainer mavContainer,
-			NativeWebRequest webRequest, WebDataBinderFactory binderFactory)
-			throws IOException {
+	@Override
+	public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
+			NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
 
 		if (mavContainer != null) {
 			mavContainer.setRequestHandled(true);

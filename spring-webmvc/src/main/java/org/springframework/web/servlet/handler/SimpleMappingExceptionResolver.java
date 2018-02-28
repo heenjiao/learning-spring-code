@@ -268,7 +268,7 @@ public class SimpleMappingExceptionResolver extends AbstractHandlerExceptionReso
 			return depth;
 		}
 		// If we've gone as far as we can go and haven't found it...
-		if (exceptionClass.equals(Throwable.class)) {
+		if (exceptionClass == Throwable.class) {
 			return -1;
 		}
 		return getDepth(exceptionMapping, exceptionClass.getSuperclass(), depth + 1);

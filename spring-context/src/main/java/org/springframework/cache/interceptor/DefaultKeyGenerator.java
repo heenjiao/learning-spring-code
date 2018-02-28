@@ -26,17 +26,28 @@ import java.util.Arrays;
  * Uses the constant value {@value #NULL_PARAM_KEY} for any
  * {@code null} parameters given.
  *
+ * <p>NOTE: As this implementation returns only a hash of the parameters
+ * it is possible for key collisions to occur. Since Spring 4.0 the
+ * {@link SimpleKeyGenerator} is used when no explicit key generator
+ * has been defined. This class remains for applications that do not
+ * wish to migrate to the {@link SimpleKeyGenerator}.
+ *
  * @author Costin Leau
  * @author Chris Beams
  * @author Juergen Hoeller
  * @since 3.1
+ * @deprecated as of Spring 4.0, in favor of {@link SimpleKeyGenerator}
+ * or custom {@link KeyGenerator} implementations based on hash codes
  */
+@Deprecated
 public class DefaultKeyGenerator implements KeyGenerator {
 
 	public static final int NO_PARAM_KEY = 0;
 
 	public static final int NULL_PARAM_KEY = 53;
 
+
+	@Override
 	public Object generate(Object target, Method method, Object... params) {
 		if (params.length == 0) {
 			return NO_PARAM_KEY;

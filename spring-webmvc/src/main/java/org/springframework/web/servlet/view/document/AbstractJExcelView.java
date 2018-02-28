@@ -78,7 +78,10 @@ import org.springframework.web.servlet.view.AbstractView;
  * @since 1.2.5
  * @see AbstractExcelView
  * @see AbstractPdfView
+ * @deprecated as of Spring 4.0, since JExcelAPI is an abandoned project
+ * (no release since 2009, with serious bugs remaining)
  */
+@Deprecated
 public abstract class AbstractJExcelView extends AbstractView {
 
 	/** The content type for an Excel response */

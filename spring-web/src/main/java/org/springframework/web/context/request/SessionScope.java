@@ -81,12 +81,13 @@ public class SessionScope extends AbstractRequestAttributesScope {
 		return this.scope;
 	}
 
+	@Override
 	public String getConversationId() {
 		return RequestContextHolder.currentRequestAttributes().getSessionId();
 	}
 
 	@Override
-	public Object get(String name, ObjectFactory objectFactory) {
+	public Object get(String name, ObjectFactory<?> objectFactory) {
 		Object mutex = RequestContextHolder.currentRequestAttributes().getSessionMutex();
 		synchronized (mutex) {
 			return super.get(name, objectFactory);

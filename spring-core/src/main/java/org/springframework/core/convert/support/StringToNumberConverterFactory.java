@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2009 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,9 +40,11 @@ import org.springframework.util.NumberUtils;
  */
 final class StringToNumberConverterFactory implements ConverterFactory<String, Number> {
 
+	@Override
 	public <T extends Number> Converter<String, T> getConverter(Class<T> targetType) {
 		return new StringToNumber<T>(targetType);
 	}
+
 
 	private static final class StringToNumber<T extends Number> implements Converter<String, T> {
 
@@ -52,8 +54,9 @@ final class StringToNumberConverterFactory implements ConverterFactory<String, N
 			this.targetType = targetType;
 		}
 
+		@Override
 		public T convert(String source) {
-			if (source.length() == 0) {
+			if (source.isEmpty()) {
 				return null;
 			}
 			return NumberUtils.parseNumber(source, this.targetType);

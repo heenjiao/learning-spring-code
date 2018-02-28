@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.core.Ordered;
@@ -112,12 +113,18 @@ public class UrlBasedViewResolver extends AbstractCachingViewResolver implements
 
 	private boolean redirectHttp10Compatible = true;
 
+	private String[] redirectHosts;
+
 	private String requestContextAttribute;
 
 	/** Map of static attributes, keyed by attribute name (String) */
 	private final Map<String, Object> staticAttributes = new HashMap<String, Object>();
 
 	private Boolean exposePathVariables;
+
+	private Boolean exposeContextBeansAsAttributes;
+
+	private String[] exposedContextBeanNames;
 
 	private String[] viewNames;
 
@@ -250,6 +257,28 @@ public class UrlBasedViewResolver extends AbstractCachingViewResolver implements
 	}
 
 	/**
+	 * Configure one or more hosts associated with the application.
+	 * All other hosts will be considered external hosts.
+	 * <p>In effect, this property provides a way turn off encoding on redirect
+	 * via {@link HttpServletResponse#encodeRedirectURL} for URLs that have a
+	 * host and that host is not listed as a known host.
+	 * <p>If not set (the default) all URLs are encoded through the response.
+	 * @param redirectHosts one or more application hosts
+	 * @since 4.3
+	 */
+	public void setRedirectHosts(String... redirectHosts) {
+		this.redirectHosts = redirectHosts;
+	}
+
+	/**
+	 * Return the configured application hosts for redirect purposes.
+	 * @since 4.3
+	 */
+	public String[] getRedirectHosts() {
+		return this.redirectHosts;
+	}
+
+	/**
 	 * Set the name of the RequestContext attribute for all views.
 	 * @param requestContextAttribute name of the RequestContext attribute
 	 * @see AbstractView#setRequestContextAttribute
@@ -328,6 +357,37 @@ public class UrlBasedViewResolver extends AbstractCachingViewResolver implements
 	}
 
 	/**
+	 * Set whether to make all Spring beans in the application context accessible
+	 * as request attributes, through lazy checking once an attribute gets accessed.
+	 * <p>This will make all such beans accessible in plain {@code ${...}}
+	 * expressions in a JSP 2.0 page, as well as in JSTL's {@code c:out}
+	 * value expressions.
+	 * <p>Default is "false".
+	 * @see AbstractView#setExposeContextBeansAsAttributes
+	 */
+	public void setExposeContextBeansAsAttributes(boolean exposeContextBeansAsAttributes) {
+		this.exposeContextBeansAsAttributes = exposeContextBeansAsAttributes;
+	}
+
+	protected Boolean getExposeContextBeansAsAttributes() {
+		return this.exposeContextBeansAsAttributes;
+	}
+
+	/**
+	 * Specify the names of beans in the context which are supposed to be exposed.
+	 * If this is non-null, only the specified beans are eligible for exposure as
+	 * attributes.
+	 * @see AbstractView#setExposedContextBeanNames
+	 */
+	public void setExposedContextBeanNames(String... exposedContextBeanNames) {
+		this.exposedContextBeanNames = exposedContextBeanNames;
+	}
+
+	protected String[] getExposedContextBeanNames() {
+		return this.exposedContextBeanNames;
+	}
+
+	/**
 	 * Set the view names (or name patterns) that can be handled by this
 	 * {@link org.springframework.web.servlet.ViewResolver}. View names can contain
 	 * simple wildcards such that 'my*', '*Report' and '*Repo*' will all match the
@@ -358,6 +418,7 @@ public class UrlBasedViewResolver extends AbstractCachingViewResolver implements
 	 * Return the order in which this {@link org.springframework.web.servlet.ViewResolver}
 	 * is evaluated.
 	 */
+	@Override
 	public int getOrder() {
 		return this.order;
 	}
@@ -399,6 +460,7 @@ public class UrlBasedViewResolver extends AbstractCachingViewResolver implements
 		if (viewName.startsWith(REDIRECT_URL_PREFIX)) {
 			String redirectUrl = viewName.substring(REDIRECT_URL_PREFIX.length());
 			RedirectView view = new RedirectView(redirectUrl, isRedirectContextRelative(), isRedirectHttp10Compatible());
+			view.setHosts(getRedirectHosts());
 			return applyLifecycleMethods(viewName, view);
 		}
 		// Check for special "forward:" prefix.
@@ -480,6 +542,14 @@ public class UrlBasedViewResolver extends AbstractCachingViewResolver implements
 		Boolean exposePathVariables = getExposePathVariables();
 		if (exposePathVariables != null) {
 			view.setExposePathVariables(exposePathVariables);
+		}
+		Boolean exposeContextBeansAsAttributes = getExposeContextBeansAsAttributes();
+		if (exposeContextBeansAsAttributes != null) {
+			view.setExposeContextBeansAsAttributes(exposeContextBeansAsAttributes);
+		}
+		String[] exposedContextBeanNames = getExposedContextBeanNames();
+		if (exposedContextBeanNames != null) {
+			view.setExposedContextBeanNames(exposedContextBeanNames);
 		}
 
 		return view;

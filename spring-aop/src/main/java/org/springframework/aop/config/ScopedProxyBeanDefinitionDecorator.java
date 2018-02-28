@@ -27,7 +27,7 @@ import org.springframework.beans.factory.xml.ParserContext;
 
 /**
  * {@link BeanDefinitionDecorator} responsible for parsing the
- * {@code &lt;aop:scoped-proxy/&gt;} tag.
+ * {@code <aop:scoped-proxy/>} tag.
  *
  * @author Rob Harrop
  * @author Juergen Hoeller
@@ -39,6 +39,7 @@ class ScopedProxyBeanDefinitionDecorator implements BeanDefinitionDecorator {
 	private static final String PROXY_TARGET_CLASS = "proxy-target-class";
 
 
+	@Override
 	public BeanDefinitionHolder decorate(Node node, BeanDefinitionHolder definition, ParserContext parserContext) {
 		boolean proxyTargetClass = true;
 		if (node instanceof Element) {

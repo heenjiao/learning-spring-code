@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ import org.springframework.cache.CacheManager;
  * <p>Will simply accept any items into the cache not actually storing them.
  *
  * @author Costin Leau
+ * @author Stephane Nicoll
  * @since 3.1
  * @see CompositeCacheManager
  */
@@ -48,6 +49,7 @@ public class NoOpCacheManager implements CacheManager {
 	 * This implementation always returns a {@link Cache} implementation that will not store items.
 	 * Additionally, the request cache will be remembered by the manager for consistency.
 	 */
+	@Override
 	public Cache getCache(String name) {
 		Cache cache = this.caches.get(name);
 		if (cache == null) {
@@ -63,40 +65,10 @@ public class NoOpCacheManager implements CacheManager {
 	/**
 	 * This implementation returns the name of the caches previously requested.
 	 */
+	@Override
 	public Collection<String> getCacheNames() {
 		synchronized (this.cacheNames) {
 			return Collections.unmodifiableSet(this.cacheNames);
-		}
-	}
-
-
-	private static class NoOpCache implements Cache {
-
-		private final String name;
-
-		public NoOpCache(String name) {
-			this.name = name;
-		}
-
-		public void clear() {
-		}
-
-		public void evict(Object key) {
-		}
-
-		public ValueWrapper get(Object key) {
-			return null;
-		}
-
-		public String getName() {
-			return this.name;
-		}
-
-		public Object getNativeCache() {
-			return null;
-		}
-
-		public void put(Object key, Object value) {
 		}
 	}
 

@@ -16,17 +16,17 @@
 
 package org.springframework.scripting.jruby;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import org.junit.After;
 import org.junit.Test;
+
 import org.springframework.aop.framework.Advised;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.scripting.Messenger;
 import org.springframework.tests.aop.advice.CountingBeforeAdvice;
 import org.springframework.util.MBeanTestUtils;
+
+import static org.junit.Assert.*;
 
 /**
  * @author Rob Harrop
@@ -58,7 +58,8 @@ public final class AdvisedJRubyScriptFactoryTests {
 			assertEquals(0, advice.getCalls());
 			bean.getMessage();
 			assertEquals(1, advice.getCalls());
-		} finally {
+		}
+		finally {
 			ctx.close();
 		}
 	}
@@ -76,7 +77,8 @@ public final class AdvisedJRubyScriptFactoryTests {
 			assertEquals(0, advice.getCalls());
 			bean.getMessage();
 			assertEquals(1, advice.getCalls());
-		} finally {
+		}
+		finally {
 			ctx.close();
 		}
 	}

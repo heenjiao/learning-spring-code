@@ -139,7 +139,7 @@ public abstract class DataAccessUtils {
 
 		Object result = requiredUniqueResult(results);
 		if (requiredType != null && !requiredType.isInstance(result)) {
-			if (String.class.equals(requiredType)) {
+			if (String.class == requiredType) {
 				result = result.toString();
 			}
 			else if (Number.class.isAssignableFrom(requiredType) && Number.class.isInstance(result)) {
@@ -172,7 +172,7 @@ public abstract class DataAccessUtils {
 	 * @throws TypeMismatchDataAccessException if the unique object
 	 * in the collection is not convertible to an int
 	 */
-	public static int intResult(Collection results)
+	public static int intResult(Collection<?> results)
 			throws IncorrectResultSizeDataAccessException, TypeMismatchDataAccessException {
 
 		return objectResult(results, Number.class).intValue();
@@ -191,7 +191,7 @@ public abstract class DataAccessUtils {
 	 * @throws TypeMismatchDataAccessException if the unique object
 	 * in the collection is not convertible to a long
 	 */
-	public static long longResult(Collection results)
+	public static long longResult(Collection<?> results)
 			throws IncorrectResultSizeDataAccessException, TypeMismatchDataAccessException {
 
 		return objectResult(results, Number.class).longValue();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,7 +68,7 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 
 	protected Object[] arguments;
 
-	private final Class targetClass;
+	private final Class<?> targetClass;
 
 	/**
 	 * Lazily initialized map of user-specific attributes for this invocation.
@@ -79,7 +79,7 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 	 * List of MethodInterceptor and InterceptorAndDynamicMethodMatcher
 	 * that need dynamic checks.
 	 */
-	protected final List interceptorsAndDynamicMethodMatchers;
+	protected final List<?> interceptorsAndDynamicMethodMatchers;
 
 	/**
 	 * Index from 0 of the current interceptor we're invoking.
@@ -103,25 +103,28 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 	 */
 	protected ReflectiveMethodInvocation(
 			Object proxy, Object target, Method method, Object[] arguments,
-			Class targetClass, List<Object> interceptorsAndDynamicMethodMatchers) {
+			Class<?> targetClass, List<Object> interceptorsAndDynamicMethodMatchers) {
 
 		this.proxy = proxy;
 		this.target = target;
 		this.targetClass = targetClass;
 		this.method = BridgeMethodResolver.findBridgedMethod(method);
-		this.arguments = arguments;
+		this.arguments = AopProxyUtils.adaptArgumentsIfNecessary(method, arguments);
 		this.interceptorsAndDynamicMethodMatchers = interceptorsAndDynamicMethodMatchers;
 	}
 
 
+	@Override
 	public final Object getProxy() {
 		return this.proxy;
 	}
 
+	@Override
 	public final Object getThis() {
 		return this.target;
 	}
 
+	@Override
 	public final AccessibleObject getStaticPart() {
 		return this.method;
 	}
@@ -131,19 +134,23 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 	 * May or may not correspond with a method invoked on an underlying
 	 * implementation of that interface.
 	 */
+	@Override
 	public final Method getMethod() {
 		return this.method;
 	}
 
+	@Override
 	public final Object[] getArguments() {
 		return (this.arguments != null ? this.arguments : new Object[0]);
 	}
 
-	public void setArguments(Object[] arguments) {
+	@Override
+	public void setArguments(Object... arguments) {
 		this.arguments = arguments;
 	}
 
 
+	@Override
 	public Object proceed() throws Throwable {
 		//	We start with an index of -1 and increment early.
 		if (this.currentInterceptorIndex == this.interceptorsAndDynamicMethodMatchers.size() - 1) {
@@ -192,6 +199,7 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 	 * current interceptor index.
 	 * @see java.lang.Object#clone()
 	 */
+	@Override
 	public MethodInvocation invocableClone() {
 		Object[] cloneArguments = null;
 		if (this.arguments != null) {
@@ -210,7 +218,8 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 	 * current interceptor index.
 	 * @see java.lang.Object#clone()
 	 */
-	public MethodInvocation invocableClone(Object[] arguments) {
+	@Override
+	public MethodInvocation invocableClone(Object... arguments) {
 		// Force initialization of the user attributes Map,
 		// for having a shared Map reference in the clone.
 		if (this.userAttributes == null) {
@@ -230,6 +239,7 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 	}
 
 
+	@Override
 	public void setUserAttribute(String key, Object value) {
 		if (value != null) {
 			if (this.userAttributes == null) {
@@ -244,6 +254,7 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 		}
 	}
 
+	@Override
 	public Object getUserAttribute(String key) {
 		return (this.userAttributes != null ? this.userAttributes.get(key) : null);
 	}

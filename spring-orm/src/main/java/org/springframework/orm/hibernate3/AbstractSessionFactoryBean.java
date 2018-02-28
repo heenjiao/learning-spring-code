@@ -49,7 +49,9 @@ import org.springframework.beans.factory.InitializingBean;
  * @see #setExposeTransactionAwareSessionFactory
  * @see org.hibernate.SessionFactory#getCurrentSession()
  * @see org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor
+ * @deprecated as of Spring 4.3, in favor of Hibernate 4.x/5.x
  */
+@Deprecated
 public abstract class AbstractSessionFactoryBean extends HibernateExceptionTranslator
 		implements FactoryBean<SessionFactory>, InitializingBean, DisposableBean {
 
@@ -184,6 +186,7 @@ public abstract class AbstractSessionFactoryBean extends HibernateExceptionTrans
 	 * @see #buildSessionFactory()
 	 * @see #wrapSessionFactoryIfNecessary
 	 */
+	@Override
 	public void afterPropertiesSet() throws Exception {
 		SessionFactory rawSf = buildSessionFactory();
 		this.sessionFactory = wrapSessionFactoryIfNecessary(rawSf);
@@ -219,6 +222,7 @@ public abstract class AbstractSessionFactoryBean extends HibernateExceptionTrans
 	/**
 	 * Close the SessionFactory on bean factory shutdown.
 	 */
+	@Override
 	public void destroy() throws HibernateException {
 		logger.info("Closing Hibernate SessionFactory");
 		try {
@@ -233,14 +237,17 @@ public abstract class AbstractSessionFactoryBean extends HibernateExceptionTrans
 	/**
 	 * Return the singleton SessionFactory.
 	 */
+	@Override
 	public SessionFactory getObject() {
 		return this.sessionFactory;
 	}
 
+	@Override
 	public Class<? extends SessionFactory> getObjectType() {
 		return (this.sessionFactory != null ? this.sessionFactory.getClass() : SessionFactory.class);
 	}
 
+	@Override
 	public boolean isSingleton() {
 		return true;
 	}

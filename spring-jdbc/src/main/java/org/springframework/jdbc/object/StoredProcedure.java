@@ -33,9 +33,7 @@ import org.springframework.jdbc.core.SqlParameter;
  * {@link #execute} method.
  *
  * <p>The inherited {@code sql} property is the name of the stored
- * procedure in the RDBMS. Note that JDBC 3.0 introduces named parameters,
- * although the other features provided by this class are still necessary
- * in JDBC 3.0.
+ * procedure in the RDBMS.
  *
  * @author Rod Johnson
  * @author Thomas Risberg

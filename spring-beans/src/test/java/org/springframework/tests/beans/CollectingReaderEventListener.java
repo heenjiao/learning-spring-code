@@ -36,15 +36,13 @@ import org.springframework.beans.factory.parsing.ReaderEventListener;
  */
 public class CollectingReaderEventListener implements ReaderEventListener {
 
-	private final List<DefaultsDefinition> defaults = new LinkedList<DefaultsDefinition>();
+	private final List<DefaultsDefinition> defaults = new LinkedList<>();
 
-	private final Map<String, ComponentDefinition> componentDefinitions =
-			new LinkedHashMap<String, ComponentDefinition>(8);
+	private final Map<String, ComponentDefinition> componentDefinitions = new LinkedHashMap<>(8);
 
-	private final Map<String, List<AliasDefinition>> aliasMap =
-			new LinkedHashMap<String, List<AliasDefinition>>(8);
+	private final Map<String, List<AliasDefinition>> aliasMap = new LinkedHashMap<>(8);
 
-	private final List<ImportDefinition> imports = new LinkedList<ImportDefinition>();
+	private final List<ImportDefinition> imports = new LinkedList<>();
 
 
 	@Override
@@ -74,7 +72,7 @@ public class CollectingReaderEventListener implements ReaderEventListener {
 	public void aliasRegistered(AliasDefinition aliasDefinition) {
 		List<AliasDefinition> aliases = this.aliasMap.get(aliasDefinition.getBeanName());
 		if (aliases == null) {
-			aliases = new ArrayList<AliasDefinition>();
+			aliases = new ArrayList<>();
 			this.aliasMap.put(aliasDefinition.getBeanName(), aliases);
 		}
 		aliases.add(aliasDefinition);

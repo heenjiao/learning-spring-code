@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2015 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,10 @@
 
 package org.springframework.web.servlet.mvc.condition;
 
-import javax.servlet.http.HttpServletRequest;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.http.MediaType;
-import org.springframework.web.HttpMediaTypeException;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 /**
@@ -33,7 +30,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
  * @author Rossen Stoyanchev
  * @since 3.1
  */
-abstract class AbstractMediaTypeExpression implements Comparable<AbstractMediaTypeExpression>, MediaTypeExpression {
+abstract class AbstractMediaTypeExpression implements MediaTypeExpression, Comparable<AbstractMediaTypeExpression> {
 
 	protected final Log logger = LogFactory.getLog(getClass());
 
@@ -58,28 +55,19 @@ abstract class AbstractMediaTypeExpression implements Comparable<AbstractMediaTy
 		this.isNegated = negated;
 	}
 
+
+	@Override
 	public MediaType getMediaType() {
 		return this.mediaType;
 	}
 
+	@Override
 	public boolean isNegated() {
 		return this.isNegated;
 	}
 
 
-	public final boolean match(HttpServletRequest request) {
-		try {
-			boolean match = matchMediaType(request);
-			return (!this.isNegated ? match : !match);
-		}
-		catch (HttpMediaTypeException ex) {
-			return false;
-		}
-	}
-
-	protected abstract boolean matchMediaType(HttpServletRequest request) throws HttpMediaTypeException;
-
-
+	@Override
 	public int compareTo(AbstractMediaTypeExpression other) {
 		return MediaType.SPECIFICITY_COMPARATOR.compare(this.getMediaType(), other.getMediaType());
 	}
@@ -89,7 +77,7 @@ abstract class AbstractMediaTypeExpression implements Comparable<AbstractMediaTy
 		if (this == obj) {
 			return true;
 		}
-		if (obj != null && getClass().equals(obj.getClass())) {
+		if (obj != null && getClass() == obj.getClass()) {
 			AbstractMediaTypeExpression other = (AbstractMediaTypeExpression) obj;
 			return (this.mediaType.equals(other.mediaType) && this.isNegated == other.isNegated);
 		}

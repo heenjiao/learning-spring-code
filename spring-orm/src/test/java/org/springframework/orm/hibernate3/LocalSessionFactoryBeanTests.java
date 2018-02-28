@@ -28,14 +28,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-
 import javax.transaction.TransactionManager;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Interceptor;
 import org.hibernate.SessionFactory;
-import org.hibernate.cache.CacheProvider;
-import org.hibernate.cache.NoCacheProvider;
 import org.hibernate.cache.RegionFactory;
 import org.hibernate.cache.impl.NoCachingRegionFactory;
 import org.hibernate.cfg.Configuration;
@@ -49,6 +46,7 @@ import org.hibernate.event.MergeEvent;
 import org.hibernate.event.MergeEventListener;
 import org.hibernate.mapping.TypeDef;
 import org.junit.Test;
+
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.core.io.ClassPathResource;
@@ -63,7 +61,9 @@ import static org.mockito.BDDMockito.*;
  * @author Juergen Hoeller
  * @author Phillip Webb
  * @since 05.03.2005
+ * @deprecated as of Spring 4.3, in favor of Hibernate 4.x/5.x
  */
+@Deprecated
 public class LocalSessionFactoryBeanTests {
 
 	@Test
@@ -133,43 +133,6 @@ public class LocalSessionFactoryBeanTests {
 			}
 		};
 		sfb.setCacheRegionFactory(regionFactory);
-		sfb.afterPropertiesSet();
-		assertTrue(sfb.getConfiguration() != null);
-		assertEquals("newSessionFactory", invocations.get(0));
-	}
-
-	@Test
-	@SuppressWarnings("serial")
-	public void testLocalSessionFactoryBeanWithCacheProvider() throws Exception {
-		final CacheProvider cacheProvider = new NoCacheProvider();
-		final List invocations = new ArrayList();
-		LocalSessionFactoryBean sfb = new LocalSessionFactoryBean() {
-			@Override
-			protected Configuration newConfiguration() {
-				return new Configuration() {
-					@Override
-					public Configuration addInputStream(InputStream is) {
-						try {
-							is.close();
-						}
-						catch (IOException ex) {
-						}
-						invocations.add("addResource");
-						return this;
-					}
-				};
-			}
-
-			@Override
-			protected SessionFactory newSessionFactory(Configuration config) {
-				assertEquals(LocalCacheProviderProxy.class.getName(),
-						config.getProperty(Environment.CACHE_PROVIDER));
-				assertSame(cacheProvider, LocalSessionFactoryBean.getConfigTimeCacheProvider());
-				invocations.add("newSessionFactory");
-				return null;
-			}
-		};
-		sfb.setCacheProvider(cacheProvider);
 		sfb.afterPropertiesSet();
 		assertTrue(sfb.getConfiguration() != null);
 		assertEquals("newSessionFactory", invocations.get(0));
@@ -513,10 +476,10 @@ public class LocalSessionFactoryBeanTests {
 			@Override
 			protected Configuration newConfiguration() {
 				return new Configuration() {
-					// changed from return type 'void' to 'Configuration' in Hibernate 3.6
 					@Override
-					public void setCacheConcurrencyStrategy(String clazz, String concurrencyStrategy, String regionName) {
+					public Configuration setCacheConcurrencyStrategy(String clazz, String concurrencyStrategy, String regionName) {
 						registeredClassCache.setProperty(clazz, concurrencyStrategy + "," + regionName);
+						return this;
 					}
 					@Override
 					public void setCollectionCacheConcurrencyStrategy(String collectionRole, String concurrencyStrategy, String regionName) {

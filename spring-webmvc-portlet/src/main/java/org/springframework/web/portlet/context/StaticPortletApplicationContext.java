@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,18 +99,22 @@ public class StaticPortletApplicationContext extends StaticApplicationContext
 		}
 	}
 
+	@Override
 	public ServletContext getServletContext() {
 		return this.servletContext;
 	}
 
+	@Override
 	public void setPortletContext(PortletContext portletContext) {
 		this.portletContext = portletContext;
 	}
 
+	@Override
 	public PortletContext getPortletContext() {
 		return this.portletContext;
 	}
 
+	@Override
 	public void setPortletConfig(PortletConfig portletConfig) {
 		this.portletConfig = portletConfig;
 		if (portletConfig != null && this.portletContext == null) {
@@ -118,10 +122,12 @@ public class StaticPortletApplicationContext extends StaticApplicationContext
 		}
 	}
 
+	@Override
 	public PortletConfig getPortletConfig() {
 		return this.portletConfig;
 	}
 
+	@Override
 	public void setNamespace(String namespace) {
 		this.namespace = namespace;
 		if (namespace != null) {
@@ -129,6 +135,7 @@ public class StaticPortletApplicationContext extends StaticApplicationContext
 		}
 	}
 
+	@Override
 	public String getNamespace() {
 		return this.namespace;
 	}
@@ -137,6 +144,7 @@ public class StaticPortletApplicationContext extends StaticApplicationContext
 	 * The {@link StaticPortletApplicationContext} class does not support this method.
 	 * @throws UnsupportedOperationException <b>always</b>
 	 */
+	@Override
 	public void setConfigLocation(String configLocation) {
 		if (configLocation != null) {
 			throw new UnsupportedOperationException("StaticPortletApplicationContext does not support config locations");
@@ -147,12 +155,14 @@ public class StaticPortletApplicationContext extends StaticApplicationContext
 	 * The {@link StaticPortletApplicationContext} class does not support this method.
 	 * @throws UnsupportedOperationException <b>always</b>
 	 */
-	public void setConfigLocations(String[] configLocations) {
+	@Override
+	public void setConfigLocations(String... configLocations) {
 		if (configLocations != null) {
 			throw new UnsupportedOperationException("StaticPortletApplicationContext does not support config locations");
 		}
 	}
 
+	@Override
 	public String[] getConfigLocations() {
 		return null;
 	}

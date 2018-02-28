@@ -17,7 +17,6 @@
 package org.springframework.jmx.export.naming;
 
 import java.util.Hashtable;
-
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 
@@ -27,7 +26,7 @@ import org.springframework.util.ObjectUtils;
 
 /**
  * An implementation of the {@code ObjectNamingStrategy} interface that
- * creates a name based on the the identity of a given instance.
+ * creates a name based on the identity of a given instance.
  *
  * <p>The resulting {@code ObjectName} will be in the form
  * <i>package</i>:class=<i>class name</i>,hashCode=<i>identity hash (in hex)</i>
@@ -47,9 +46,10 @@ public class IdentityNamingStrategy implements ObjectNamingStrategy {
 	 * Returns an instance of {@code ObjectName} based on the identity
 	 * of the managed resource.
 	 */
+	@Override
 	public ObjectName getObjectName(Object managedBean, String beanKey) throws MalformedObjectNameException {
 		String domain = ClassUtils.getPackageName(managedBean.getClass());
-		Hashtable keys = new Hashtable();
+		Hashtable<String, String> keys = new Hashtable<String, String>();
 		keys.put(TYPE_KEY, ClassUtils.getShortName(managedBean.getClass()));
 		keys.put(HASH_CODE_KEY, ObjectUtils.getIdentityHexString(managedBean));
 		return ObjectNameManager.getInstance(domain, keys);

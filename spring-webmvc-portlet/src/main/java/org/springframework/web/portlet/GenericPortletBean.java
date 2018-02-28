@@ -19,7 +19,6 @@ package org.springframework.web.portlet;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Set;
-
 import javax.portlet.GenericPortlet;
 import javax.portlet.PortletConfig;
 import javax.portlet.PortletContext;
@@ -27,6 +26,7 @@ import javax.portlet.PortletException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.MutablePropertyValues;
@@ -174,6 +174,7 @@ public abstract class GenericPortletBean extends GenericPortlet
 	 * @throws IllegalArgumentException if environment is not assignable to
 	 * {@code ConfigurableEnvironment}.
 	 */
+	@Override
 	public void setEnvironment(Environment environment) {
 		Assert.isInstanceOf(ConfigurableEnvironment.class, environment);
 		this.environment = (ConfigurableEnvironment)environment;
@@ -184,6 +185,7 @@ public abstract class GenericPortletBean extends GenericPortlet
 	 * <p>If {@code null}, a new environment will be initialized via
 	 * {@link #createEnvironment()}.
 	 */
+	@Override
 	public ConfigurableEnvironment getEnvironment() {
 		if (this.environment == null) {
 			this.environment = this.createEnvironment();
@@ -219,9 +221,9 @@ public abstract class GenericPortletBean extends GenericPortlet
 			Set<String> missingProps = (requiredProperties != null && !requiredProperties.isEmpty()) ?
 					new HashSet<String>(requiredProperties) : null;
 
-			Enumeration en = config.getInitParameterNames();
+			Enumeration<String> en = config.getInitParameterNames();
 			while (en.hasMoreElements()) {
-				String property = (String) en.nextElement();
+				String property = en.nextElement();
 				Object value = config.getInitParameter(property);
 				addPropertyValue(new PropertyValue(property, value));
 				if (missingProps != null) {

@@ -62,7 +62,7 @@ public class ReflectiveMethodResolver implements MethodResolver {
 
 
 	public ReflectiveMethodResolver() {
-		this.useDistance = false;
+		this.useDistance = true;
 	}
 
 	/**
@@ -102,6 +102,7 @@ public class ReflectiveMethodResolver implements MethodResolver {
 	 * according to the registered type converter
 	 * </ol>
 	 */
+	@Override
 	public MethodExecutor resolve(EvaluationContext context, Object targetObject, String name,
 			List<TypeDescriptor> argumentTypes) throws AccessException {
 
@@ -120,6 +121,7 @@ public class ReflectiveMethodResolver implements MethodResolver {
 			// Sort methods into a sensible order
 			if (methods.size() > 1) {
 				Collections.sort(methods, new Comparator<Method>() {
+					@Override
 					public int compare(Method m1, Method m2) {
 						int m1pl = m1.getParameterTypes().length;
 						int m2pl = m2.getParameterTypes().length;
@@ -150,7 +152,6 @@ public class ReflectiveMethodResolver implements MethodResolver {
 
 			Method closeMatch = null;
 			int closeMatchDistance = Integer.MAX_VALUE;
-			int[] argsToConvert = null;
 			Method matchRequiringConversion = null;
 			boolean multipleOptions = false;
 
@@ -172,7 +173,7 @@ public class ReflectiveMethodResolver implements MethodResolver {
 					}
 					if (matchInfo != null) {
 						if (matchInfo.isExactMatch()) {
-							return new ReflectiveMethodExecutor(method, null);
+							return new ReflectiveMethodExecutor(method);
 						}
 						else if (matchInfo.isCloseMatch()) {
 							if (this.useDistance) {
@@ -194,20 +195,19 @@ public class ReflectiveMethodResolver implements MethodResolver {
 							if (matchRequiringConversion != null) {
 								multipleOptions = true;
 							}
-							argsToConvert = matchInfo.argsRequiringConversion;
 							matchRequiringConversion = method;
 						}
 					}
 				}
 			}
 			if (closeMatch != null) {
-				return new ReflectiveMethodExecutor(closeMatch, null);
+				return new ReflectiveMethodExecutor(closeMatch);
 			}
 			else if (matchRequiringConversion != null) {
 				if (multipleOptions) {
 					throw new SpelEvaluationException(SpelMessage.MULTIPLE_POSSIBLE_METHODS, name);
 				}
-				return new ReflectiveMethodExecutor(matchRequiringConversion, argsToConvert);
+				return new ReflectiveMethodExecutor(matchRequiringConversion);
 			}
 			else {
 				return null;

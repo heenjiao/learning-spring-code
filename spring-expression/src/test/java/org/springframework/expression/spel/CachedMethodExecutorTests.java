@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,6 +48,7 @@ public class CachedMethodExecutorTests {
 	@Test
 	public void testCachedExecutionForParameters() throws Exception {
 		Expression expression = this.parser.parseExpression("echo(#var)");
+
 		assertMethodExecution(expression, 42, "int: 42");
 		assertMethodExecution(expression, 42, "int: 42");
 		assertMethodExecution(expression, "Deep Thought", "String: Deep Thought");
@@ -57,6 +58,7 @@ public class CachedMethodExecutorTests {
 	@Test
 	public void testCachedExecutionForTarget() throws Exception {
 		Expression expression = this.parser.parseExpression("#var.echo(42)");
+
 		assertMethodExecution(expression, new RootObject(), "int: 42");
 		assertMethodExecution(expression, new RootObject(), "int: 42");
 		assertMethodExecution(expression, new BaseObject(), "String: 42");
@@ -74,14 +76,15 @@ public class CachedMethodExecutorTests {
 		public String echo(String value) {
 			return "String: " + value;
 		}
-	}
 
+	}
 
 	public static class RootObject extends BaseObject {
 
 		public String echo(int value) {
 			return "int: " + value;
 		}
+
 	}
 
 }

@@ -29,6 +29,7 @@ import org.springframework.test.context.TestContext;
 import org.springframework.test.context.TestContextManager;
 import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
+import org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener;
 import org.springframework.test.context.support.DirtiesContextTestExecutionListener;
 import org.springframework.test.context.web.ServletTestExecutionListener;
 
@@ -64,9 +65,10 @@ import org.testng.annotations.BeforeMethod;
  * TestExecutionListeners} are configured by default:
  *
  * <ul>
- *   <li>{@link org.springframework.test.context.web.ServletTestExecutionListener}
- *   <li>{@link org.springframework.test.context.support.DependencyInjectionTestExecutionListener}
- *   <li>{@link org.springframework.test.context.support.DirtiesContextTestExecutionListener}
+ * <li>{@link org.springframework.test.context.web.ServletTestExecutionListener}
+ * <li>{@link org.springframework.test.context.support.DirtiesContextBeforeModesTestExecutionListener}
+ * <li>{@link org.springframework.test.context.support.DependencyInjectionTestExecutionListener}
+ * <li>{@link org.springframework.test.context.support.DirtiesContextTestExecutionListener}
  * </ul>
  *
  * @author Sam Brannen
@@ -77,13 +79,14 @@ import org.testng.annotations.BeforeMethod;
  * @see TestContextManager
  * @see TestExecutionListeners
  * @see ServletTestExecutionListener
+ * @see DirtiesContextBeforeModesTestExecutionListener
  * @see DependencyInjectionTestExecutionListener
  * @see DirtiesContextTestExecutionListener
  * @see AbstractTransactionalTestNGSpringContextTests
  * @see org.springframework.test.context.junit4.AbstractJUnit4SpringContextTests
  */
-@TestExecutionListeners({ ServletTestExecutionListener.class, DependencyInjectionTestExecutionListener.class,
-	DirtiesContextTestExecutionListener.class })
+@TestExecutionListeners({ ServletTestExecutionListener.class, DirtiesContextBeforeModesTestExecutionListener.class,
+	DependencyInjectionTestExecutionListener.class, DirtiesContextTestExecutionListener.class })
 public abstract class AbstractTestNGSpringContextTests implements IHookable, ApplicationContextAware {
 
 	/** Logger available to subclasses */
@@ -112,8 +115,9 @@ public abstract class AbstractTestNGSpringContextTests implements IHookable, App
 	 * Set the {@link ApplicationContext} to be used by this test instance,
 	 * provided via {@link ApplicationContextAware} semantics.
 	 *
-	 * @param applicationContext the applicationContext to set
+	 * @param applicationContext the ApplicationContext that this test runs in
 	 */
+	@Override
 	public final void setApplicationContext(ApplicationContext applicationContext) {
 		this.applicationContext = applicationContext;
 	}
@@ -166,6 +170,7 @@ public abstract class AbstractTestNGSpringContextTests implements IHookable, App
 	 * @see org.testng.IHookable#run(org.testng.IHookCallBack,
 	 * org.testng.ITestResult)
 	 */
+	@Override
 	public void run(IHookCallBack callBack, ITestResult testResult) {
 		callBack.runTestMethod(testResult);
 

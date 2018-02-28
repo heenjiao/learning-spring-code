@@ -22,6 +22,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.springframework.beans.BeansException;
 import org.springframework.beans.FatalBeanException;
 import org.springframework.beans.factory.BeanDefinitionStoreException;
@@ -87,7 +88,7 @@ import org.springframework.core.io.support.ResourcePatternUtils;
  * use object from a BeanFactory/ApplicationContext. One solutions is to make the
  * class created by the third party code be just a stub or proxy, which gets the
  * real object from a BeanFactory/ApplicationContext, and delegates to it. However,
- * it is is not normally workable for the stub to create the BeanFactory on each
+ * it is not normally workable for the stub to create the BeanFactory on each
  * use, as depending on what is inside it, that can be an expensive operation.
  * Additionally, there is a fairly tight coupling between the stub and the name of
  * the definition resource for the BeanFactory/ApplicationContext. This is where
@@ -290,7 +291,7 @@ public class SingletonBeanFactoryLocator implements BeanFactoryLocator {
 	}
 
 	/**
-	 * Returns an instance which uses the the specified selector, as the name of the
+	 * Returns an instance which uses the specified selector, as the name of the
 	 * definition file(s). In the case of a name with a Spring 'classpath*:' prefix,
 	 * or with no prefix, which is treated the same, the current thread context
 	 * ClassLoader's {@code getResources} method will be called with this value
@@ -340,7 +341,7 @@ public class SingletonBeanFactoryLocator implements BeanFactoryLocator {
 
 
 	/**
-	 * Constructor which uses the the specified name as the resource name
+	 * Constructor which uses the specified name as the resource name
 	 * of the definition file(s).
 	 * @param resourceLocation the Spring resource location to use
 	 * (either a URL or a "classpath:" / "classpath*:" pseudo URL)
@@ -349,6 +350,7 @@ public class SingletonBeanFactoryLocator implements BeanFactoryLocator {
 		this.resourceLocation = resourceLocation;
 	}
 
+	@Override
 	public BeanFactoryReference useBeanFactory(String factoryKey) throws BeansException {
 		synchronized (this.bfgInstancesByKey) {
 			BeanFactoryGroup bfg = this.bfgInstancesByKey.get(this.resourceLocation);
@@ -500,11 +502,13 @@ public class SingletonBeanFactoryLocator implements BeanFactoryLocator {
 			this.groupContextRef = groupContext;
 		}
 
+		@Override
 		public BeanFactory getFactory() {
 			return this.beanFactory;
 		}
 
 		// Note that it's legal to call release more than once!
+		@Override
 		public void release() throws FatalBeanException {
 			synchronized (bfgInstancesByKey) {
 				BeanFactory savedRef = this.groupContextRef;

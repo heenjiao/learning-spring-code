@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,6 +54,8 @@ public class StandardEvaluationContext implements EvaluationContext {
 
 	private List<MethodResolver> methodResolvers;
 
+	private BeanResolver beanResolver;
+
 	private ReflectiveMethodResolver reflectiveMethodResolver;
 
 	private List<PropertyAccessor> propertyAccessors;
@@ -68,15 +70,12 @@ public class StandardEvaluationContext implements EvaluationContext {
 
 	private final Map<String, Object> variables = new HashMap<String, Object>();
 
-	private BeanResolver beanResolver;
-
 
 	public StandardEvaluationContext() {
 		setRootObject(null);
 	}
 
 	public StandardEvaluationContext(Object rootObject) {
-		this();
 		setRootObject(rootObject);
 	}
 
@@ -89,6 +88,7 @@ public class StandardEvaluationContext implements EvaluationContext {
 		this.rootObject = (rootObject != null ? new TypedValue(rootObject) : TypedValue.NULL);
 	}
 
+	@Override
 	public TypedValue getRootObject() {
 		return this.rootObject;
 	}
@@ -107,6 +107,7 @@ public class StandardEvaluationContext implements EvaluationContext {
 		this.constructorResolvers = constructorResolvers;
 	}
 
+	@Override
 	public List<ConstructorResolver> getConstructorResolvers() {
 		ensureConstructorResolversInitialized();
 		return this.constructorResolvers;
@@ -126,6 +127,7 @@ public class StandardEvaluationContext implements EvaluationContext {
 		this.methodResolvers = methodResolvers;
 	}
 
+	@Override
 	public List<MethodResolver> getMethodResolvers() {
 		ensureMethodResolversInitialized();
 		return this.methodResolvers;
@@ -135,6 +137,7 @@ public class StandardEvaluationContext implements EvaluationContext {
 		this.beanResolver = beanResolver;
 	}
 
+	@Override
 	public BeanResolver getBeanResolver() {
 		return this.beanResolver;
 	}
@@ -152,6 +155,7 @@ public class StandardEvaluationContext implements EvaluationContext {
 		this.propertyAccessors = propertyAccessors;
 	}
 
+	@Override
 	public List<PropertyAccessor> getPropertyAccessors() {
 		ensurePropertyAccessorsInitialized();
 		return this.propertyAccessors;
@@ -162,6 +166,7 @@ public class StandardEvaluationContext implements EvaluationContext {
 		this.typeLocator = typeLocator;
 	}
 
+	@Override
 	public TypeLocator getTypeLocator() {
 		if (this.typeLocator == null) {
 			 this.typeLocator = new StandardTypeLocator();
@@ -174,6 +179,7 @@ public class StandardEvaluationContext implements EvaluationContext {
 		this.typeConverter = typeConverter;
 	}
 
+	@Override
 	public TypeConverter getTypeConverter() {
 		if (this.typeConverter == null) {
 			 this.typeConverter = new StandardTypeConverter();
@@ -186,6 +192,7 @@ public class StandardEvaluationContext implements EvaluationContext {
 		this.typeComparator = typeComparator;
 	}
 
+	@Override
 	public TypeComparator getTypeComparator() {
 		return this.typeComparator;
 	}
@@ -195,10 +202,12 @@ public class StandardEvaluationContext implements EvaluationContext {
 		this.operatorOverloader = operatorOverloader;
 	}
 
+	@Override
 	public OperatorOverloader getOperatorOverloader() {
 		return this.operatorOverloader;
 	}
 
+	@Override
 	public void setVariable(String name, Object value) {
 		this.variables.put(name, value);
 	}
@@ -211,6 +220,7 @@ public class StandardEvaluationContext implements EvaluationContext {
 		this.variables.put(name, method);
 	}
 
+	@Override
 	public Object lookupVariable(String name) {
 		return this.variables.get(name);
 	}

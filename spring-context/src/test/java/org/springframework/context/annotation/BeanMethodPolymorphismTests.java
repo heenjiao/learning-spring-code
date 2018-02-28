@@ -18,11 +18,11 @@ package org.springframework.context.annotation;
 
 import java.util.List;
 
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
-import org.springframework.beans.factory.parsing.BeanDefinitionParsingException;
+import org.springframework.aop.aspectj.annotation.AnnotationAwareAspectJAutoProxyCreator;
+import org.springframework.aop.interceptor.SimpleTraceInterceptor;
+import org.springframework.aop.support.DefaultPointcutAdvisor;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 
 import static org.hamcrest.CoreMatchers.*;
@@ -36,11 +36,8 @@ import static org.junit.Assert.*;
  * @author Phillip Webb
  * @author Juergen Hoeller
  */
+@SuppressWarnings("resource")
 public class BeanMethodPolymorphismTests {
-
-	@Rule
-	public ExpectedException thrown = ExpectedException.none();
-
 
 	@Test
 	public void beanMethodDetectedOnSuperClass() {
@@ -94,16 +91,44 @@ public class BeanMethodPolymorphismTests {
 
 	@Test
 	public void beanMethodOverloadingWithoutInheritance() {
+		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
+		ctx.register(ConfigWithOverloading.class);
+		ctx.setAllowBeanDefinitionOverriding(false);
+		ctx.refresh();
+		assertThat(ctx.getBean(String.class), equalTo("regular"));
+	}
 
-		@SuppressWarnings({ "hiding" })
-		@Configuration class Config {
-			@Bean String aString() { return "na"; }
-			@Bean String aString(Integer dependency) { return "na"; }
-		}
+	@Test
+	public void beanMethodOverloadingWithoutInheritanceAndExtraDependency() {
+		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
+		ctx.register(ConfigWithOverloading.class);
+		ctx.getDefaultListableBeanFactory().registerSingleton("anInt", 5);
+		ctx.setAllowBeanDefinitionOverriding(false);
+		ctx.refresh();
+		assertThat(ctx.getBean(String.class), equalTo("overloaded5"));
+	}
 
-		this.thrown.expect(BeanDefinitionParsingException.class);
-		this.thrown.expectMessage("overloaded @Bean methods named 'aString'");
-		new AnnotationConfigApplicationContext(Config.class);
+	@Test
+	public void beanMethodOverloadingWithAdditionalMetadata() {
+		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
+		ctx.register(ConfigWithOverloadingAndAdditionalMetadata.class);
+		ctx.setAllowBeanDefinitionOverriding(false);
+		ctx.refresh();
+		assertFalse(ctx.getDefaultListableBeanFactory().containsSingleton("aString"));
+		assertThat(ctx.getBean(String.class), equalTo("regular"));
+		assertTrue(ctx.getDefaultListableBeanFactory().containsSingleton("aString"));
+	}
+
+	@Test
+	public void beanMethodOverloadingWithAdditionalMetadataButOtherMethodExecuted() {
+		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
+		ctx.register(ConfigWithOverloadingAndAdditionalMetadata.class);
+		ctx.getDefaultListableBeanFactory().registerSingleton("anInt", 5);
+		ctx.setAllowBeanDefinitionOverriding(false);
+		ctx.refresh();
+		assertFalse(ctx.getDefaultListableBeanFactory().containsSingleton("aString"));
+		assertThat(ctx.getBean(String.class), equalTo("overloaded5"));
+		assertTrue(ctx.getDefaultListableBeanFactory().containsSingleton("aString"));
 	}
 
 	@Test
@@ -138,6 +163,16 @@ public class BeanMethodPolymorphismTests {
 	public void beanMethodShadowing() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext(ShadowConfig.class);
 		assertThat(ctx.getBean(String.class), equalTo("shadow"));
+	}
+
+	@Test
+	public void beanMethodThroughAopProxy() {
+		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
+		ctx.register(Config.class);
+		ctx.register(AnnotationAwareAspectJAutoProxyCreator.class);
+		ctx.register(TestAdvisor.class);
+		ctx.refresh();
+		ctx.getBean("testBean", TestBean.class);
 	}
 
 
@@ -193,6 +228,36 @@ public class BeanMethodPolymorphismTests {
 
 
 	@Configuration
+	static class ConfigWithOverloading {
+
+		@Bean
+		String aString() {
+			return "regular";
+		}
+
+		@Bean
+		String aString(Integer dependency) {
+			return "overloaded" + dependency;
+		}
+	}
+
+
+	@Configuration
+	static class ConfigWithOverloadingAndAdditionalMetadata {
+
+		@Bean @Lazy
+		String aString() {
+			return "regular";
+		}
+
+		@Bean @Lazy
+		String aString(Integer dependency) {
+			return "overloaded" + dependency;
+		}
+	}
+
+
+	@Configuration
 	static class SuperConfig {
 
 		@Bean
@@ -239,6 +304,15 @@ public class BeanMethodPolymorphismTests {
 		@Bean
 		String aString() {
 			return "shadow";
+		}
+	}
+
+
+	@SuppressWarnings("serial")
+	public static class TestAdvisor extends DefaultPointcutAdvisor {
+
+		public TestAdvisor() {
+			super(new SimpleTraceInterceptor());
 		}
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,17 +31,20 @@ import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
 
 /**
- * JavaBean that allows for configuring a JDK 1.5 {@link java.util.concurrent.ThreadPoolExecutor}
+ * JavaBean that allows for configuring a {@link java.util.concurrent.ThreadPoolExecutor}
  * in bean style (through its "corePoolSize", "maxPoolSize", "keepAliveSeconds",
  * "queueCapacity" properties) and exposing it as a bean reference of its native
  * {@link java.util.concurrent.ExecutorService} type.
  *
- * <p>For an alternative, you may set up a ThreadPoolExecutor instance directly using
- * constructor injection, or use a factory method definition that points to the JDK 1.5
+ * <p>For an alternative, you may set up a {@link ThreadPoolExecutor} instance directly
+ * using constructor injection, or use a factory method definition that points to the
  * {@link java.util.concurrent.Executors} class.
+ * <b>This is strongly recommended in particular for common {@code @Bean} methods in
+ * configuration classes, where this {@code FactoryBean} variant would force you to
+ * return the {@code FactoryBean} type instead of the actual {@code Executor} type.</b>
  *
- * <p><b>If you need a timing-based {@link java.util.concurrent.ScheduledExecutorService}
- * instead, consider {@link ScheduledExecutorFactoryBean}.</b>
+ * <p>If you need a timing-based {@link java.util.concurrent.ScheduledExecutorService}
+ * instead, consider {@link ScheduledExecutorFactoryBean}.
 
  * @author Juergen Hoeller
  * @since 3.0
@@ -96,9 +99,7 @@ public class ThreadPoolExecutorFactoryBean extends ExecutorConfigurationSupport
 	 * Specify whether to allow core threads to time out. This enables dynamic
 	 * growing and shrinking even in combination with a non-zero queue (since
 	 * the max pool size will only grow once the queue is full).
-	 * <p>Default is "false". Note that this feature is only available on Java 6
-	 * or above. On Java 5, consider switching to the backport-concurrent
-	 * version of ThreadPoolTaskExecutor which also supports this feature.
+	 * <p>Default is "false".
 	 * @see java.util.concurrent.ThreadPoolExecutor#allowCoreThreadTimeOut(boolean)
 	 */
 	public void setAllowCoreThreadTimeOut(boolean allowCoreThreadTimeOut) {
@@ -130,6 +131,7 @@ public class ThreadPoolExecutorFactoryBean extends ExecutorConfigurationSupport
 	}
 
 
+	@Override
 	protected ExecutorService initializeExecutor(
 			ThreadFactory threadFactory, RejectedExecutionHandler rejectedExecutionHandler) {
 
@@ -187,14 +189,17 @@ public class ThreadPoolExecutorFactoryBean extends ExecutorConfigurationSupport
 	}
 
 
-	public ExecutorService getObject() throws Exception {
+	@Override
+	public ExecutorService getObject() {
 		return this.exposedExecutor;
 	}
 
+	@Override
 	public Class<? extends ExecutorService> getObjectType() {
 		return (this.exposedExecutor != null ? this.exposedExecutor.getClass() : ExecutorService.class);
 	}
 
+	@Override
 	public boolean isSingleton() {
 		return true;
 	}

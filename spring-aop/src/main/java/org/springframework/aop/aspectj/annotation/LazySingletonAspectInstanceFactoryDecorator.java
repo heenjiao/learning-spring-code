@@ -16,6 +16,8 @@
 
 package org.springframework.aop.aspectj.annotation;
 
+import java.io.Serializable;
+
 import org.springframework.util.Assert;
 
 /**
@@ -25,7 +27,8 @@ import org.springframework.util.Assert;
  * @author Juergen Hoeller
  * @since 2.0
  */
-public class LazySingletonAspectInstanceFactoryDecorator implements MetadataAwareAspectInstanceFactory {
+@SuppressWarnings("serial")
+public class LazySingletonAspectInstanceFactoryDecorator implements MetadataAwareAspectInstanceFactory, Serializable {
 
 	private final MetadataAwareAspectInstanceFactory maaif;
 
@@ -42,12 +45,10 @@ public class LazySingletonAspectInstanceFactoryDecorator implements MetadataAwar
 	}
 
 
+	@Override
 	public Object getAspectInstance() {
 		if (this.materialized == null) {
-			Object mutex = this;
-			if (this.maaif instanceof BeanFactoryAspectInstanceFactory) {
-				mutex = ((BeanFactoryAspectInstanceFactory) this.maaif).getAspectCreationMutex();
-			}
+			Object mutex = this.maaif.getAspectCreationMutex();
 			if (mutex == null) {
 				this.materialized = this.maaif.getAspectInstance();
 			}
@@ -66,14 +67,22 @@ public class LazySingletonAspectInstanceFactoryDecorator implements MetadataAwar
 		return (this.materialized != null);
 	}
 
+	@Override
 	public ClassLoader getAspectClassLoader() {
 		return this.maaif.getAspectClassLoader();
 	}
 
+	@Override
 	public AspectMetadata getAspectMetadata() {
 		return this.maaif.getAspectMetadata();
 	}
 
+	@Override
+	public Object getAspectCreationMutex() {
+		return this.maaif.getAspectCreationMutex();
+	}
+
+	@Override
 	public int getOrder() {
 		return this.maaif.getOrder();
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,11 +29,12 @@ import javax.transaction.xa.XAResource;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.transaction.jta.SimpleTransactionFactory;
 import org.springframework.transaction.jta.TransactionFactory;
 
 /**
- * Abstract base implementation of the JCA 1.5/1.6
+ * Abstract base implementation of the JCA 1.5/1.6/1.7
  * {@link javax.resource.spi.endpoint.MessageEndpointFactory} interface,
  * providing transaction management capabilities as well as ClassLoader
  * exposure for endpoint invocations.
@@ -42,7 +43,7 @@ import org.springframework.transaction.jta.TransactionFactory;
  * @since 2.5
  * @see #setTransactionManager
  */
-public abstract class AbstractMessageEndpointFactory implements MessageEndpointFactory {
+public abstract class AbstractMessageEndpointFactory implements MessageEndpointFactory, BeanNameAware {
 
 	/** Logger available to subclasses */
 	protected final Log logger = LogFactory.getLog(getClass());
@@ -53,9 +54,11 @@ public abstract class AbstractMessageEndpointFactory implements MessageEndpointF
 
 	private int transactionTimeout = -1;
 
+	private String beanName;
+
 
 	/**
-	 * Set the the XA transaction manager to use for wrapping endpoint
+	 * Set the XA transaction manager to use for wrapping endpoint
 	 * invocations, enlisting the endpoint resource in each such transaction.
 	 * <p>The passed-in object may be a transaction manager which implements
 	 * Spring's {@link org.springframework.transaction.jta.TransactionFactory}
@@ -116,6 +119,24 @@ public abstract class AbstractMessageEndpointFactory implements MessageEndpointF
 		this.transactionTimeout = transactionTimeout;
 	}
 
+	/**
+	 * Set the name of this message endpoint. Populated with the bean name
+	 * automatically when defined within Spring's bean factory.
+	 */
+	@Override
+	public void setBeanName(String beanName) {
+		this.beanName = beanName;
+	}
+
+
+	/**
+	 * Implementation of the JCA 1.7 {@code #getActivationName()} method,
+	 * returning the bean name as set on this MessageEndpointFactory.
+	 * @see #setBeanName
+	 */
+	public String getActivationName() {
+		return this.beanName;
+	}
 
 	/**
 	 * This implementation returns {@code true} if a transaction manager
@@ -123,6 +144,7 @@ public abstract class AbstractMessageEndpointFactory implements MessageEndpointF
 	 * @see #setTransactionManager
 	 * @see #setTransactionFactory
 	 */
+	@Override
 	public boolean isDeliveryTransacted(Method method) throws NoSuchMethodException {
 		return (this.transactionFactory != null);
 	}
@@ -132,6 +154,7 @@ public abstract class AbstractMessageEndpointFactory implements MessageEndpointF
 	 * <p>This implementation delegates to {@link #createEndpointInternal()},
 	 * initializing the endpoint's XAResource before the endpoint gets invoked.
 	 */
+	@Override
 	public MessageEndpoint createEndpoint(XAResource xaResource) throws UnavailableException {
 		AbstractMessageEndpoint endpoint = createEndpointInternal();
 		endpoint.initXAResource(xaResource);
@@ -155,8 +178,7 @@ public abstract class AbstractMessageEndpointFactory implements MessageEndpointF
 	 * @return the actual endpoint instance (never {@code null})
 	 * @throws UnavailableException if no endpoint is available at present
 	 */
-	protected abstract AbstractMessageEndpoint createEndpointInternal()
-			throws UnavailableException;
+	protected abstract AbstractMessageEndpoint createEndpointInternal() throws UnavailableException;
 
 
 	/**
@@ -189,6 +211,7 @@ public abstract class AbstractMessageEndpointFactory implements MessageEndpointF
 		 * concrete endpoint method should call {@code beforeDelivery} and its
 		 * sibling {@link #afterDelivery()} explicitly, as part of its own processing.
 		 */
+		@Override
 		public void beforeDelivery(Method method) throws ResourceException {
 			this.beforeDeliveryCalled = true;
 			try {
@@ -236,6 +259,7 @@ public abstract class AbstractMessageEndpointFactory implements MessageEndpointF
 		 * to call this method after invoking the concrete endpoint. See the
 		 * explanation in {@link #beforeDelivery}'s javadoc.
 		 */
+		@Override
 		public void afterDelivery() throws ResourceException {
 			this.beforeDeliveryCalled = false;
 			Thread.currentThread().setContextClassLoader(this.previousContextClassLoader);
@@ -248,6 +272,7 @@ public abstract class AbstractMessageEndpointFactory implements MessageEndpointF
 			}
 		}
 
+		@Override
 		public void release() {
 			try {
 				this.transactionDelegate.setRollbackOnly();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package org.springframework.beans;
 import java.beans.PropertyEditor;
 import java.io.File;
 import java.io.InputStream;
+import java.io.Reader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URI;
@@ -27,7 +28,6 @@ import java.nio.charset.Charset;
 import java.util.Collection;
 import java.util.Currency;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -59,13 +59,16 @@ import org.springframework.beans.propertyeditors.FileEditor;
 import org.springframework.beans.propertyeditors.InputSourceEditor;
 import org.springframework.beans.propertyeditors.InputStreamEditor;
 import org.springframework.beans.propertyeditors.LocaleEditor;
+import org.springframework.beans.propertyeditors.PathEditor;
 import org.springframework.beans.propertyeditors.PatternEditor;
 import org.springframework.beans.propertyeditors.PropertiesEditor;
+import org.springframework.beans.propertyeditors.ReaderEditor;
 import org.springframework.beans.propertyeditors.StringArrayPropertyEditor;
 import org.springframework.beans.propertyeditors.TimeZoneEditor;
 import org.springframework.beans.propertyeditors.URIEditor;
 import org.springframework.beans.propertyeditors.URLEditor;
 import org.springframework.beans.propertyeditors.UUIDEditor;
+import org.springframework.beans.propertyeditors.ZoneIdEditor;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourceArrayPropertyEditor;
@@ -85,6 +88,29 @@ import org.springframework.util.ClassUtils;
  */
 public class PropertyEditorRegistrySupport implements PropertyEditorRegistry {
 
+	private static Class<?> pathClass;
+
+	private static Class<?> zoneIdClass;
+
+	static {
+		ClassLoader cl = PropertyEditorRegistrySupport.class.getClassLoader();
+		try {
+			pathClass = ClassUtils.forName("java.nio.file.Path", cl);
+		}
+		catch (ClassNotFoundException ex) {
+			// Java 7 Path class not available
+			pathClass = null;
+		}
+		try {
+			zoneIdClass = ClassUtils.forName("java.time.ZoneId", cl);
+		}
+		catch (ClassNotFoundException ex) {
+			// Java 8 ZoneId class not available
+			zoneIdClass = null;
+		}
+	}
+
+
 	private ConversionService conversionService;
 
 	private boolean defaultEditorsActive = false;
@@ -98,8 +124,6 @@ public class PropertyEditorRegistrySupport implements PropertyEditorRegistry {
 	private Map<Class<?>, PropertyEditor> customEditors;
 
 	private Map<String, CustomEditorHolder> customEditorsForPath;
-
-	private Set<PropertyEditor> sharedEditors;
 
 	private Map<Class<?>, PropertyEditor> customEditorCache;
 
@@ -198,13 +222,20 @@ public class PropertyEditorRegistrySupport implements PropertyEditorRegistry {
 		this.defaultEditors.put(InputStream.class, new InputStreamEditor());
 		this.defaultEditors.put(InputSource.class, new InputSourceEditor());
 		this.defaultEditors.put(Locale.class, new LocaleEditor());
+		if (pathClass != null) {
+			this.defaultEditors.put(pathClass, new PathEditor());
+		}
 		this.defaultEditors.put(Pattern.class, new PatternEditor());
 		this.defaultEditors.put(Properties.class, new PropertiesEditor());
+		this.defaultEditors.put(Reader.class, new ReaderEditor());
 		this.defaultEditors.put(Resource[].class, new ResourceArrayPropertyEditor());
 		this.defaultEditors.put(TimeZone.class, new TimeZoneEditor());
 		this.defaultEditors.put(URI.class, new URIEditor());
 		this.defaultEditors.put(URL.class, new URLEditor());
 		this.defaultEditors.put(UUID.class, new UUIDEditor());
+		if (zoneIdClass != null) {
+			this.defaultEditors.put(zoneIdClass, new ZoneIdEditor());
+		}
 
 		// Default instances of collection editors.
 		// Can be overridden by registering custom instances of those as custom editors.
@@ -269,10 +300,12 @@ public class PropertyEditorRegistrySupport implements PropertyEditorRegistry {
 	// Management of custom editors
 	//---------------------------------------------------------------------
 
+	@Override
 	public void registerCustomEditor(Class<?> requiredType, PropertyEditor propertyEditor) {
 		registerCustomEditor(requiredType, null, propertyEditor);
 	}
 
+	@Override
 	public void registerCustomEditor(Class<?> requiredType, String propertyPath, PropertyEditor propertyEditor) {
 		if (requiredType == null && propertyPath == null) {
 			throw new IllegalArgumentException("Either requiredType or propertyPath is required");
@@ -292,33 +325,7 @@ public class PropertyEditorRegistrySupport implements PropertyEditorRegistry {
 		}
 	}
 
-	/**
-	 * Register the given custom property editor for all properties
-	 * of the given type, indicating that the given instance is a
-	 * shared editor that might be used concurrently.
-	 * @param requiredType the type of the property
-	 * @param propertyEditor the shared editor to register
-	 * @deprecated as of Spring 3.0, in favor of PropertyEditorRegistrars or ConversionService usage
-	 */
-	@Deprecated
-	public void registerSharedEditor(Class<?> requiredType, PropertyEditor propertyEditor) {
-		registerCustomEditor(requiredType, null, propertyEditor);
-		if (this.sharedEditors == null) {
-			this.sharedEditors = new HashSet<PropertyEditor>();
-		}
-		this.sharedEditors.add(propertyEditor);
-	}
-
-	/**
-	 * Check whether the given editor instance is a shared editor, that is,
-	 * whether the given editor instance might be used concurrently.
-	 * @param propertyEditor the editor instance to check
-	 * @return whether the editor is a shared instance
-	 */
-	public boolean isSharedEditor(PropertyEditor propertyEditor) {
-		return (this.sharedEditors != null && this.sharedEditors.contains(propertyEditor));
-	}
-
+	@Override
 	public PropertyEditor findCustomEditor(Class<?> requiredType, String propertyPath) {
 		Class<?> requiredTypeToUse = requiredType;
 		if (propertyPath != null) {

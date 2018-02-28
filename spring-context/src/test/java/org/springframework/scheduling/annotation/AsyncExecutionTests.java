@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2016 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,13 @@
 
 package org.springframework.scheduling.annotation;
 
+import java.io.IOException;
+import java.io.Serializable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import org.aopalliance.intercept.MethodInterceptor;
@@ -28,12 +32,14 @@ import org.junit.Test;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator;
 import org.springframework.aop.support.DefaultIntroductionAdvisor;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.util.concurrent.ListenableFuture;
 
 import static org.junit.Assert.*;
 
@@ -64,6 +70,50 @@ public class AsyncExecutionTests {
 		asyncTest.doSomething(10);
 		Future<String> future = asyncTest.returnSomething(20);
 		assertEquals("20", future.get());
+		ListenableFuture<String> listenableFuture = asyncTest.returnSomethingListenable(20);
+		assertEquals("20", listenableFuture.get());
+		CompletableFuture<String> completableFuture = asyncTest.returnSomethingCompletable(20);
+		assertEquals("20", completableFuture.get());
+
+		try {
+			asyncTest.returnSomething(0).get();
+			fail("Should have thrown ExecutionException");
+		}
+		catch (ExecutionException ex) {
+			assertTrue(ex.getCause() instanceof IllegalArgumentException);
+		}
+
+		try {
+			asyncTest.returnSomething(-1).get();
+			fail("Should have thrown ExecutionException");
+		}
+		catch (ExecutionException ex) {
+			assertTrue(ex.getCause() instanceof IOException);
+		}
+
+		try {
+			asyncTest.returnSomethingListenable(0).get();
+			fail("Should have thrown ExecutionException");
+		}
+		catch (ExecutionException ex) {
+			assertTrue(ex.getCause() instanceof IllegalArgumentException);
+		}
+
+		try {
+			asyncTest.returnSomethingListenable(-1).get();
+			fail("Should have thrown ExecutionException");
+		}
+		catch (ExecutionException ex) {
+			assertTrue(ex.getCause() instanceof IOException);
+		}
+
+		try {
+			asyncTest.returnSomethingCompletable(0).get();
+			fail("Should have thrown ExecutionException");
+		}
+		catch (ExecutionException ex) {
+			assertTrue(ex.getCause() instanceof IllegalArgumentException);
+		}
 	}
 
 	@Test
@@ -137,6 +187,34 @@ public class AsyncExecutionTests {
 		asyncTest.doSomething(10);
 		Future<String> future = asyncTest.returnSomething(20);
 		assertEquals("20", future.get());
+		ListenableFuture<String> listenableFuture = asyncTest.returnSomethingListenable(20);
+		assertEquals("20", listenableFuture.get());
+		CompletableFuture<String> completableFuture = asyncTest.returnSomethingCompletable(20);
+		assertEquals("20", completableFuture.get());
+
+		try {
+			asyncTest.returnSomething(0).get();
+			fail("Should have thrown ExecutionException");
+		}
+		catch (ExecutionException ex) {
+			assertTrue(ex.getCause() instanceof IllegalArgumentException);
+		}
+
+		try {
+			asyncTest.returnSomethingListenable(0).get();
+			fail("Should have thrown ExecutionException");
+		}
+		catch (ExecutionException ex) {
+			assertTrue(ex.getCause() instanceof IllegalArgumentException);
+		}
+
+		try {
+			asyncTest.returnSomethingCompletable(0).get();
+			fail("Should have thrown ExecutionException");
+		}
+		catch (ExecutionException ex) {
+			assertTrue(ex.getCause() instanceof IllegalArgumentException);
+		}
 	}
 
 	@Test
@@ -359,7 +437,34 @@ public class AsyncExecutionTests {
 		@Async
 		public Future<String> returnSomething(int i) {
 			assertTrue(!Thread.currentThread().getName().equals(originalThreadName));
+			if (i == 0) {
+				throw new IllegalArgumentException();
+			}
+			else if (i < 0) {
+				return AsyncResult.forExecutionException(new IOException());
+			}
+			return AsyncResult.forValue(Integer.toString(i));
+		}
+
+		@Async
+		public ListenableFuture<String> returnSomethingListenable(int i) {
+			assertTrue(!Thread.currentThread().getName().equals(originalThreadName));
+			if (i == 0) {
+				throw new IllegalArgumentException();
+			}
+			else if (i < 0) {
+				return AsyncResult.forExecutionException(new IOException());
+			}
 			return new AsyncResult<String>(Integer.toString(i));
+		}
+
+		@Async
+		public CompletableFuture<String> returnSomethingCompletable(int i) {
+			assertTrue(!Thread.currentThread().getName().equals(originalThreadName));
+			if (i == 0) {
+				throw new IllegalArgumentException();
+			}
+			return CompletableFuture.completedFuture(Integer.toString(i));
 		}
 	}
 
@@ -412,7 +517,8 @@ public class AsyncExecutionTests {
 
 
 	@Async
-	public static class AsyncClassBean {
+	@SuppressWarnings("serial")
+	public static class AsyncClassBean implements Serializable, DisposableBean {
 
 		public void doSomething(int i) {
 			assertTrue(!Thread.currentThread().getName().equals(originalThreadName));
@@ -420,7 +526,31 @@ public class AsyncExecutionTests {
 
 		public Future<String> returnSomething(int i) {
 			assertTrue(!Thread.currentThread().getName().equals(originalThreadName));
+			if (i == 0) {
+				throw new IllegalArgumentException();
+			}
 			return new AsyncResult<String>(Integer.toString(i));
+		}
+
+		public ListenableFuture<String> returnSomethingListenable(int i) {
+			assertTrue(!Thread.currentThread().getName().equals(originalThreadName));
+			if (i == 0) {
+				throw new IllegalArgumentException();
+			}
+			return new AsyncResult<String>(Integer.toString(i));
+		}
+
+		@Async
+		public CompletableFuture<String> returnSomethingCompletable(int i) {
+			assertTrue(!Thread.currentThread().getName().equals(originalThreadName));
+			if (i == 0) {
+				throw new IllegalArgumentException();
+			}
+			return CompletableFuture.completedFuture(Integer.toString(i));
+		}
+
+		@Override
+		public void destroy() {
 		}
 	}
 
@@ -476,7 +606,7 @@ public class AsyncExecutionTests {
 		private final AsyncInterface proxy;
 
 		public DynamicAsyncInterfaceBean() {
-			ProxyFactory pf = new ProxyFactory(new HashMap<String, String>());
+			ProxyFactory pf = new ProxyFactory(new HashMap<>());
 			DefaultIntroductionAdvisor advisor = new DefaultIntroductionAdvisor(new MethodInterceptor() {
 				@Override
 				public Object invoke(MethodInvocation invocation) throws Throwable {
@@ -546,7 +676,7 @@ public class AsyncExecutionTests {
 		private final AsyncMethodsInterface proxy;
 
 		public DynamicAsyncMethodsInterfaceBean() {
-			ProxyFactory pf = new ProxyFactory(new HashMap<String, String>());
+			ProxyFactory pf = new ProxyFactory(new HashMap<>());
 			DefaultIntroductionAdvisor advisor = new DefaultIntroductionAdvisor(new MethodInterceptor() {
 				@Override
 				public Object invoke(MethodInvocation invocation) throws Throwable {

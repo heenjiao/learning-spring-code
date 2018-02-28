@@ -18,7 +18,6 @@ package org.springframework.jmx.export.naming;
 
 import java.io.IOException;
 import java.util.Properties;
-
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 
@@ -71,7 +70,7 @@ public class KeyNamingStrategy implements ObjectNamingStrategy, InitializingBean
 
 	/**
 	 * Stores the result of merging the {@code mappings} {@code Properties}
-	 * with the the properties stored in the resources defined by {@code mappingLocations}.
+	 * with the properties stored in the resources defined by {@code mappingLocations}.
 	 */
 	private Properties mergedMappings;
 
@@ -108,6 +107,7 @@ public class KeyNamingStrategy implements ObjectNamingStrategy, InitializingBean
 	 * used for {@code ObjectName} resolution.
 	 * @throws IOException
 	 */
+	@Override
 	public void afterPropertiesSet() throws IOException {
 		this.mergedMappings = new Properties();
 
@@ -129,6 +129,7 @@ public class KeyNamingStrategy implements ObjectNamingStrategy, InitializingBean
 	 * Attempts to retrieve the {@code ObjectName} via the given key, trying to
 	 * find a mapped value in the mappings first.
 	 */
+	@Override
 	public ObjectName getObjectName(Object managedBean, String beanKey) throws MalformedObjectNameException {
 		String objectName = null;
 		if (this.mergedMappings != null) {

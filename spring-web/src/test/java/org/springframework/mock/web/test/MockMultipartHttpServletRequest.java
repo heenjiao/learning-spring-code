@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import javax.servlet.ServletContext;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -33,6 +34,8 @@ import org.springframework.web.multipart.MultipartHttpServletRequest;
 /**
  * Mock implementation of the
  * {@link org.springframework.web.multipart.MultipartHttpServletRequest} interface.
+ *
+ * <p>As of Spring 4.0, this set of mocks is designed on a Servlet 3.0 baseline.
  *
  * <p>Useful for testing application controllers that access multipart uploads.
  * The {@link MockMultipartFile} can be used to populate these mock requests
@@ -50,7 +53,22 @@ public class MockMultipartHttpServletRequest extends MockHttpServletRequest impl
 			new LinkedMultiValueMap<String, MultipartFile>();
 
 
+	/**
+	 * Create a new {@code MockMultipartHttpServletRequest} with a default
+	 * {@link MockServletContext}.
+	 * @see #MockMultipartHttpServletRequest(ServletContext)
+	 */
 	public MockMultipartHttpServletRequest() {
+		this(null);
+	}
+
+	/**
+	 * Create a new {@code MockMultipartHttpServletRequest} with the supplied {@link ServletContext}.
+	 * @param servletContext the ServletContext that the request runs in
+	 * (may be {@code null} to use a default {@link MockServletContext})
+	 */
+	public MockMultipartHttpServletRequest(ServletContext servletContext) {
+		super(servletContext);
 		setMethod("POST");
 		setContentType("multipart/form-data");
 	}
@@ -110,7 +128,7 @@ public class MockMultipartHttpServletRequest extends MockHttpServletRequest impl
 
 	@Override
 	public HttpMethod getRequestMethod() {
-		return HttpMethod.valueOf(getMethod());
+		return HttpMethod.resolve(getMethod());
 	}
 
 	@Override

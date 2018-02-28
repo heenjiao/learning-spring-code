@@ -82,6 +82,12 @@ public class GenericSqlQueryTests {
 		doTestCustomerQuery(query, true);
 	}
 
+	@Test
+	public void testCustomerQueryWithRowMapperInstance() throws SQLException {
+		SqlQuery<?> query = (SqlQuery<?>) beanFactory.getBean("queryWithRowMapperBean");
+		doTestCustomerQuery(query, true);
+	}
+
 	private void doTestCustomerQuery(SqlQuery<?> query, boolean namedParameters) throws SQLException {
 		given(resultSet.next()).willReturn(true);
 		given(resultSet.getInt("id")).willReturn(1);

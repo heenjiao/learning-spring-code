@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2011 the original author or authors.
+ * Copyright 2002-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,9 @@ import org.springframework.jdbc.support.SQLExceptionTranslator;
  * @see org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor
  * @see SessionFactoryUtils#convertHibernateAccessException(HibernateException)
  * @see SQLExceptionTranslator
+ * @deprecated as of Spring 4.3, in favor of Hibernate 4.x/5.x
  */
+@Deprecated
 public class HibernateExceptionTranslator implements PersistenceExceptionTranslator {
 
 	private SQLExceptionTranslator jdbcExceptionTranslator;
@@ -63,6 +65,7 @@ public class HibernateExceptionTranslator implements PersistenceExceptionTransla
 	}
 
 
+	@Override
 	public DataAccessException translateExceptionIfPossible(RuntimeException ex) {
 		if (ex instanceof HibernateException) {
 			return convertHibernateAccessException((HibernateException) ex);

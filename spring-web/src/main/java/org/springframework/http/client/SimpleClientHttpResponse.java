@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 
 import org.springframework.http.HttpHeaders;
+import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
 
 /**
@@ -29,6 +30,7 @@ import org.springframework.util.StringUtils;
  * {@link SimpleStreamingClientHttpRequest#execute()}.
  *
  * @author Arjen Poutsma
+ * @author Brian Clozel
  * @since 3.0
  */
 final class SimpleClientHttpResponse extends AbstractClientHttpResponse {
@@ -37,20 +39,25 @@ final class SimpleClientHttpResponse extends AbstractClientHttpResponse {
 
 	private HttpHeaders headers;
 
+	private InputStream responseStream;
+
 
 	SimpleClientHttpResponse(HttpURLConnection connection) {
 		this.connection = connection;
 	}
 
 
+	@Override
 	public int getRawStatusCode() throws IOException {
 		return this.connection.getResponseCode();
 	}
 
+	@Override
 	public String getStatusText() throws IOException {
 		return this.connection.getResponseMessage();
 	}
 
+	@Override
 	public HttpHeaders getHeaders() {
 		if (this.headers == null) {
 			this.headers = new HttpHeaders();
@@ -72,13 +79,24 @@ final class SimpleClientHttpResponse extends AbstractClientHttpResponse {
 		return this.headers;
 	}
 
+	@Override
 	public InputStream getBody() throws IOException {
 		InputStream errorStream = this.connection.getErrorStream();
-		return (errorStream != null ? errorStream : this.connection.getInputStream());
+		this.responseStream = (errorStream != null ? errorStream : this.connection.getInputStream());
+		return this.responseStream;
 	}
 
+	@Override
 	public void close() {
-		this.connection.disconnect();
+		if (this.responseStream != null) {
+			try {
+				StreamUtils.drain(this.responseStream);
+				this.responseStream.close();
+			}
+			catch (IOException ex) {
+				// ignore
+			}
+		}
 	}
 
 }

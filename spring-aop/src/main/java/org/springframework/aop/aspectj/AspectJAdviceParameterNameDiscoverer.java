@@ -21,7 +21,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -142,9 +141,8 @@ public class AspectJAdviceParameterNameDiscoverer implements ParameterNameDiscov
 		singleValuedAnnotationPcds.add("@withincode");
 		singleValuedAnnotationPcds.add("@annotation");
 
-		Set pointcutPrimitives = PointcutParser.getAllSupportedPointcutPrimitives();
-		for (Iterator iterator = pointcutPrimitives.iterator(); iterator.hasNext();) {
-			PointcutPrimitive primitive = (PointcutPrimitive) iterator.next();
+		Set<PointcutPrimitive> pointcutPrimitives = PointcutParser.getAllSupportedPointcutPrimitives();
+		for (PointcutPrimitive primitive : pointcutPrimitives) {
 			nonReferencePointcutTokens.add(primitive.getName());
 		}
 		nonReferencePointcutTokens.add("&&");
@@ -173,7 +171,7 @@ public class AspectJAdviceParameterNameDiscoverer implements ParameterNameDiscov
 	 */
 	private String pointcutExpression;
 
-	private Class[] argumentTypes;
+	private Class<?>[] argumentTypes;
 
 	private String[] parameterNameBindings;
 
@@ -222,6 +220,7 @@ public class AspectJAdviceParameterNameDiscoverer implements ParameterNameDiscov
 	 * @param method the target {@link Method}
 	 * @return the parameter names
 	 */
+	@Override
 	public String[] getParameterNames(Method method) {
 		this.argumentTypes = method.getParameterTypes();
 		this.numberOfRemainingUnboundArguments = this.argumentTypes.length;
@@ -309,7 +308,8 @@ public class AspectJAdviceParameterNameDiscoverer implements ParameterNameDiscov
 	 * @throws UnsupportedOperationException if
 	 * {@link #setRaiseExceptions(boolean) raiseExceptions} has been set to {@code true}
 	 */
-	public String[] getParameterNames(Constructor ctor) {
+	@Override
+	public String[] getParameterNames(Constructor<?> ctor) {
 		if (this.raiseExceptions) {
 			throw new UnsupportedOperationException("An advice method can never be a constructor");
 		}
@@ -729,7 +729,7 @@ public class AspectJAdviceParameterNameDiscoverer implements ParameterNameDiscov
 	 * Return {@code true} if the given argument type is a subclass
 	 * of the given supertype.
 	 */
-	private boolean isSubtypeOf(Class supertype, int argumentNumber) {
+	private boolean isSubtypeOf(Class<?> supertype, int argumentNumber) {
 		return supertype.isAssignableFrom(this.argumentTypes[argumentNumber]);
 	}
 
@@ -757,7 +757,7 @@ public class AspectJAdviceParameterNameDiscoverer implements ParameterNameDiscov
 	 * Find the argument index with the given type, and bind the given
 	 * {@code varName} in that position.
 	 */
-	private void findAndBind(Class argumentType, String varName) {
+	private void findAndBind(Class<?> argumentType, String varName) {
 		for (int i = 0; i < this.argumentTypes.length; i++) {
 			if (isUnbound(i) && isSubtypeOf(argumentType, i)) {
 				bindParameterName(i, varName);

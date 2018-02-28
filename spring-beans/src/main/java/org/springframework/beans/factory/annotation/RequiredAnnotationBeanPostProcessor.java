@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,9 @@ import java.beans.PropertyDescriptor;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.beans.BeansException;
@@ -29,6 +30,7 @@ import org.springframework.beans.PropertyValues;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.BeanInitializationException;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessorAdapter;
 import org.springframework.beans.factory.support.MergedBeanDefinitionPostProcessor;
@@ -90,9 +92,9 @@ public class RequiredAnnotationBeanPostProcessor extends InstantiationAwareBeanP
 
 	/**
 	 * Cache for validated bean names, skipping re-validation for the same bean
-	 * (using a ConcurrentHashMap as a Set)
 	 */
-	private final Map<String, Boolean> validatedBeanNames = new ConcurrentHashMap<String, Boolean>(64);
+	private final Set<String> validatedBeanNames =
+			Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>(64));
 
 
 	/**
@@ -116,6 +118,7 @@ public class RequiredAnnotationBeanPostProcessor extends InstantiationAwareBeanP
 		return this.requiredAnnotationType;
 	}
 
+	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
 		if (beanFactory instanceof ConfigurableListableBeanFactory) {
 			this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
@@ -126,20 +129,21 @@ public class RequiredAnnotationBeanPostProcessor extends InstantiationAwareBeanP
 		this.order = order;
 	}
 
+	@Override
 	public int getOrder() {
 		return this.order;
 	}
 
 
+	@Override
 	public void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
 	}
 
 	@Override
 	public PropertyValues postProcessPropertyValues(
-			PropertyValues pvs, PropertyDescriptor[] pds, Object bean, String beanName)
-			throws BeansException {
+			PropertyValues pvs, PropertyDescriptor[] pds, Object bean, String beanName) throws BeansException {
 
-		if (!this.validatedBeanNames.containsKey(beanName)) {
+		if (!this.validatedBeanNames.contains(beanName)) {
 			if (!shouldSkip(this.beanFactory, beanName)) {
 				List<String> invalidProperties = new ArrayList<String>();
 				for (PropertyDescriptor pd : pds) {
@@ -151,7 +155,7 @@ public class RequiredAnnotationBeanPostProcessor extends InstantiationAwareBeanP
 					throw new BeanInitializationException(buildExceptionMessage(invalidProperties, beanName));
 				}
 			}
-			this.validatedBeanNames.put(beanName, Boolean.TRUE);
+			this.validatedBeanNames.add(beanName);
 		}
 		return pvs;
 	}
@@ -161,6 +165,8 @@ public class RequiredAnnotationBeanPostProcessor extends InstantiationAwareBeanP
 	 * required property check as performed by this post-processor.
 	 * <p>The default implementations check for the presence of the
 	 * {@link #SKIP_REQUIRED_CHECK_ATTRIBUTE} attribute in the bean definition, if any.
+	 * It also suggests skipping in case of a bean definition with a "factory-bean"
+	 * reference set, assuming that instance-based factories pre-populate the bean.
 	 * @param beanFactory the BeanFactory to check against
 	 * @param beanName the name of the bean to check against
 	 * @return {@code true} to skip the bean; {@code false} to process it
@@ -169,7 +175,11 @@ public class RequiredAnnotationBeanPostProcessor extends InstantiationAwareBeanP
 		if (beanFactory == null || !beanFactory.containsBeanDefinition(beanName)) {
 			return false;
 		}
-		Object value = beanFactory.getBeanDefinition(beanName).getAttribute(SKIP_REQUIRED_CHECK_ATTRIBUTE);
+		BeanDefinition beanDefinition = beanFactory.getBeanDefinition(beanName);
+		if (beanDefinition.getFactoryBeanName() != null) {
+			return true;
+		}
+		Object value = beanDefinition.getAttribute(SKIP_REQUIRED_CHECK_ATTRIBUTE);
 		return (value != null && (Boolean.TRUE.equals(value) || Boolean.valueOf(value.toString())));
 	}
 

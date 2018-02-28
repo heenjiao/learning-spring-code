@@ -71,6 +71,7 @@ public class XmlViewResolver extends AbstractCachingViewResolver
 		this.order = order;
 	}
 
+	@Override
 	public int getOrder() {
 		return this.order;
 	}
@@ -88,6 +89,7 @@ public class XmlViewResolver extends AbstractCachingViewResolver
 	 * Pre-initialize the factory from the XML file.
 	 * Only effective if caching is enabled.
 	 */
+	@Override
 	public void afterPropertiesSet() throws BeansException {
 		if (isCache()) {
 			initFactory();
@@ -154,6 +156,7 @@ public class XmlViewResolver extends AbstractCachingViewResolver
 	/**
 	 * Close the view bean factory on context shutdown.
 	 */
+	@Override
 	public void destroy() throws BeansException {
 		if (this.cachedFactory != null) {
 			this.cachedFactory.close();

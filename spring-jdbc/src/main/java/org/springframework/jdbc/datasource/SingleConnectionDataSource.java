@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,9 +39,6 @@ import org.springframework.util.ObjectUtils;
  * <p>If client code will call {@code close()} in the assumption of a pooled
  * Connection, like when using persistence tools, set "suppressClose" to "true".
  * This will return a close-suppressing proxy instead of the physical Connection.
- * Be aware that you will not be able to cast this to a native
- * {@code OracleConnection} or the like anymore; you need to use a
- * {@link org.springframework.jdbc.support.nativejdbc.NativeJdbcExtractor} then.
  *
  * <p>This is primarily intended for testing. For example, it enables easy testing
  * outside an application server, for code that expects to work on a DataSource.
@@ -53,10 +50,8 @@ import org.springframework.util.ObjectUtils;
  * @see #getConnection()
  * @see java.sql.Connection#close()
  * @see DataSourceUtils#releaseConnection
- * @see org.springframework.jdbc.support.nativejdbc.NativeJdbcExtractor
  */
-public class SingleConnectionDataSource extends DriverManagerDataSource
-		implements SmartDataSource, DisposableBean {
+public class SingleConnectionDataSource extends DriverManagerDataSource implements SmartDataSource, DisposableBean {
 
 	/** Create a close-suppressing proxy? */
 	private boolean suppressClose;
@@ -78,28 +73,6 @@ public class SingleConnectionDataSource extends DriverManagerDataSource
 	 * Constructor for bean-style configuration.
 	 */
 	public SingleConnectionDataSource() {
-	}
-
-	/**
-	 * Create a new SingleConnectionDataSource with the given standard
-	 * DriverManager parameters.
-	 * @param driverClassName the JDBC driver class name
-	 * @param url the JDBC URL to use for accessing the DriverManager
-	 * @param username the JDBC username to use for accessing the DriverManager
-	 * @param password the JDBC password to use for accessing the DriverManager
-	 * @param suppressClose if the returned Connection should be a
-	 * close-suppressing proxy or the physical Connection
-	 * @deprecated since Spring 2.5. Driver parameter usage is generally not recommended
-	 * for a SingleConnectionDataSource. If you insist on using driver parameters
-	 * directly, set up the Driver class manually before invoking this DataSource.
-	 * @see java.sql.DriverManager#getConnection(String, String, String)
-	 */
-	@Deprecated
-	public SingleConnectionDataSource(
-			String driverClassName, String url, String username, String password, boolean suppressClose) {
-
-		super(driverClassName, url, username, password);
-		this.suppressClose = suppressClose;
 	}
 
 	/**
@@ -213,6 +186,7 @@ public class SingleConnectionDataSource extends DriverManagerDataSource
 	/**
 	 * This is a single Connection: Do not close it when returning to the "pool".
 	 */
+	@Override
 	public boolean shouldClose(Connection con) {
 		synchronized (this.connectionMonitor) {
 			return (con != this.connection && con != this.target);
@@ -225,6 +199,7 @@ public class SingleConnectionDataSource extends DriverManagerDataSource
 	 * <p>As this bean implements DisposableBean, a bean factory will
 	 * automatically invoke this on destruction of its cached singletons.
 	 */
+	@Override
 	public void destroy() {
 		synchronized (this.connectionMonitor) {
 			closeConnection();
@@ -298,7 +273,7 @@ public class SingleConnectionDataSource extends DriverManagerDataSource
 	protected Connection getCloseSuppressingConnectionProxy(Connection target) {
 		return (Connection) Proxy.newProxyInstance(
 				ConnectionProxy.class.getClassLoader(),
-				new Class[] {ConnectionProxy.class},
+				new Class<?>[] {ConnectionProxy.class},
 				new CloseSuppressingInvocationHandler(target));
 	}
 
@@ -314,6 +289,7 @@ public class SingleConnectionDataSource extends DriverManagerDataSource
 			this.target = target;
 		}
 
+		@Override
 		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 			// Invocation on ConnectionProxy interface coming in...
 
@@ -326,12 +302,12 @@ public class SingleConnectionDataSource extends DriverManagerDataSource
 				return System.identityHashCode(proxy);
 			}
 			else if (method.getName().equals("unwrap")) {
-				if (((Class) args[0]).isInstance(proxy)) {
+				if (((Class<?>) args[0]).isInstance(proxy)) {
 					return proxy;
 				}
 			}
 			else if (method.getName().equals("isWrapperFor")) {
-				if (((Class) args[0]).isInstance(proxy)) {
+				if (((Class<?>) args[0]).isInstance(proxy)) {
 					return true;
 				}
 			}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,15 @@
 
 package org.springframework.test.context.testng;
 
-import static org.springframework.test.transaction.TransactionTestUtils.assertInTransaction;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertNotSame;
-import static org.testng.Assert.assertSame;
+import org.testng.annotations.Test;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestContextManager;
-import org.testng.annotations.Test;
+
+import static org.springframework.test.transaction.TransactionTestUtils.*;
+import static org.testng.Assert.*;
 
 /**
  * <p>
@@ -53,13 +52,12 @@ public class DirtiesContextTransactionalTestNGSpringContextTests extends Abstrac
 	private ApplicationContext dirtiedApplicationContext;
 
 
-	@SuppressWarnings("deprecation")
 	private void performCommonAssertions() {
 		assertInTransaction(true);
 		assertNotNull(super.applicationContext,
 			"The application context should have been set due to ApplicationContextAware semantics.");
-		assertNotNull(super.simpleJdbcTemplate,
-			"The SimpleJdbcTemplate should have been created in setDataSource() via DI for the DataSource.");
+		assertNotNull(super.jdbcTemplate,
+			"The JdbcTemplate should have been created in setDataSource() via DI for the DataSource.");
 	}
 
 	@Test

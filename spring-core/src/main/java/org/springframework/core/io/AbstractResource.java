@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,6 +46,7 @@ public abstract class AbstractResource implements Resource {
 	 * falling back to whether an InputStream can be opened.
 	 * This will cover both directories and content resources.
 	 */
+	@Override
 	public boolean exists() {
 		// Try file existence: can we find the file in the file system?
 		try {
@@ -67,6 +68,7 @@ public abstract class AbstractResource implements Resource {
 	/**
 	 * This implementation always returns {@code true}.
 	 */
+	@Override
 	public boolean isReadable() {
 		return true;
 	}
@@ -74,6 +76,7 @@ public abstract class AbstractResource implements Resource {
 	/**
 	 * This implementation always returns {@code false}.
 	 */
+	@Override
 	public boolean isOpen() {
 		return false;
 	}
@@ -82,6 +85,7 @@ public abstract class AbstractResource implements Resource {
 	 * This implementation throws a FileNotFoundException, assuming
 	 * that the resource cannot be resolved to a URL.
 	 */
+	@Override
 	public URL getURL() throws IOException {
 		throw new FileNotFoundException(getDescription() + " cannot be resolved to URL");
 	}
@@ -90,6 +94,7 @@ public abstract class AbstractResource implements Resource {
 	 * This implementation builds a URI based on the URL returned
 	 * by {@link #getURL()}.
 	 */
+	@Override
 	public URI getURI() throws IOException {
 		URL url = getURL();
 		try {
@@ -104,6 +109,7 @@ public abstract class AbstractResource implements Resource {
 	 * This implementation throws a FileNotFoundException, assuming
 	 * that the resource cannot be resolved to an absolute file path.
 	 */
+	@Override
 	public File getFile() throws IOException {
 		throw new FileNotFoundException(getDescription() + " cannot be resolved to absolute file path");
 	}
@@ -113,11 +119,11 @@ public abstract class AbstractResource implements Resource {
 	 * content length. Subclasses will almost always be able to provide
 	 * a more optimal version of this, e.g. checking a File length.
 	 * @see #getInputStream()
-	 * @throws IllegalStateException if {@link #getInputStream()} returns null.
 	 */
+	@Override
 	public long contentLength() throws IOException {
-		InputStream is = this.getInputStream();
-		Assert.state(is != null, "resource input stream must not be null");
+		InputStream is = getInputStream();
+		Assert.state(is != null, "Resource InputStream must not be null");
 		try {
 			long size = 0;
 			byte[] buf = new byte[255];
@@ -141,6 +147,7 @@ public abstract class AbstractResource implements Resource {
 	 * if available.
 	 * @see #getFileForLastModifiedCheck()
 	 */
+	@Override
 	public long lastModified() throws IOException {
 		long lastModified = getFileForLastModifiedCheck().lastModified();
 		if (lastModified == 0L) {
@@ -154,8 +161,9 @@ public abstract class AbstractResource implements Resource {
 	 * Determine the File to use for timestamp checking.
 	 * <p>The default implementation delegates to {@link #getFile()}.
 	 * @return the File to use for timestamp checking (never {@code null})
-	 * @throws IOException if the resource cannot be resolved as absolute
-	 * file path, i.e. if the resource is not available in a file system
+	 * @throws FileNotFoundException if the resource cannot be resolved as
+	 * an absolute file path, i.e. is not available in a file system
+	 * @throws IOException in case of general resolution/reading failures
 	 */
 	protected File getFileForLastModifiedCheck() throws IOException {
 		return getFile();
@@ -165,6 +173,7 @@ public abstract class AbstractResource implements Resource {
 	 * This implementation throws a FileNotFoundException, assuming
 	 * that relative resources cannot be created for this resource.
 	 */
+	@Override
 	public Resource createRelative(String relativePath) throws IOException {
 		throw new FileNotFoundException("Cannot create a relative resource for " + getDescription());
 	}
@@ -173,6 +182,7 @@ public abstract class AbstractResource implements Resource {
 	 * This implementation always returns {@code null},
 	 * assuming that this resource type does not have a filename.
 	 */
+	@Override
 	public String getFilename() {
 		return null;
 	}

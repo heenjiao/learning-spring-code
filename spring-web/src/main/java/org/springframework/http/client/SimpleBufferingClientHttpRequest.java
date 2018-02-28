@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,10 +50,12 @@ final class SimpleBufferingClientHttpRequest extends AbstractBufferingClientHttp
 	}
 
 
+	@Override
 	public HttpMethod getMethod() {
-		return HttpMethod.valueOf(this.connection.getRequestMethod());
+		return HttpMethod.resolve(this.connection.getRequestMethod());
 	}
 
+	@Override
 	public URI getURI() {
 		try {
 			return this.connection.getURL().toURI();
@@ -66,7 +68,10 @@ final class SimpleBufferingClientHttpRequest extends AbstractBufferingClientHttp
 	@Override
 	protected ClientHttpResponse executeInternal(HttpHeaders headers, byte[] bufferedOutput) throws IOException {
 		addHeaders(this.connection, headers);
-
+		// JDK <1.8 doesn't support getOutputStream with HTTP DELETE
+		if (HttpMethod.DELETE == getMethod() && bufferedOutput.length == 0) {
+			this.connection.setDoOutput(false);
+		}
 		if (this.connection.getDoOutput() && this.outputStreaming) {
 			this.connection.setFixedLengthStreamingMode(bufferedOutput.length);
 		}
@@ -74,7 +79,10 @@ final class SimpleBufferingClientHttpRequest extends AbstractBufferingClientHttp
 		if (this.connection.getDoOutput()) {
 			FileCopyUtils.copy(bufferedOutput, this.connection.getOutputStream());
 		}
-
+		else {
+			// Immediately trigger the request in a no-output scenario as well
+			this.connection.getResponseCode();
+		}
 		return new SimpleClientHttpResponse(this.connection);
 	}
 
@@ -87,13 +95,14 @@ final class SimpleBufferingClientHttpRequest extends AbstractBufferingClientHttp
 	static void addHeaders(HttpURLConnection connection, HttpHeaders headers) {
 		for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
 			String headerName = entry.getKey();
-			if ("Cookie".equalsIgnoreCase(headerName)) {  // RFC 6265
+			if (HttpHeaders.COOKIE.equalsIgnoreCase(headerName)) {  // RFC 6265
 				String headerValue = StringUtils.collectionToDelimitedString(entry.getValue(), "; ");
 				connection.setRequestProperty(headerName, headerValue);
 			}
 			else {
 				for (String headerValue : entry.getValue()) {
-					connection.addRequestProperty(headerName, headerValue);
+					String actualHeaderValue = headerValue != null ? headerValue : "";
+					connection.addRequestProperty(headerName, actualHeaderValue);
 				}
 			}
 		}

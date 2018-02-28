@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2015 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ public abstract class CollectionUtils {
 	 * @param collection the Collection to check
 	 * @return whether the given Collection is empty
 	 */
-	public static boolean isEmpty(Collection collection) {
+	public static boolean isEmpty(Collection<?> collection) {
 		return (collection == null || collection.isEmpty());
 	}
 
@@ -57,7 +57,7 @@ public abstract class CollectionUtils {
 	 * @param map the Map to check
 	 * @return whether the given Map is empty
 	 */
-	public static boolean isEmpty(Map map) {
+	public static boolean isEmpty(Map<?, ?> map) {
 		return (map == null || map.isEmpty());
 	}
 
@@ -73,6 +73,7 @@ public abstract class CollectionUtils {
 	 * @see ObjectUtils#toObjectArray(Object)
 	 * @see Arrays#asList(Object[])
 	 */
+	@SuppressWarnings("rawtypes")
 	public static List arrayToList(Object source) {
 		return Arrays.asList(ObjectUtils.toObjectArray(source));
 	}
@@ -83,13 +84,13 @@ public abstract class CollectionUtils {
 	 * @param collection the target Collection to merge the array into
 	 */
 	@SuppressWarnings("unchecked")
-	public static void mergeArrayIntoCollection(Object array, Collection collection) {
+	public static <E> void mergeArrayIntoCollection(Object array, Collection<E> collection) {
 		if (collection == null) {
 			throw new IllegalArgumentException("Collection must not be null");
 		}
 		Object[] arr = ObjectUtils.toObjectArray(array);
 		for (Object elem : arr) {
-			collection.add(elem);
+			collection.add((E) elem);
 		}
 	}
 
@@ -102,19 +103,19 @@ public abstract class CollectionUtils {
 	 * @param map the target Map to merge the properties into
 	 */
 	@SuppressWarnings("unchecked")
-	public static void mergePropertiesIntoMap(Properties props, Map map) {
+	public static <K, V> void mergePropertiesIntoMap(Properties props, Map<K, V> map) {
 		if (map == null) {
 			throw new IllegalArgumentException("Map must not be null");
 		}
 		if (props != null) {
-			for (Enumeration en = props.propertyNames(); en.hasMoreElements();) {
+			for (Enumeration<?> en = props.propertyNames(); en.hasMoreElements();) {
 				String key = (String) en.nextElement();
-				Object value = props.getProperty(key);
+				Object value = props.get(key);
 				if (value == null) {
-					// Potentially a non-String value...
-					value = props.get(key);
+					// Allow for defaults fallback or potentially overridden accessor...
+					value = props.getProperty(key);
 				}
-				map.put(key, value);
+				map.put((K) key, (V) value);
 			}
 		}
 	}
@@ -126,7 +127,7 @@ public abstract class CollectionUtils {
 	 * @param element the element to look for
 	 * @return {@code true} if found, {@code false} else
 	 */
-	public static boolean contains(Iterator iterator, Object element) {
+	public static boolean contains(Iterator<?> iterator, Object element) {
 		if (iterator != null) {
 			while (iterator.hasNext()) {
 				Object candidate = iterator.next();
@@ -144,7 +145,7 @@ public abstract class CollectionUtils {
 	 * @param element the element to look for
 	 * @return {@code true} if found, {@code false} else
 	 */
-	public static boolean contains(Enumeration enumeration, Object element) {
+	public static boolean contains(Enumeration<?> enumeration, Object element) {
 		if (enumeration != null) {
 			while (enumeration.hasMoreElements()) {
 				Object candidate = enumeration.nextElement();
@@ -164,7 +165,7 @@ public abstract class CollectionUtils {
 	 * @param element the element to look for
 	 * @return {@code true} if found, {@code false} else
 	 */
-	public static boolean containsInstance(Collection collection, Object element) {
+	public static boolean containsInstance(Collection<?> collection, Object element) {
 		if (collection != null) {
 			for (Object candidate : collection) {
 				if (candidate == element) {
@@ -182,7 +183,7 @@ public abstract class CollectionUtils {
 	 * @param candidates the candidates to search for
 	 * @return whether any of the candidates has been found
 	 */
-	public static boolean containsAny(Collection source, Collection candidates) {
+	public static boolean containsAny(Collection<?> source, Collection<?> candidates) {
 		if (isEmpty(source) || isEmpty(candidates)) {
 			return false;
 		}
@@ -203,13 +204,14 @@ public abstract class CollectionUtils {
 	 * @param candidates the candidates to search for
 	 * @return the first present object, or {@code null} if not found
 	 */
-	public static Object findFirstMatch(Collection source, Collection candidates) {
+	@SuppressWarnings("unchecked")
+	public static <E> E findFirstMatch(Collection<?> source, Collection<E> candidates) {
 		if (isEmpty(source) || isEmpty(candidates)) {
 			return null;
 		}
 		for (Object candidate : candidates) {
 			if (source.contains(candidate)) {
-				return candidate;
+				return (E) candidate;
 			}
 		}
 		return null;
@@ -268,7 +270,7 @@ public abstract class CollectionUtils {
 	 * @return {@code true} if the collection contains a single reference or
 	 * multiple references to the same instance, {@code false} else
 	 */
-	public static boolean hasUniqueObject(Collection collection) {
+	public static boolean hasUniqueObject(Collection<?> collection) {
 		if (isEmpty(collection)) {
 			return false;
 		}
@@ -292,7 +294,7 @@ public abstract class CollectionUtils {
 	 * @return the common element type, or {@code null} if no clear
 	 * common type has been found (or the collection was empty)
 	 */
-	public static Class<?> findCommonElementType(Collection collection) {
+	public static Class<?> findCommonElementType(Collection<?> collection) {
 		if (isEmpty(collection)) {
 			return null;
 		}
@@ -340,7 +342,6 @@ public abstract class CollectionUtils {
 	 */
 	public static <K, V> MultiValueMap<K, V> toMultiValueMap(Map<K, List<V>> map) {
 		return new MultiValueMapAdapter<K, V>(map);
-
 	}
 
 	/**
@@ -349,12 +350,13 @@ public abstract class CollectionUtils {
 	 * @return an unmodifiable view of the specified multi-value map.
 	 * @since 3.1
 	 */
+	@SuppressWarnings("unchecked")
 	public static <K, V> MultiValueMap<K, V> unmodifiableMultiValueMap(MultiValueMap<? extends K, ? extends V> map) {
 		Assert.notNull(map, "'map' must not be null");
 		Map<K, List<V>> result = new LinkedHashMap<K, List<V>>(map.size());
 		for (Map.Entry<? extends K, ? extends List<? extends V>> entry : map.entrySet()) {
-			List<V> values = Collections.unmodifiableList(entry.getValue());
-			result.put(entry.getKey(), values);
+			List<? extends V> values = Collections.unmodifiableList(entry.getValue());
+			result.put(entry.getKey(), (List<V>) values);
 		}
 		Map<K, List<V>> unmodifiableMap = Collections.unmodifiableMap(result);
 		return toMultiValueMap(unmodifiableMap);
@@ -372,18 +374,22 @@ public abstract class CollectionUtils {
 			this.enumeration = enumeration;
 		}
 
+		@Override
 		public boolean hasNext() {
 			return this.enumeration.hasMoreElements();
 		}
 
+		@Override
 		public E next() {
 			return this.enumeration.nextElement();
 		}
 
+		@Override
 		public void remove() throws UnsupportedOperationException {
 			throw new UnsupportedOperationException("Not supported");
 		}
 	}
+
 
 	/**
 	 * Adapts a Map to the MultiValueMap contract.
@@ -398,6 +404,7 @@ public abstract class CollectionUtils {
 			this.map = map;
 		}
 
+		@Override
 		public void add(K key, V value) {
 			List<V> values = this.map.get(key);
 			if (values == null) {
@@ -407,23 +414,27 @@ public abstract class CollectionUtils {
 			values.add(value);
 		}
 
+		@Override
 		public V getFirst(K key) {
 			List<V> values = this.map.get(key);
 			return (values != null ? values.get(0) : null);
 		}
 
+		@Override
 		public void set(K key, V value) {
 			List<V> values = new LinkedList<V>();
 			values.add(value);
 			this.map.put(key, values);
 		}
 
+		@Override
 		public void setAll(Map<K, V> values) {
 			for (Entry<K, V> entry : values.entrySet()) {
 				set(entry.getKey(), entry.getValue());
 			}
 		}
 
+		@Override
 		public Map<K, V> toSingleValueMap() {
 			LinkedHashMap<K, V> singleValueMap = new LinkedHashMap<K,V>(this.map.size());
 			for (Entry<K, List<V>> entry : map.entrySet()) {
@@ -432,50 +443,62 @@ public abstract class CollectionUtils {
 			return singleValueMap;
 		}
 
+		@Override
 		public int size() {
 			return this.map.size();
 		}
 
+		@Override
 		public boolean isEmpty() {
 			return this.map.isEmpty();
 		}
 
+		@Override
 		public boolean containsKey(Object key) {
 			return this.map.containsKey(key);
 		}
 
+		@Override
 		public boolean containsValue(Object value) {
 			return this.map.containsValue(value);
 		}
 
+		@Override
 		public List<V> get(Object key) {
 			return this.map.get(key);
 		}
 
+		@Override
 		public List<V> put(K key, List<V> value) {
 			return this.map.put(key, value);
 		}
 
+		@Override
 		public List<V> remove(Object key) {
 			return this.map.remove(key);
 		}
 
+		@Override
 		public void putAll(Map<? extends K, ? extends List<V>> map) {
 			this.map.putAll(map);
 		}
 
+		@Override
 		public void clear() {
 			this.map.clear();
 		}
 
+		@Override
 		public Set<K> keySet() {
 			return this.map.keySet();
 		}
 
+		@Override
 		public Collection<List<V>> values() {
 			return this.map.values();
 		}
 
+		@Override
 		public Set<Entry<K, List<V>>> entrySet() {
 			return this.map.entrySet();
 		}

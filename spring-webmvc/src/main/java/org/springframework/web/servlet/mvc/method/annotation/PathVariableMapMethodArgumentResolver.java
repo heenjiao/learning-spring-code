@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,15 +42,17 @@ import org.springframework.web.servlet.HandlerMapping;
  */
 public class PathVariableMapMethodArgumentResolver implements HandlerMethodArgumentResolver {
 
+	@Override
 	public boolean supportsParameter(MethodParameter parameter) {
-		PathVariable annot = parameter.getParameterAnnotation(PathVariable.class);
-		return ((annot != null) && (Map.class.isAssignableFrom(parameter.getParameterType()))
-				&& (!StringUtils.hasText(annot.value())));
+		PathVariable ann = parameter.getParameterAnnotation(PathVariable.class);
+		return (ann != null && (Map.class.isAssignableFrom(parameter.getParameterType()))
+				&& !StringUtils.hasText(ann.value()));
 	}
 
 	/**
 	 * Return a Map with all URI template variables or an empty map.
 	 */
+	@Override
 	public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
 			NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
 

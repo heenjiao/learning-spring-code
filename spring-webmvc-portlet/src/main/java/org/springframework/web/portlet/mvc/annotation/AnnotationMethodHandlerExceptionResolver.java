@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ import org.springframework.core.ExceptionDepthComparator;
 import org.springframework.core.GenericTypeResolver;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.core.annotation.SynthesizingMethodParameter;
 import org.springframework.ui.Model;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
@@ -74,9 +75,11 @@ import org.springframework.web.servlet.View;
  */
 public class AnnotationMethodHandlerExceptionResolver extends AbstractHandlerExceptionResolver {
 
-	// dummy method placeholder
-	private static final Method NO_METHOD_FOUND =
-			ClassUtils.getMethodIfAvailable(System.class, "currentTimeMillis", (Class<?>[]) null);
+	/**
+	 * Arbitrary {@link Method} reference, indicating no method found in the cache.
+	 */
+	private static final Method NO_METHOD_FOUND = ClassUtils.getMethodIfAvailable(System.class, "currentTimeMillis");
+
 
 	private final Map<Class<?>, Map<Class<? extends Throwable>, Method>> exceptionHandlerCache =
 			new ConcurrentHashMap<Class<?>, Map<Class<? extends Throwable>, Method>>(64);
@@ -153,6 +156,7 @@ public class AnnotationMethodHandlerExceptionResolver extends AbstractHandlerExc
 		final Map<Class<? extends Throwable>, Method> matchedHandlers = new HashMap<Class<? extends Throwable>, Method>();
 
 		ReflectionUtils.doWithMethods(handlerType, new ReflectionUtils.MethodCallback() {
+			@Override
 			public void doWith(Method method) {
 				method = ClassUtils.getMostSpecificMethod(method, handlerType);
 				List<Class<? extends Throwable>> handledExceptions = getHandledExceptions(method);
@@ -208,7 +212,7 @@ public class AnnotationMethodHandlerExceptionResolver extends AbstractHandlerExc
 
 	/**
 	 * Uses the {@link ExceptionDepthComparator} to find the best matching method.
-	 * @return the best matching method or {@code null}.
+	 * @return the best matching method, or {@code null} if none found
 	 */
 	private Method getBestMatchingMethod(
 			Map<Class<? extends Throwable>, Method> resolverMethods, Exception thrownException) {
@@ -232,7 +236,7 @@ public class AnnotationMethodHandlerExceptionResolver extends AbstractHandlerExc
 		Object[] args = new Object[paramTypes.length];
 		Class<?> handlerType = handler.getClass();
 		for (int i = 0; i < args.length; i++) {
-			MethodParameter methodParam = new MethodParameter(handlerMethod, i);
+			MethodParameter methodParam = new SynthesizingMethodParameter(handlerMethod, i);
 			GenericTypeResolver.resolveParameterType(methodParam, handlerType);
 			Class<?> paramType = methodParam.getParameterType();
 			Object argValue = resolveCommonArgument(methodParam, webRequest, thrownException);
@@ -327,7 +331,7 @@ public class AnnotationMethodHandlerExceptionResolver extends AbstractHandlerExc
 		else if (Principal.class.isAssignableFrom(parameterType)) {
 			return request.getUserPrincipal();
 		}
-		else if (Locale.class.equals(parameterType)) {
+		else if (Locale.class == parameterType) {
 			return request.getLocale();
 		}
 		else if (InputStream.class.isAssignableFrom(parameterType)) {
@@ -354,7 +358,7 @@ public class AnnotationMethodHandlerExceptionResolver extends AbstractHandlerExc
 			}
 			return ((MimeResponse) response).getWriter();
 		}
-		else if (Event.class.equals(parameterType)) {
+		else if (Event.class == parameterType) {
 			if (!(request instanceof EventRequest)) {
 				throw new IllegalStateException("Event can only get obtained from EventRequest");
 			}
@@ -385,7 +389,7 @@ public class AnnotationMethodHandlerExceptionResolver extends AbstractHandlerExc
 			return new ModelAndView().addAllObjects(((Model) returnValue).asMap());
 		}
 		else if (returnValue instanceof Map) {
-			return new ModelAndView().addAllObjects((Map) returnValue);
+			return new ModelAndView().addAllObjects((Map<String, Object>) returnValue);
 		}
 		else if (returnValue instanceof View) {
 			return new ModelAndView(returnValue);

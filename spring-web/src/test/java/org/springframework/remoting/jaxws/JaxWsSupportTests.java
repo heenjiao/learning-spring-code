@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.remoting.jaxws;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-
 import javax.xml.namespace.QName;
 import javax.xml.ws.BindingProvider;
 import javax.xml.ws.Service;
@@ -27,6 +26,7 @@ import javax.xml.ws.WebServiceRef;
 import javax.xml.ws.soap.AddressingFeature;
 
 import org.junit.Test;
+
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.support.GenericBeanDefinition;
 import org.springframework.beans.factory.support.RootBeanDefinition;
@@ -127,7 +127,7 @@ public class JaxWsSupportTests {
 		}
 		catch (BeanCreationException ex) {
 			if ("exporter".equals(ex.getBeanName()) && ex.getRootCause() instanceof ClassNotFoundException) {
-				// ignore - probably running on JDK < 1.6 without the JAX-WS impl present
+				// ignore - probably running on JDK without the JAX-WS impl present
 			}
 			else {
 				throw ex;
@@ -146,7 +146,7 @@ public class JaxWsSupportTests {
 
 		public OrderService myService;
 
-		@WebServiceRef(value=OrderServiceService.class, wsdlLocation = "http://localhost:9999/OrderService?wsdl")
+		@WebServiceRef(value = OrderServiceService.class, wsdlLocation = "http://localhost:9999/OrderService?wsdl")
 		public void setMyService(OrderService myService) {
 			this.myService = myService;
 		}

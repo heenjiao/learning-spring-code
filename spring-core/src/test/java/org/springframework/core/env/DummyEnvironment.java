@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,56 +18,68 @@ package org.springframework.core.env;
 
 public class DummyEnvironment implements Environment {
 
+	@Override
 	public boolean containsProperty(String key) {
 		return false;
 	}
 
+	@Override
 	public String getProperty(String key) {
 		return null;
 	}
 
+	@Override
 	public String getProperty(String key, String defaultValue) {
 		return null;
 	}
 
+	@Override
 	public <T> T getProperty(String key, Class<T> targetType) {
 		return null;
 	}
 
+	@Override
 	public <T> T getProperty(String key, Class<T> targetType, T defaultValue) {
 		return null;
 	}
 
+	@Override
+	@Deprecated
 	public <T> Class<T> getPropertyAsClass(String key, Class<T> targetType) {
 		return null;
 	}
 
+	@Override
 	public String getRequiredProperty(String key) throws IllegalStateException {
 		return null;
 	}
 
-	public <T> T getRequiredProperty(String key, Class<T> targetType)
-			throws IllegalStateException {
+	@Override
+	public <T> T getRequiredProperty(String key, Class<T> targetType) throws IllegalStateException {
 		return null;
 	}
 
+	@Override
 	public String resolvePlaceholders(String text) {
 		return null;
 	}
 
-	public String resolveRequiredPlaceholders(String text)
-			throws IllegalArgumentException {
+	@Override
+	public String resolveRequiredPlaceholders(String text) throws IllegalArgumentException {
 		return null;
 	}
 
+	@Override
 	public String[] getActiveProfiles() {
 		return null;
 	}
 
+	@Override
 	public String[] getDefaultProfiles() {
 		return null;
 	}
 
+	@Override
 	public boolean acceptsProfiles(String... profiles) {
 		return false;
 	}

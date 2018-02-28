@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,19 @@
 
 package org.springframework.web.servlet.mvc.method.annotation;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.security.Principal;
+import java.time.ZoneId;
 import java.util.Locale;
-
+import java.util.TimeZone;
 import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
 import org.springframework.core.MethodParameter;
+import org.springframework.http.HttpMethod;
+import org.springframework.lang.UsesJava8;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.context.request.WebRequest;
@@ -43,36 +45,47 @@ import org.springframework.web.servlet.support.RequestContextUtils;
  * <li>{@link MultipartRequest}
  * <li>{@link HttpSession}
  * <li>{@link Principal}
- * <li>{@link Locale}
  * <li>{@link InputStream}
  * <li>{@link Reader}
+ * <li>{@link HttpMethod} (as of Spring 4.0)
+ * <li>{@link Locale}
+ * <li>{@link TimeZone} (as of Spring 4.0)
+ * <li>{@link java.time.ZoneId} (as of Spring 4.0 and Java 8)
  * </ul>
  *
  * @author Arjen Poutsma
  * @author Rossen Stoyanchev
+ * @author Juergen Hoeller
  * @since 3.1
  */
 public class ServletRequestMethodArgumentResolver implements HandlerMethodArgumentResolver {
 
+	@Override
 	public boolean supportsParameter(MethodParameter parameter) {
 		Class<?> paramType = parameter.getParameterType();
-		return WebRequest.class.isAssignableFrom(paramType) ||
+		return (WebRequest.class.isAssignableFrom(paramType) ||
 				ServletRequest.class.isAssignableFrom(paramType) ||
 				MultipartRequest.class.isAssignableFrom(paramType) ||
 				HttpSession.class.isAssignableFrom(paramType) ||
 				Principal.class.isAssignableFrom(paramType) ||
-				Locale.class.equals(paramType) ||
 				InputStream.class.isAssignableFrom(paramType) ||
-				Reader.class.isAssignableFrom(paramType);
+				Reader.class.isAssignableFrom(paramType) ||
+				HttpMethod.class == paramType ||
+				Locale.class == paramType ||
+				TimeZone.class == paramType ||
+				"java.time.ZoneId".equals(paramType.getName()));
 	}
 
-	public Object resolveArgument(
-			MethodParameter parameter, ModelAndViewContainer mavContainer,
-			NativeWebRequest webRequest, WebDataBinderFactory binderFactory)
-			throws IOException {
+	@Override
+	public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
+			NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
 
 		Class<?> paramType = parameter.getParameterType();
 		if (WebRequest.class.isAssignableFrom(paramType)) {
+			if (!paramType.isInstance(webRequest)) {
+				throw new IllegalStateException(
+						"Current request is not of type [" + paramType.getName() + "]: " + webRequest);
+			}
 			return webRequest;
 		}
 
@@ -86,24 +99,67 @@ public class ServletRequestMethodArgumentResolver implements HandlerMethodArgume
 			return nativeRequest;
 		}
 		else if (HttpSession.class.isAssignableFrom(paramType)) {
-			return request.getSession();
-		}
-		else if (Principal.class.isAssignableFrom(paramType)) {
-			return request.getUserPrincipal();
-		}
-		else if (Locale.class.equals(paramType)) {
-			return RequestContextUtils.getLocale(request);
+			HttpSession session = request.getSession();
+			if (session != null && !paramType.isInstance(session)) {
+				throw new IllegalStateException(
+						"Current session is not of type [" + paramType.getName() + "]: " + session);
+			}
+			return session;
 		}
 		else if (InputStream.class.isAssignableFrom(paramType)) {
-			return request.getInputStream();
+			InputStream inputStream = request.getInputStream();
+			if (inputStream != null && !paramType.isInstance(inputStream)) {
+				throw new IllegalStateException(
+						"Request input stream is not of type [" + paramType.getName() + "]: " + inputStream);
+			}
+			return inputStream;
 		}
 		else if (Reader.class.isAssignableFrom(paramType)) {
-			return request.getReader();
+			Reader reader = request.getReader();
+			if (reader != null && !paramType.isInstance(reader)) {
+				throw new IllegalStateException(
+						"Request body reader is not of type [" + paramType.getName() + "]: " + reader);
+			}
+			return reader;
+		}
+		else if (Principal.class.isAssignableFrom(paramType)) {
+			Principal userPrincipal = request.getUserPrincipal();
+			if (userPrincipal != null && !paramType.isInstance(userPrincipal)) {
+				throw new IllegalStateException(
+						"Current user principal is not of type [" + paramType.getName() + "]: " + userPrincipal);
+			}
+			return userPrincipal;
+		}
+		else if (HttpMethod.class == paramType) {
+			return HttpMethod.resolve(request.getMethod());
+		}
+		else if (Locale.class == paramType) {
+			return RequestContextUtils.getLocale(request);
+		}
+		else if (TimeZone.class == paramType) {
+			TimeZone timeZone = RequestContextUtils.getTimeZone(request);
+			return (timeZone != null ? timeZone : TimeZone.getDefault());
+		}
+		else if ("java.time.ZoneId".equals(paramType.getName())) {
+			return ZoneIdResolver.resolveZoneId(request);
 		}
 		else {
-			// should never happen...
+			// Should never happen...
 			throw new UnsupportedOperationException(
-					"Unknown parameter type: " + paramType + " in method: " + parameter.getMethod());
+					"Unknown parameter type [" + paramType.getName() + "] in " + parameter.getMethod());
+		}
+	}
+
+
+	/**
+	 * Inner class to avoid a hard-coded dependency on Java 8's {@link java.time.ZoneId}.
+	 */
+	@UsesJava8
+	private static class ZoneIdResolver {
+
+		public static Object resolveZoneId(HttpServletRequest request) {
+			TimeZone timeZone = RequestContextUtils.getTimeZone(request);
+			return (timeZone != null ? timeZone.toZoneId() : ZoneId.systemDefault());
 		}
 	}
 

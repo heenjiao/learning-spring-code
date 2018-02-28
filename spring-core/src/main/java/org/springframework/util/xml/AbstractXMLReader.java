@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,15 +26,16 @@ import org.xml.sax.XMLReader;
 import org.xml.sax.ext.LexicalHandler;
 
 /**
- * Abstract base class for SAX {@code XMLReader} implementations. Contains properties as defined in {@link
- * XMLReader}, and does not recognize any features.
+ * Abstract base class for SAX {@code XMLReader} implementations.
+ * Contains properties as defined in {@link XMLReader}, and does not recognize any features.
  *
  * @author Arjen Poutsma
+ * @author Juergen Hoeller
+ * @since 3.0
  * @see #setContentHandler(org.xml.sax.ContentHandler)
  * @see #setDTDHandler(org.xml.sax.DTDHandler)
  * @see #setEntityResolver(org.xml.sax.EntityResolver)
  * @see #setErrorHandler(org.xml.sax.ErrorHandler)
- * @since 3.0
  */
 abstract class AbstractXMLReader implements XMLReader {
 
@@ -48,68 +49,92 @@ abstract class AbstractXMLReader implements XMLReader {
 
 	private LexicalHandler lexicalHandler;
 
-	public ContentHandler getContentHandler() {
-		return contentHandler;
-	}
 
+	@Override
 	public void setContentHandler(ContentHandler contentHandler) {
 		this.contentHandler = contentHandler;
 	}
 
+	@Override
+	public ContentHandler getContentHandler() {
+		return this.contentHandler;
+	}
+
+	@Override
 	public void setDTDHandler(DTDHandler dtdHandler) {
 		this.dtdHandler = dtdHandler;
 	}
 
+	@Override
 	public DTDHandler getDTDHandler() {
-		return dtdHandler;
+		return this.dtdHandler;
 	}
 
-	public EntityResolver getEntityResolver() {
-		return entityResolver;
-	}
-
+	@Override
 	public void setEntityResolver(EntityResolver entityResolver) {
 		this.entityResolver = entityResolver;
 	}
 
-	public ErrorHandler getErrorHandler() {
-		return errorHandler;
+	@Override
+	public EntityResolver getEntityResolver() {
+		return this.entityResolver;
 	}
 
+	@Override
 	public void setErrorHandler(ErrorHandler errorHandler) {
 		this.errorHandler = errorHandler;
 	}
 
+	@Override
+	public ErrorHandler getErrorHandler() {
+		return this.errorHandler;
+	}
+
 	protected LexicalHandler getLexicalHandler() {
-		return lexicalHandler;
+		return this.lexicalHandler;
 	}
 
+
 	/**
-	 * Throws a {@code SAXNotRecognizedException} exception.
-	 *
-	 * @throws org.xml.sax.SAXNotRecognizedException
-	 *          always
+	 * This implementation throws a {@code SAXNotRecognizedException} exception
+	 * for any feature outside of the "http://xml.org/sax/features/" namespace
+	 * and returns {@code false} for any feature within.
 	 */
+	@Override
 	public boolean getFeature(String name) throws SAXNotRecognizedException, SAXNotSupportedException {
-		throw new SAXNotRecognizedException(name);
+		if (name.startsWith("http://xml.org/sax/features/")) {
+			return false;
+		}
+		else {
+			throw new SAXNotRecognizedException(name);
+		}
 	}
 
 	/**
-	 * Throws a {@code SAXNotRecognizedException} exception.
-	 *
-	 * @throws SAXNotRecognizedException always
+	 * This implementation throws a {@code SAXNotRecognizedException} exception
+	 * for any feature outside of the "http://xml.org/sax/features/" namespace
+	 * and accepts a {@code false} value for any feature within.
 	 */
+	@Override
 	public void setFeature(String name, boolean value) throws SAXNotRecognizedException, SAXNotSupportedException {
-		throw new SAXNotRecognizedException(name);
+		if (name.startsWith("http://xml.org/sax/features/")) {
+			if (value) {
+				throw new SAXNotSupportedException(name);
+			}
+		}
+		else {
+			throw new SAXNotRecognizedException(name);
+		}
 	}
 
 	/**
 	 * Throws a {@code SAXNotRecognizedException} exception when the given property does not signify a lexical
 	 * handler. The property name for a lexical handler is {@code http://xml.org/sax/properties/lexical-handler}.
 	 */
+	@Override
 	public Object getProperty(String name) throws SAXNotRecognizedException, SAXNotSupportedException {
 		if ("http://xml.org/sax/properties/lexical-handler".equals(name)) {
-			return lexicalHandler;
+			return this.lexicalHandler;
 		}
 		else {
 			throw new SAXNotRecognizedException(name);
@@ -120,12 +145,14 @@ abstract class AbstractXMLReader implements XMLReader {
 	 * Throws a {@code SAXNotRecognizedException} exception when the given property does not signify a lexical
 	 * handler. The property name for a lexical handler is {@code http://xml.org/sax/properties/lexical-handler}.
 	 */
+	@Override
 	public void setProperty(String name, Object value) throws SAXNotRecognizedException, SAXNotSupportedException {
 		if ("http://xml.org/sax/properties/lexical-handler".equals(name)) {
-			lexicalHandler = (LexicalHandler) value;
+			this.lexicalHandler = (LexicalHandler) value;
 		}
 		else {
 			throw new SAXNotRecognizedException(name);
 		}
 	}
+
 }

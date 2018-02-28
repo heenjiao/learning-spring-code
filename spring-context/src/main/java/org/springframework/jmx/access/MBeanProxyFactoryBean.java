@@ -48,7 +48,7 @@ import org.springframework.util.ClassUtils;
 public class MBeanProxyFactoryBean extends MBeanClientInterceptor
 		implements FactoryBean<Object>, BeanClassLoaderAware, InitializingBean {
 
-	private Class proxyInterface;
+	private Class<?> proxyInterface;
 
 	private ClassLoader beanClassLoader = ClassUtils.getDefaultClassLoader();
 
@@ -62,7 +62,7 @@ public class MBeanProxyFactoryBean extends MBeanClientInterceptor
 	 * conventional Java methods for MBean operations.
 	 * @see #setObjectName
 	 */
-	public void setProxyInterface(Class proxyInterface) {
+	public void setProxyInterface(Class<?> proxyInterface) {
 		this.proxyInterface = proxyInterface;
 	}
 
@@ -94,14 +94,17 @@ public class MBeanProxyFactoryBean extends MBeanClientInterceptor
 	}
 
 
+	@Override
 	public Object getObject() {
 		return this.mbeanProxy;
 	}
 
+	@Override
 	public Class<?> getObjectType() {
 		return this.proxyInterface;
 	}
 
+	@Override
 	public boolean isSingleton() {
 		return true;
 	}

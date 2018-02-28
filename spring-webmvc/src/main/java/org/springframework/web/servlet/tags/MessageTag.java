@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,8 @@ package org.springframework.web.servlet.tags;
 
 import java.io.IOException;
 import java.util.Collection;
-
+import java.util.LinkedList;
+import java.util.List;
 import javax.servlet.jsp.JspException;
 import javax.servlet.jsp.JspTagException;
 
@@ -27,8 +28,6 @@ import org.springframework.context.MessageSourceResolvable;
 import org.springframework.context.NoSuchMessageException;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
-import org.springframework.web.util.ExpressionEvaluationUtils;
-import org.springframework.web.util.HtmlUtils;
 import org.springframework.web.util.JavaScriptUtils;
 import org.springframework.web.util.TagUtils;
 
@@ -42,17 +41,22 @@ import org.springframework.web.util.TagUtils;
  * <p>If "code" isn't set or cannot be resolved, "text" will be used as default
  * message. Thus, this tag can also be used for HTML escaping of any texts.
  *
+ * <p>Message arguments can be specified via the {@link #setArguments(Object) arguments}
+ * attribute or by using nested {@code <spring:argument>} tags.
+ *
  * @author Rod Johnson
  * @author Juergen Hoeller
+ * @author Nicholas Williams
  * @see #setCode
  * @see #setText
  * @see #setHtmlEscape
  * @see #setJavaScriptEscape
  * @see HtmlEscapeTag#setDefaultHtmlEscape
  * @see org.springframework.web.util.WebUtils#HTML_ESCAPE_CONTEXT_PARAM
+ * @see ArgumentTag
  */
 @SuppressWarnings("serial")
-public class MessageTag extends HtmlEscapingAwareTag {
+public class MessageTag extends HtmlEscapingAwareTag implements ArgumentAware {
 
 	/**
 	 * Default separator for splitting an arguments String: a comma (",")
@@ -60,13 +64,15 @@ public class MessageTag extends HtmlEscapingAwareTag {
 	public static final String DEFAULT_ARGUMENT_SEPARATOR = ",";
 
 
-	private Object message;
+	private MessageSourceResolvable message;
 
 	private String code;
 
 	private Object arguments;
 
 	private String argumentSeparator = DEFAULT_ARGUMENT_SEPARATOR;
+
+	private List<Object> nestedArguments;
 
 	private String text;
 
@@ -79,12 +85,10 @@ public class MessageTag extends HtmlEscapingAwareTag {
 
 	/**
 	 * Set the MessageSourceResolvable for this tag.
-	 * Accepts a direct MessageSourceResolvable instance as well as a JSP
-	 * expression language String that points to a MessageSourceResolvable.
 	 * <p>If a MessageSourceResolvable is specified, it effectively overrides
 	 * any code, arguments or text specified on this tag.
 	 */
-	public void setMessage(Object message) {
+	public void setMessage(MessageSourceResolvable message) {
 		this.message = message;
 	}
 
@@ -111,6 +115,11 @@ public class MessageTag extends HtmlEscapingAwareTag {
 	 */
 	public void setArgumentSeparator(String argumentSeparator) {
 		this.argumentSeparator = argumentSeparator;
+	}
+
+	@Override
+	public void addArgument(Object argument) throws JspTagException {
+		this.nestedArguments.add(argument);
 	}
 
 	/**
@@ -145,11 +154,16 @@ public class MessageTag extends HtmlEscapingAwareTag {
 	 * Set JavaScript escaping for this tag, as boolean value.
 	 * Default is "false".
 	 */
-	public void setJavaScriptEscape(String javaScriptEscape) throws JspException {
-		this.javaScriptEscape =
-				ExpressionEvaluationUtils.evaluateBoolean("javaScriptEscape", javaScriptEscape, pageContext);
+	public void setJavaScriptEscape(boolean javaScriptEscape) throws JspException {
+		this.javaScriptEscape = javaScriptEscape;
 	}
 
+
+	@Override
+	protected final int doStartTagInternal() throws JspException, IOException {
+		this.nestedArguments = new LinkedList<Object>();
+		return EVAL_BODY_INCLUDE;
+	}
 
 	/**
 	 * Resolves the message, escapes it if demanded,
@@ -160,30 +174,37 @@ public class MessageTag extends HtmlEscapingAwareTag {
 	 * @see #writeMessage(String)
 	 */
 	@Override
-	protected final int doStartTagInternal() throws JspException, IOException {
+	public int doEndTag() throws JspException {
 		try {
 			// Resolve the unescaped message.
 			String msg = resolveMessage();
 
 			// HTML and/or JavaScript escape, if demanded.
-			msg = isHtmlEscape() ? HtmlUtils.htmlEscape(msg) : msg;
+			msg = htmlEscape(msg);
 			msg = this.javaScriptEscape ? JavaScriptUtils.javaScriptEscape(msg) : msg;
 
 			// Expose as variable, if demanded, else write to the page.
-			String resolvedVar = ExpressionEvaluationUtils.evaluateString("var", this.var, pageContext);
-			if (resolvedVar != null) {
-				String resolvedScope = ExpressionEvaluationUtils.evaluateString("scope", this.scope, pageContext);
-				pageContext.setAttribute(resolvedVar, msg, TagUtils.getScope(resolvedScope));
+			if (this.var != null) {
+				pageContext.setAttribute(this.var, msg, TagUtils.getScope(this.scope));
 			}
 			else {
 				writeMessage(msg);
 			}
 
-			return EVAL_BODY_INCLUDE;
+			return EVAL_PAGE;
+		}
+		catch (IOException ex) {
+			throw new JspTagException(ex.getMessage(), ex);
 		}
 		catch (NoSuchMessageException ex) {
 			throw new JspTagException(getNoSuchMessageExceptionDescription(ex));
 		}
+	}
+
+	@Override
+	public void release() {
+		super.release();
+		this.arguments = null;
 	}
 
 	/**
@@ -197,41 +218,43 @@ public class MessageTag extends HtmlEscapingAwareTag {
 		}
 
 		// Evaluate the specified MessageSourceResolvable, if any.
-		MessageSourceResolvable resolvedMessage = null;
-		if (this.message instanceof MessageSourceResolvable) {
-			resolvedMessage = (MessageSourceResolvable) this.message;
-		}
-		else if (this.message != null) {
-			String expr = this.message.toString();
-			resolvedMessage = (MessageSourceResolvable)
-					ExpressionEvaluationUtils.evaluate("message", expr, MessageSourceResolvable.class, pageContext);
-		}
-
-		if (resolvedMessage != null) {
+		if (this.message != null) {
 			// We have a given MessageSourceResolvable.
-			return messageSource.getMessage(resolvedMessage, getRequestContext().getLocale());
+			return messageSource.getMessage(this.message, getRequestContext().getLocale());
 		}
 
-		String resolvedCode = ExpressionEvaluationUtils.evaluateString("code", this.code, pageContext);
-		String resolvedText = ExpressionEvaluationUtils.evaluateString("text", this.text, pageContext);
-
-		if (resolvedCode != null || resolvedText != null) {
+		if (this.code != null || this.text != null) {
 			// We have a code or default text that we need to resolve.
 			Object[] argumentsArray = resolveArguments(this.arguments);
-			if (resolvedText != null) {
+			if (!this.nestedArguments.isEmpty()) {
+				argumentsArray = appendArguments(argumentsArray,
+						this.nestedArguments.toArray());
+			}
+
+			if (this.text != null) {
 				// We have a fallback text to consider.
 				return messageSource.getMessage(
-						resolvedCode, argumentsArray, resolvedText, getRequestContext().getLocale());
+						this.code, argumentsArray, this.text, getRequestContext().getLocale());
 			}
 			else {
 				// We have no fallback text to consider.
 				return messageSource.getMessage(
-						resolvedCode, argumentsArray, getRequestContext().getLocale());
+						this.code, argumentsArray, getRequestContext().getLocale());
 			}
 		}
 
 		// All we have is a specified literal text.
-		return resolvedText;
+		return this.text;
+	}
+
+	private Object[] appendArguments(Object[] sourceArguments, Object[] additionalArguments) {
+		if (ObjectUtils.isEmpty(sourceArguments)) {
+			return additionalArguments;
+		}
+		Object[] arguments = new Object[sourceArguments.length + additionalArguments.length];
+		System.arraycopy(sourceArguments, 0, arguments, 0, sourceArguments.length);
+		System.arraycopy(additionalArguments, 0, arguments, sourceArguments.length, additionalArguments.length);
+		return arguments;
 	}
 
 	/**
@@ -246,7 +269,7 @@ public class MessageTag extends HtmlEscapingAwareTag {
 			String[] stringArray =
 					StringUtils.delimitedListToStringArray((String) arguments, this.argumentSeparator);
 			if (stringArray.length == 1) {
-				Object argument = ExpressionEvaluationUtils.evaluate("argument", stringArray[0], pageContext);
+				Object argument = stringArray[0];
 				if (argument != null && argument.getClass().isArray()) {
 					return ObjectUtils.toObjectArray(argument);
 				}
@@ -255,19 +278,14 @@ public class MessageTag extends HtmlEscapingAwareTag {
 				}
 			}
 			else {
-				Object[] argumentsArray = new Object[stringArray.length];
-				for (int i = 0; i < stringArray.length; i++) {
-					argumentsArray[i] =
-							ExpressionEvaluationUtils.evaluate("argument[" + i + "]", stringArray[i], pageContext);
-				}
-				return argumentsArray;
+				return stringArray;
 			}
 		}
 		else if (arguments instanceof Object[]) {
 			return (Object[]) arguments;
 		}
 		else if (arguments instanceof Collection) {
-			return ((Collection) arguments).toArray();
+			return ((Collection<?>) arguments).toArray();
 		}
 		else if (arguments != null) {
 			// Assume a single argument object.

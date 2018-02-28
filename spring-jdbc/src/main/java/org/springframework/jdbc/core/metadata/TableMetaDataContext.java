@@ -17,8 +17,8 @@
 package org.springframework.jdbc.core.metadata;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,6 +39,7 @@ import org.springframework.jdbc.support.nativejdbc.NativeJdbcExtractor;
  * and execution of operations on a database table.
  *
  * @author Thomas Risberg
+ * @author Juergen Hoeller
  * @since 2.5
  */
 public class TableMetaDataContext {
@@ -46,13 +47,13 @@ public class TableMetaDataContext {
 	/** Logger available to subclasses */
 	protected final Log logger = LogFactory.getLog(getClass());
 
-	/** name of procedure to call **/
+	/** name of table for this context **/
 	private String tableName;
 
-	/** name of catalog for call **/
+	/** name of catalog for this context **/
 	private String catalogName;
 
-	/** name of schema for call **/
+	/** name of schema for this context **/
 	private String schemaName;
 
 	/** List of columns objects to be used in this context */
@@ -218,7 +219,7 @@ public class TableMetaDataContext {
 		if (declaredColumns.size() > 0) {
 			return new ArrayList<String>(declaredColumns);
 		}
-		Set<String> keys = new HashSet<String>(generatedKeyNames.length);
+		Set<String> keys = new LinkedHashSet<String>(generatedKeyNames.length);
 		for (String key : generatedKeyNames) {
 			keys.add(key.toUpperCase());
 		}
@@ -275,9 +276,9 @@ public class TableMetaDataContext {
 	 * Match the provided column names and values with the list of columns used.
 	 * @param inParameters the parameter names and values
 	 */
-	public List<Object> matchInParameterValuesWithInsertColumns(Map<String, Object> inParameters) {
+	public List<Object> matchInParameterValuesWithInsertColumns(Map<String, ?> inParameters) {
 		List<Object> values = new ArrayList<Object>();
-		Map<String, Object> source = new HashMap<String, Object>();
+		Map<String, Object> source = new LinkedHashMap<String, Object>(inParameters.size());
 		for (String key : inParameters.keySet()) {
 			source.put(key.toLowerCase(), inParameters.get(key));
 		}
@@ -293,7 +294,7 @@ public class TableMetaDataContext {
 	 * @return the insert string to be used
 	 */
 	public String createInsertString(String... generatedKeyNames) {
-		HashSet<String> keys = new HashSet<String>(generatedKeyNames.length);
+		Set<String> keys = new LinkedHashSet<String>(generatedKeyNames.length);
 		for (String key : generatedKeyNames) {
 			keys.add(key.toUpperCase());
 		}
@@ -343,7 +344,8 @@ public class TableMetaDataContext {
 	public int[] createInsertTypes() {
 		int[] types = new int[getTableColumns().size()];
 		List<TableParameterMetaData> parameters = this.metaDataProvider.getTableParameterMetaData();
-		Map<String, TableParameterMetaData> parameterMap = new HashMap<String, TableParameterMetaData>(parameters.size());
+		Map<String, TableParameterMetaData> parameterMap =
+				new LinkedHashMap<String, TableParameterMetaData>(parameters.size());
 		for (TableParameterMetaData tpmd : parameters) {
 			parameterMap.put(tpmd.getParameterName().toUpperCase(), tpmd);
 		}

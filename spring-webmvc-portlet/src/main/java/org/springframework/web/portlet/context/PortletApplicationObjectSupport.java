@@ -17,7 +17,6 @@
 package org.springframework.web.portlet.context;
 
 import java.io.File;
-
 import javax.portlet.PortletContext;
 
 import org.springframework.context.support.ApplicationObjectSupport;
@@ -36,6 +35,7 @@ public abstract class PortletApplicationObjectSupport extends ApplicationObjectS
 	private PortletContext portletContext;
 
 
+	@Override
 	public void setPortletContext(PortletContext portletContext) {
 		this.portletContext = portletContext;
 	}

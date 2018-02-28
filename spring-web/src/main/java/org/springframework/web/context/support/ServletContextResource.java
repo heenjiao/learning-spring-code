@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -77,6 +77,7 @@ public class ServletContextResource extends AbstractFileResolvingResource implem
 		this.path = pathToUse;
 	}
 
+
 	/**
 	 * Return the ServletContext for this resource.
 	 */
@@ -90,7 +91,6 @@ public class ServletContextResource extends AbstractFileResolvingResource implem
 	public final String getPath() {
 		return this.path;
 	}
-
 
 	/**
 	 * This implementation checks {@code ServletContext.getResource}.
@@ -134,6 +134,7 @@ public class ServletContextResource extends AbstractFileResolvingResource implem
 	 * but throws a FileNotFoundException if no resource found.
 	 * @see javax.servlet.ServletContext#getResourceAsStream(String)
 	 */
+	@Override
 	public InputStream getInputStream() throws IOException {
 		InputStream is = this.servletContext.getResourceAsStream(this.path);
 		if (is == null) {
@@ -202,10 +203,12 @@ public class ServletContextResource extends AbstractFileResolvingResource implem
 	 * This implementation returns a description that includes the ServletContext
 	 * resource location.
 	 */
+	@Override
 	public String getDescription() {
 		return "ServletContext resource [" + this.path + "]";
 	}
 
+	@Override
 	public String getPathWithinContext() {
 		return this.path;
 	}

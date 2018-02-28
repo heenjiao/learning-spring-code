@@ -20,7 +20,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
-
 import javax.transaction.TransactionManager;
 
 import org.springframework.jdbc.support.lob.LobCreator;
@@ -41,7 +40,9 @@ import org.springframework.jdbc.support.lob.LobHandler;
  * @author Juergen Hoeller
  * @since 1.2
  * @see org.springframework.orm.hibernate3.LocalSessionFactoryBean#setLobHandler
+ * @deprecated as of Spring 4.3, in favor of Hibernate 4.x/5.x
  */
+@Deprecated
 public class ClobStringType extends AbstractLobType {
 
 	/**
@@ -62,11 +63,13 @@ public class ClobStringType extends AbstractLobType {
 		super(lobHandler, jtaTransactionManager);
 	}
 
+	@Override
 	public int[] sqlTypes() {
 		return new int[] {Types.CLOB};
 	}
 
-	public Class returnedClass() {
+	@Override
+	public Class<?> returnedClass() {
 		return String.class;
 	}
 

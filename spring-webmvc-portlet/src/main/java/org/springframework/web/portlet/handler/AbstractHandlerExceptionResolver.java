@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,20 +17,20 @@
 package org.springframework.web.portlet.handler;
 
 import java.util.Set;
+import javax.portlet.MimeResponse;
 import javax.portlet.PortletRequest;
-import javax.portlet.WindowState;
 import javax.portlet.RenderRequest;
 import javax.portlet.RenderResponse;
 import javax.portlet.ResourceRequest;
 import javax.portlet.ResourceResponse;
-import javax.portlet.MimeResponse;
+import javax.portlet.WindowState;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.springframework.core.Ordered;
 import org.springframework.web.portlet.HandlerExceptionResolver;
 import org.springframework.web.portlet.ModelAndView;
-import org.springframework.core.Ordered;
 
 /**
  * Abstract base class for {@link HandlerExceptionResolver} implementations.
@@ -39,6 +39,7 @@ import org.springframework.core.Ordered;
  * and the {@link Ordered} implementation.
  *
  * @author Arjen Poutsma
+ * @author Juergen Hoeller
  * @since 3.0
  */
 public abstract class AbstractHandlerExceptionResolver implements HandlerExceptionResolver, Ordered {
@@ -50,7 +51,7 @@ public abstract class AbstractHandlerExceptionResolver implements HandlerExcepti
 
 	private Set<?> mappedHandlers;
 
-	private Class[] mappedHandlerClasses;
+	private Class<?>[] mappedHandlerClasses;
 
 	private Log warnLogger;
 
@@ -61,18 +62,18 @@ public abstract class AbstractHandlerExceptionResolver implements HandlerExcepti
 		this.order = order;
 	}
 
+	@Override
 	public int getOrder() {
 		return this.order;
 	}
 
 	/**
-	 * Specify the set of handlers that this exception resolver should map.
-	 * The exception mappings and the default error view will only apply
-	 * to the specified handlers.
-	 * <p>If no handlers set, both the exception mappings and the default error
-	 * view will apply to all handlers. This means that a specified default
-	 * error view will be used as fallback for all exceptions; any further
-	 * HandlerExceptionResolvers in the chain will be ignored in this case.
+	 * Specify the set of handlers that this exception resolver should apply to.
+	 * <p>The exception mappings and the default error view will only apply to the specified handlers.
+	 * <p>If no handlers or handler classes are set, the exception mappings and the default error
+	 * view will apply to all handlers. This means that a specified default error view will be used
+	 * as a fallback for all exceptions; any further HandlerExceptionResolvers in the chain will be
+	 * ignored in this case.
 	 */
 	public void setMappedHandlers(Set<?> mappedHandlers) {
 		this.mappedHandlers = mappedHandlers;
@@ -80,26 +81,23 @@ public abstract class AbstractHandlerExceptionResolver implements HandlerExcepti
 
 	/**
 	 * Specify the set of classes that this exception resolver should apply to.
-	 * The exception mappings and the default error view will only apply
-	 * to handlers of the specified type; the specified types may be interfaces
-	 * and superclasses of handlers as well.
-	 * <p>If no handlers and handler classes are set, the exception mappings
-	 * and the default error view will apply to all handlers. This means that
-	 * a specified default error view will be used as fallback for all exceptions;
-	 * any further HandlerExceptionResolvers in the chain will be ignored in
-	 * this case.
+	 * <p>The exception mappings and the default error view will only apply to handlers of the
+	 * specified types; the specified types may be interfaces or superclasses of handlers as well.
+	 * <p>If no handlers or handler classes are set, the exception mappings and the default error
+	 * view will apply to all handlers. This means that a specified default error view will be used
+	 * as a fallback for all exceptions; any further HandlerExceptionResolvers in the chain will be
+	 * ignored in this case.
 	 */
-	public void setMappedHandlerClasses(Class[] mappedHandlerClasses) {
+	public void setMappedHandlerClasses(Class<?>... mappedHandlerClasses) {
 		this.mappedHandlerClasses = mappedHandlerClasses;
 	}
 
 	/**
-	 * Set the log category for warn logging. The name will be passed to the
-	 * underlying logger implementation through Commons Logging, getting
-	 * interpreted as log category according to the logger's configuration.
-	 * <p>Default is no warn logging. Specify this setting to activate
-	 * warn logging into a specific category. Alternatively, override
-	 * the {@link #logException} method for custom logging.
+	 * Set the log category for warn logging. The name will be passed to the underlying logger
+	 * implementation through Commons Logging, getting interpreted as a log category according
+	 * to the logger's configuration.
+	 * <p>Default is no warn logging. Specify this setting to activate warn logging into a specific
+	 * category. Alternatively, override the {@link #logException} method for custom logging.
 	 * @see org.apache.commons.logging.LogFactory#getLog(String)
 	 * @see org.apache.log4j.Logger#getLogger(String)
 	 * @see java.util.logging.Logger#getLogger(String)
@@ -124,6 +122,7 @@ public abstract class AbstractHandlerExceptionResolver implements HandlerExcepti
 	 * matches in case of "mappedHandlers" having been specified), then
 	 * delegates to the {@link #doResolveException} template method.
 	 */
+	@Override
 	public ModelAndView resolveException(RenderRequest request, RenderResponse response, Object handler, Exception ex) {
 		if (shouldApplyTo(request, handler)) {
 			return doResolveException(request, response, handler, ex);
@@ -133,6 +132,7 @@ public abstract class AbstractHandlerExceptionResolver implements HandlerExcepti
 		}
 	}
 
+	@Override
 	public ModelAndView resolveException(ResourceRequest request, ResourceResponse response, Object handler, Exception ex) {
 		if (shouldApplyTo(request, handler)) {
 			return doResolveException(request, response, handler, ex);
@@ -166,7 +166,7 @@ public abstract class AbstractHandlerExceptionResolver implements HandlerExcepti
 				return true;
 			}
 			if (this.mappedHandlerClasses != null) {
-				for (Class mappedClass : this.mappedHandlerClasses) {
+				for (Class<?> mappedClass : this.mappedHandlerClasses) {
 					if (mappedClass.isInstance(handler)) {
 						return true;
 					}
@@ -180,8 +180,7 @@ public abstract class AbstractHandlerExceptionResolver implements HandlerExcepti
 	/**
 	 * Log the given exception at warn level, provided that warn logging has been
 	 * activated through the {@link #setWarnLogCategory "warnLogCategory"} property.
-	 * <p>Calls {@link #buildLogMessage} in order to determine the concrete message
-	 * to log. Always passes the full exception to the logger.
+	 * <p>Calls {@link #buildLogMessage} in order to determine the concrete message to log.
 	 * @param ex the exception that got thrown during handler execution
 	 * @param request current portlet request (useful for obtaining metadata)
 	 * @see #setWarnLogCategory
@@ -190,19 +189,18 @@ public abstract class AbstractHandlerExceptionResolver implements HandlerExcepti
 	 */
 	protected void logException(Exception ex, PortletRequest request) {
 		if (this.warnLogger != null && this.warnLogger.isWarnEnabled()) {
-			this.warnLogger.warn(buildLogMessage(ex, request), ex);
+			this.warnLogger.warn(buildLogMessage(ex, request));
 		}
 	}
 
 	/**
-	 * Build a log message for the given exception, occured during processing
-	 * the given request.
+	 * Build a log message for the given exception, occurred during processing the given request.
 	 * @param ex the exception that got thrown during handler execution
 	 * @param request current portlet request (useful for obtaining metadata)
 	 * @return the log message to use
 	 */
 	protected String buildLogMessage(Exception ex, PortletRequest request) {
-		return "Handler execution resulted in exception";
+		return "Handler execution resulted in exception: " + ex;
 	}
 
 

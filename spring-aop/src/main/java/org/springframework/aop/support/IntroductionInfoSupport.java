@@ -43,7 +43,7 @@ import org.springframework.util.ClassUtils;
 @SuppressWarnings("serial")
 public class IntroductionInfoSupport implements IntroductionInfo, Serializable {
 
-	protected final Set<Class> publishedInterfaces = new LinkedHashSet<Class>();
+	protected final Set<Class<?>> publishedInterfaces = new LinkedHashSet<Class<?>>();
 
 	private transient Map<Method, Boolean> rememberedMethods = new ConcurrentHashMap<Method, Boolean>(32);
 
@@ -59,6 +59,7 @@ public class IntroductionInfoSupport implements IntroductionInfo, Serializable {
 		this.publishedInterfaces.remove(intf);
 	}
 
+	@Override
 	public Class<?>[] getInterfaces() {
 		return this.publishedInterfaces.toArray(new Class<?>[this.publishedInterfaces.size()]);
 	}

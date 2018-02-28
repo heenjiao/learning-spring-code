@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,22 @@
 
 package org.springframework.mock.web;
 
+import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import javax.servlet.http.Cookie;
 
 import org.junit.Test;
+
+import org.springframework.util.StreamUtils;
 
 import static org.junit.Assert.*;
 
@@ -36,18 +42,52 @@ import static org.junit.Assert.*;
  * @author Mark Fisher
  * @author Rossen Stoyanchev
  * @author Sam Brannen
+ * @author Brian Clozel
+ * @author Jakub Narloch
  */
 public class MockHttpServletRequestTests {
 
-	private MockHttpServletRequest request = new MockHttpServletRequest();
+	private static final String HOST = "Host";
 
+	private static final String CONTENT_TYPE = "Content-Type";
+
+	private static final String IF_MODIFIED_SINCE = "If-Modified-Since";
+
+	private final MockHttpServletRequest request = new MockHttpServletRequest();
+
+
+	@Test
+	public void protocolAndScheme() {
+		assertEquals(MockHttpServletRequest.DEFAULT_PROTOCOL, request.getProtocol());
+		assertEquals(MockHttpServletRequest.DEFAULT_SCHEME, request.getScheme());
+		request.setProtocol("HTTP/2.0");
+		request.setScheme("https");
+		assertEquals("HTTP/2.0", request.getProtocol());
+		assertEquals("https", request.getScheme());
+	}
+
+	@Test
+	public void setContentAndGetInputStream() throws IOException {
+		byte[] bytes = "body".getBytes(Charset.defaultCharset());
+		request.setContent(bytes);
+		assertEquals(bytes.length, request.getContentLength());
+		assertNotNull(request.getInputStream());
+		assertEquals("body", StreamUtils.copyToString(request.getInputStream(), Charset.defaultCharset()));
+	}
+
+	@Test
+	public void noContent() throws IOException {
+		assertEquals(-1, request.getContentLength());
+		assertNotNull(request.getInputStream());
+		assertEquals(-1, request.getInputStream().read());
+	}
 
 	@Test
 	public void setContentType() {
 		String contentType = "test/plain";
 		request.setContentType(contentType);
 		assertEquals(contentType, request.getContentType());
-		assertEquals(contentType, request.getHeader("Content-Type"));
+		assertEquals(contentType, request.getHeader(CONTENT_TYPE));
 		assertNull(request.getCharacterEncoding());
 	}
 
@@ -56,7 +96,7 @@ public class MockHttpServletRequestTests {
 		String contentType = "test/plain;charset=UTF-8";
 		request.setContentType(contentType);
 		assertEquals(contentType, request.getContentType());
-		assertEquals(contentType, request.getHeader("Content-Type"));
+		assertEquals(contentType, request.getHeader(CONTENT_TYPE));
 		assertEquals("UTF-8", request.getCharacterEncoding());
 	}
 
@@ -65,7 +105,7 @@ public class MockHttpServletRequestTests {
 		String contentType = "test/plain";
 		request.addHeader("Content-Type", contentType);
 		assertEquals(contentType, request.getContentType());
-		assertEquals(contentType, request.getHeader("Content-Type"));
+		assertEquals(contentType, request.getHeader(CONTENT_TYPE));
 		assertNull(request.getCharacterEncoding());
 	}
 
@@ -74,7 +114,16 @@ public class MockHttpServletRequestTests {
 		String contentType = "test/plain;charset=UTF-8";
 		request.addHeader("Content-Type", contentType);
 		assertEquals(contentType, request.getContentType());
-		assertEquals(contentType, request.getHeader("Content-Type"));
+		assertEquals(contentType, request.getHeader(CONTENT_TYPE));
+		assertEquals("UTF-8", request.getCharacterEncoding());
+	}
+
+	@Test  // SPR-12677
+	public void setContentTypeHeaderWithMoreComplexCharsetSyntax() {
+		String contentType = "test/plain;charset=\"utf-8\";foo=\"charset=bar\";foocharset=bar;foo=bar";
+		request.addHeader("Content-Type", contentType);
+		assertEquals(contentType, request.getContentType());
+		assertEquals(contentType, request.getHeader(CONTENT_TYPE));
 		assertEquals("UTF-8", request.getCharacterEncoding());
 	}
 
@@ -83,7 +132,7 @@ public class MockHttpServletRequestTests {
 		request.setContentType("test/plain");
 		request.setCharacterEncoding("UTF-8");
 		assertEquals("test/plain", request.getContentType());
-		assertEquals("test/plain;charset=UTF-8", request.getHeader("Content-Type"));
+		assertEquals("test/plain;charset=UTF-8", request.getHeader(CONTENT_TYPE));
 		assertEquals("UTF-8", request.getCharacterEncoding());
 	}
 
@@ -92,7 +141,7 @@ public class MockHttpServletRequestTests {
 		request.setCharacterEncoding("UTF-8");
 		request.setContentType("test/plain");
 		assertEquals("test/plain", request.getContentType());
-		assertEquals("test/plain;charset=UTF-8", request.getHeader("Content-Type"));
+		assertEquals("test/plain;charset=UTF-8", request.getHeader(CONTENT_TYPE));
 		assertEquals("UTF-8", request.getCharacterEncoding());
 	}
 
@@ -115,7 +164,7 @@ public class MockHttpServletRequestTests {
 	public void setMultipleParameters() {
 		request.setParameter("key1", "value1");
 		request.setParameter("key2", "value2");
-		Map<String, Object> params = new HashMap<String, Object>(2);
+		Map<String, Object> params = new HashMap<>(2);
 		params.put("key1", "newValue1");
 		params.put("key3", new String[] { "value3A", "value3B" });
 		request.setParameters(params);
@@ -133,7 +182,7 @@ public class MockHttpServletRequestTests {
 	public void addMultipleParameters() {
 		request.setParameter("key1", "value1");
 		request.setParameter("key2", "value2");
-		Map<String, Object> params = new HashMap<String, Object>(2);
+		Map<String, Object> params = new HashMap<>(2);
 		params.put("key1", "newValue1");
 		params.put("key3", new String[] { "value3A", "value3B" });
 		request.addParameters(params);
@@ -151,13 +200,33 @@ public class MockHttpServletRequestTests {
 	@Test
 	public void removeAllParameters() {
 		request.setParameter("key1", "value1");
-		Map<String, Object> params = new HashMap<String, Object>(2);
+		Map<String, Object> params = new HashMap<>(2);
 		params.put("key2", "value2");
 		params.put("key3", new String[] { "value3A", "value3B" });
 		request.addParameters(params);
 		assertEquals(3, request.getParameterMap().size());
 		request.removeAllParameters();
 		assertEquals(0, request.getParameterMap().size());
+	}
+
+	@Test
+	public void cookies() {
+		Cookie cookie1 = new Cookie("foo", "bar");
+		Cookie cookie2 = new Cookie("baz", "qux");
+		request.setCookies(cookie1, cookie2);
+
+		Cookie[] cookies = request.getCookies();
+
+		assertEquals(2, cookies.length);
+		assertEquals("foo", cookies[0].getName());
+		assertEquals("bar", cookies[0].getValue());
+		assertEquals("baz", cookies[1].getName());
+		assertEquals("qux", cookies[1].getValue());
+	}
+
+	@Test
+	public void noCookies() {
+		assertNull(request.getCookies());
 	}
 
 	@Test
@@ -183,7 +252,7 @@ public class MockHttpServletRequestTests {
 
 	@Test(expected = IllegalArgumentException.class)
 	public void setPreferredLocalesWithEmptyList() {
-		request.setPreferredLocales(new ArrayList<Locale>());
+		request.setPreferredLocales(new ArrayList<>());
 	}
 
 	@Test
@@ -191,6 +260,196 @@ public class MockHttpServletRequestTests {
 		List<Locale> preferredLocales = Arrays.asList(Locale.ITALY, Locale.CHINA);
 		request.setPreferredLocales(preferredLocales);
 		assertEqualEnumerations(Collections.enumeration(preferredLocales), request.getLocales());
+	}
+
+	@Test
+	public void getServerNameWithDefaultName() {
+		assertEquals("localhost", request.getServerName());
+	}
+
+	@Test
+	public void getServerNameWithCustomName() {
+		request.setServerName("example.com");
+		assertEquals("example.com", request.getServerName());
+	}
+
+	@Test
+	public void getServerNameViaHostHeaderWithoutPort() {
+		String testServer = "test.server";
+		request.addHeader(HOST, testServer);
+		assertEquals(testServer, request.getServerName());
+	}
+
+	@Test
+	public void getServerNameViaHostHeaderWithPort() {
+		String testServer = "test.server";
+		request.addHeader(HOST, testServer + ":8080");
+		assertEquals(testServer, request.getServerName());
+	}
+
+	@Test
+	public void getServerNameViaHostHeaderAsIpv6AddressWithoutPort() {
+		String ipv6Address = "[2001:db8:0:1]";
+		request.addHeader(HOST, ipv6Address);
+		assertEquals("2001:db8:0:1", request.getServerName());
+	}
+
+	@Test
+	public void getServerNameViaHostHeaderAsIpv6AddressWithPort() {
+		String ipv6Address = "[2001:db8:0:1]:8081";
+		request.addHeader(HOST, ipv6Address);
+		assertEquals("2001:db8:0:1", request.getServerName());
+	}
+
+	@Test
+	public void getServerPortWithDefaultPort() {
+		assertEquals(80, request.getServerPort());
+	}
+
+	@Test
+	public void getServerPortWithCustomPort() {
+		request.setServerPort(8080);
+		assertEquals(8080, request.getServerPort());
+	}
+
+	@Test
+	public void getServerPortViaHostHeaderAsIpv6AddressWithoutPort() {
+		String testServer = "[2001:db8:0:1]";
+		request.addHeader(HOST, testServer);
+		assertEquals(80, request.getServerPort());
+	}
+
+	@Test
+	public void getServerPortViaHostHeaderAsIpv6AddressWithPort() {
+		String testServer = "[2001:db8:0:1]";
+		int testPort = 9999;
+		request.addHeader(HOST, testServer + ":" + testPort);
+		assertEquals(testPort, request.getServerPort());
+	}
+
+	@Test
+	public void getServerPortViaHostHeaderWithoutPort() {
+		String testServer = "test.server";
+		request.addHeader(HOST, testServer);
+		assertEquals(80, request.getServerPort());
+	}
+
+	@Test
+	public void getServerPortViaHostHeaderWithPort() {
+		String testServer = "test.server";
+		int testPort = 9999;
+		request.addHeader(HOST, testServer + ":" + testPort);
+		assertEquals(testPort, request.getServerPort());
+	}
+
+	@Test
+	public void getRequestURL() {
+		request.setServerPort(8080);
+		request.setRequestURI("/path");
+		assertEquals("http://localhost:8080/path", request.getRequestURL().toString());
+
+		request.setScheme("https");
+		request.setServerName("example.com");
+		request.setServerPort(8443);
+		assertEquals("https://example.com:8443/path", request.getRequestURL().toString());
+	}
+
+	@Test
+	public void getRequestURLWithDefaults() {
+		StringBuffer requestURL = request.getRequestURL();
+		assertEquals("http://localhost", requestURL.toString());
+	}
+
+	@Test
+	public void getRequestURLWithNullRequestUri() {
+		request.setRequestURI(null);
+		StringBuffer requestURL = request.getRequestURL();
+		assertEquals("http://localhost", requestURL.toString());
+	}
+
+	@Test
+	public void getRequestURLWithDefaultsAndHttps() {
+		request.setScheme("https");
+		request.setServerPort(443);
+		StringBuffer requestURL = request.getRequestURL();
+		assertEquals("https://localhost", requestURL.toString());
+	}
+
+	@Test
+	public void getRequestURLWithNegativePort() {
+		request.setServerPort(-99);
+		StringBuffer requestURL = request.getRequestURL();
+		assertEquals("http://localhost", requestURL.toString());
+	}
+
+	@Test
+	public void isSecureWithHttpSchemeAndSecureFlagIsFalse() {
+		assertFalse(request.isSecure());
+		request.setScheme("http");
+		request.setSecure(false);
+		assertFalse(request.isSecure());
+	}
+
+	@Test
+	public void isSecureWithHttpSchemeAndSecureFlagIsTrue() {
+		assertFalse(request.isSecure());
+		request.setScheme("http");
+		request.setSecure(true);
+		assertTrue(request.isSecure());
+	}
+
+	@Test
+	public void isSecureWithHttpsSchemeAndSecureFlagIsFalse() {
+		assertFalse(request.isSecure());
+		request.setScheme("https");
+		request.setSecure(false);
+		assertTrue(request.isSecure());
+	}
+
+	@Test
+	public void isSecureWithHttpsSchemeAndSecureFlagIsTrue() {
+		assertFalse(request.isSecure());
+		request.setScheme("https");
+		request.setSecure(true);
+		assertTrue(request.isSecure());
+	}
+
+	@Test
+	public void httpHeaderDate() throws Exception {
+		Date date = new Date();
+		request.addHeader(IF_MODIFIED_SINCE, date);
+		assertEquals(date.getTime(), request.getDateHeader(IF_MODIFIED_SINCE));
+	}
+
+	@Test
+	public void httpHeaderTimestamp() throws Exception {
+		long timestamp = new Date().getTime();
+		request.addHeader(IF_MODIFIED_SINCE, timestamp);
+		assertEquals(timestamp, request.getDateHeader(IF_MODIFIED_SINCE));
+	}
+
+	@Test
+	public void httpHeaderRfcFormatedDate() throws Exception {
+		request.addHeader(IF_MODIFIED_SINCE, "Tue, 21 Jul 2015 10:00:00 GMT");
+		assertEquals(1437472800000L, request.getDateHeader(IF_MODIFIED_SINCE));
+	}
+
+	@Test
+	public void httpHeaderFirstVariantFormatedDate() throws Exception {
+		request.addHeader(IF_MODIFIED_SINCE, "Tue, 21-Jul-15 10:00:00 GMT");
+		assertEquals(1437472800000L, request.getDateHeader(IF_MODIFIED_SINCE));
+	}
+
+	@Test
+	public void httpHeaderSecondVariantFormatedDate() throws Exception {
+		request.addHeader(IF_MODIFIED_SINCE, "Tue Jul 21 10:00:00 2015");
+		assertEquals(1437472800000L, request.getDateHeader(IF_MODIFIED_SINCE));
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void httpHeaderFormatedDateError() throws Exception {
+		request.addHeader(IF_MODIFIED_SINCE, "This is not a date");
+		request.getDateHeader(IF_MODIFIED_SINCE);
 	}
 
 	private void assertEqualEnumerations(Enumeration<?> enum1, Enumeration<?> enum2) {

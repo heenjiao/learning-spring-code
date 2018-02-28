@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ import org.springframework.web.portlet.util.PortletUtils;
 
 /**
  * {@link PortletMultipartResolver} implementation for
- * <a href="http://jakarta.apache.org/commons/fileupload">Jakarta Commons FileUpload</a>
+ * <a href="http://commons.apache.org/proper/commons-fileupload">Apache Commons FileUpload</a>
  * 1.2 or above.
  *
  * <p>Provides "maxUploadSize", "maxInMemorySize" and "defaultEncoding" settings as
@@ -106,6 +106,7 @@ public class CommonsPortletMultipartResolver extends CommonsFileUploadSupport
 		return new PortletFileUpload(fileItemFactory);
 	}
 
+	@Override
 	public void setPortletContext(PortletContext portletContext) {
 		if (!isUploadTempDirSpecified()) {
 			getFileItemFactory().setRepository(PortletUtils.getTempDir(portletContext));
@@ -113,10 +114,12 @@ public class CommonsPortletMultipartResolver extends CommonsFileUploadSupport
 	}
 
 
+	@Override
 	public boolean isMultipart(ActionRequest request) {
 		return (request != null && PortletFileUpload.isMultipartContent(request));
 	}
 
+	@Override
 	public MultipartActionRequest resolveMultipart(final ActionRequest request) throws MultipartException {
 		Assert.notNull(request, "Request must not be null");
 		if (this.resolveLazily) {
@@ -143,7 +146,6 @@ public class CommonsPortletMultipartResolver extends CommonsFileUploadSupport
 	 * @return the parsing result
 	 * @throws MultipartException if multipart resolution failed.
 	 */
-	@SuppressWarnings("unchecked")
 	protected MultipartParsingResult parseRequest(ActionRequest request) throws MultipartException {
 		String encoding = determineEncoding(request);
 		FileUpload fileUpload = prepareFileUpload(encoding);
@@ -154,8 +156,11 @@ public class CommonsPortletMultipartResolver extends CommonsFileUploadSupport
 		catch (FileUploadBase.SizeLimitExceededException ex) {
 			throw new MaxUploadSizeExceededException(fileUpload.getSizeMax(), ex);
 		}
+		catch (FileUploadBase.FileSizeLimitExceededException ex) {
+			throw new MaxUploadSizeExceededException(fileUpload.getFileSizeMax(), ex);
+		}
 		catch (FileUploadException ex) {
-			throw new MultipartException("Could not parse multipart portlet request", ex);
+			throw new MultipartException("Failed to parse multipart portlet request", ex);
 		}
 	}
 
@@ -177,6 +182,7 @@ public class CommonsPortletMultipartResolver extends CommonsFileUploadSupport
 		return encoding;
 	}
 
+	@Override
 	public void cleanupMultipart(MultipartActionRequest request) {
 		if (request != null) {
 			try {

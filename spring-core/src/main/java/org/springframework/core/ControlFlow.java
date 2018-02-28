@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,9 @@ package org.springframework.core;
  *
  * @author Rod Johnson
  * @since 02.02.2004
+ * @deprecated as of Spring Framework 4.3.6
  */
+@Deprecated
 public interface ControlFlow {
 
 	/**
@@ -31,7 +33,7 @@ public interface ControlFlow {
 	 * according to the current stack trace.
 	 * @param clazz the clazz to look for
 	 */
-	boolean under(Class clazz);
+	boolean under(Class<?> clazz);
 
 	/**
 	 * Detect whether we're under the given class and method,
@@ -39,7 +41,7 @@ public interface ControlFlow {
 	 * @param clazz the clazz to look for
 	 * @param methodName the name of the method to look for
 	 */
-	boolean under(Class clazz, String methodName);
+	boolean under(Class<?> clazz, String methodName);
 
 	/**
 	 * Detect whether the current stack trace contains the given token.

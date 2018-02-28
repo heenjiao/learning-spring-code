@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,12 +35,9 @@ import javax.portlet.RenderResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import org.springframework.beans.BeansException;
-import org.springframework.tests.sample.beans.DerivedTestBean;
-import org.springframework.tests.sample.beans.ITestBean;
-import org.springframework.tests.sample.beans.TestBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.beans.propertyeditors.CustomDateEditor;
@@ -54,6 +51,9 @@ import org.springframework.mock.web.portlet.MockPortletContext;
 import org.springframework.mock.web.portlet.MockRenderRequest;
 import org.springframework.mock.web.portlet.MockRenderResponse;
 import org.springframework.stereotype.Controller;
+import org.springframework.tests.sample.beans.DerivedTestBean;
+import org.springframework.tests.sample.beans.ITestBean;
+import org.springframework.tests.sample.beans.TestBean;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.ui.ModelMap;
@@ -78,13 +78,16 @@ import org.springframework.web.portlet.mvc.AbstractController;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.mvc.annotation.ModelAndViewResolver;
 
+import static org.junit.Assert.*;
+
 /**
  * @author Juergen Hoeller
  * @since 2.5
  */
-public class PortletAnnotationControllerTests extends TestCase {
+public class PortletAnnotationControllerTests {
 
-	public void testStandardHandleMethod() throws Exception {
+	@Test
+	public void standardHandleMethod() throws Exception {
 		DispatcherPortlet portlet = new DispatcherPortlet() {
 			@Override
 			protected ApplicationContext createPortletApplicationContext(ApplicationContext parent) throws BeansException {
@@ -102,19 +105,22 @@ public class PortletAnnotationControllerTests extends TestCase {
 		assertEquals("test", response.getContentAsString());
 	}
 
-	public void testAdaptedHandleMethods() throws Exception {
+	@Test
+	public void adaptedHandleMethods() throws Exception {
 		doTestAdaptedHandleMethods(MyAdaptedController.class);
 	}
 
-	public void testAdaptedHandleMethods2() throws Exception {
+	@Test
+	public void adaptedHandleMethods2() throws Exception {
 		doTestAdaptedHandleMethods(MyAdaptedController2.class);
 	}
 
-	public void testAdaptedHandleMethods3() throws Exception {
+	@Test
+	public void adaptedHandleMethods3() throws Exception {
 		doTestAdaptedHandleMethods(MyAdaptedController3.class);
 	}
 
-	public void doTestAdaptedHandleMethods(final Class controllerClass) throws Exception {
+	public void doTestAdaptedHandleMethods(final Class<?> controllerClass) throws Exception {
 		DispatcherPortlet portlet = new DispatcherPortlet() {
 			@Override
 			protected ApplicationContext createPortletApplicationContext(ApplicationContext parent) throws BeansException {
@@ -153,7 +159,8 @@ public class PortletAnnotationControllerTests extends TestCase {
 		assertEquals("test-name1-typeMismatch", response.getContentAsString());
 	}
 
-	public void testFormController() throws Exception {
+	@Test
+	public void formController() throws Exception {
 		DispatcherPortlet portlet = new DispatcherPortlet() {
 			@Override
 			protected ApplicationContext createPortletApplicationContext(ApplicationContext parent) throws BeansException {
@@ -177,7 +184,8 @@ public class PortletAnnotationControllerTests extends TestCase {
 		assertEquals("myView-name1-typeMismatch-tb1-myValue", response.getContentAsString());
 	}
 
-	public void testModelFormController() throws Exception {
+	@Test
+	public void modelFormController() throws Exception {
 		DispatcherPortlet portlet = new DispatcherPortlet() {
 			@Override
 			protected ApplicationContext createPortletApplicationContext(ApplicationContext parent) throws BeansException {
@@ -201,7 +209,8 @@ public class PortletAnnotationControllerTests extends TestCase {
 		assertEquals("myView-name1-typeMismatch-tb1-myValue", response.getContentAsString());
 	}
 
-	public void testCommandProvidingFormController() throws Exception {
+	@Test
+	public void commandProvidingFormController() throws Exception {
 		DispatcherPortlet portlet = new DispatcherPortlet() {
 			@Override
 			protected ApplicationContext createPortletApplicationContext(ApplicationContext parent) throws BeansException {
@@ -229,7 +238,8 @@ public class PortletAnnotationControllerTests extends TestCase {
 		assertEquals("myView-String:myDefaultName-typeMismatch-tb1-myOriginalValue", response.getContentAsString());
 	}
 
-	public void testTypedCommandProvidingFormController() throws Exception {
+	@Test
+	public void typedCommandProvidingFormController() throws Exception {
 		DispatcherPortlet portlet = new DispatcherPortlet() {
 			@Override
 			protected ApplicationContext createPortletApplicationContext(ApplicationContext parent) throws BeansException {
@@ -278,7 +288,8 @@ public class PortletAnnotationControllerTests extends TestCase {
 		assertEquals("myView-myName-typeMismatch-tb1-myOriginalValue", response.getContentAsString());
 	}
 
-	public void testBinderInitializingCommandProvidingFormController() throws Exception {
+	@Test
+	public void binderInitializingCommandProvidingFormController() throws Exception {
 		DispatcherPortlet portlet = new DispatcherPortlet() {
 			@Override
 			protected ApplicationContext createPortletApplicationContext(ApplicationContext parent) throws BeansException {
@@ -303,7 +314,8 @@ public class PortletAnnotationControllerTests extends TestCase {
 		assertEquals("myView-String:myDefaultName-typeMismatch-tb1-myOriginalValue", response.getContentAsString());
 	}
 
-	public void testSpecificBinderInitializingCommandProvidingFormController() throws Exception {
+	@Test
+	public void specificBinderInitializingCommandProvidingFormController() throws Exception {
 		DispatcherPortlet portlet = new DispatcherPortlet() {
 			@Override
 			protected ApplicationContext createPortletApplicationContext(ApplicationContext parent) throws BeansException {
@@ -328,7 +340,8 @@ public class PortletAnnotationControllerTests extends TestCase {
 		assertEquals("myView-String:myDefaultName-typeMismatch-tb1-myOriginalValue", response.getContentAsString());
 	}
 
-	public void testParameterDispatchingController() throws Exception {
+	@Test
+	public void parameterDispatchingController() throws Exception {
 		DispatcherPortlet portlet = new DispatcherPortlet() {
 			@Override
 			protected ApplicationContext createPortletApplicationContext(ApplicationContext parent) throws BeansException {
@@ -369,7 +382,8 @@ public class PortletAnnotationControllerTests extends TestCase {
 		assertEquals("mySurpriseView", response.getContentAsString());
 	}
 
-	public void testTypeLevelParameterDispatchingController() throws Exception {
+	@Test
+	public void typeLevelParameterDispatchingController() throws Exception {
 		DispatcherPortlet portlet = new DispatcherPortlet() {
 			@Override
 			protected ApplicationContext createPortletApplicationContext(ApplicationContext parent) throws BeansException {
@@ -455,7 +469,8 @@ public class PortletAnnotationControllerTests extends TestCase {
 		assertEquals("mySurpriseView", response.getContentAsString());
 	}
 
-	public void testMavResolver() throws Exception {
+	@Test
+	public void mavResolver() throws Exception {
 		DispatcherPortlet portlet = new DispatcherPortlet() {
 			@Override
 			protected ApplicationContext createPortletApplicationContext(ApplicationContext parent) throws BeansException {
@@ -636,6 +651,7 @@ public class PortletAnnotationControllerTests extends TestCase {
 		}
 
 		@ModelAttribute
+		@SuppressWarnings("unchecked")
 		protected TB2 getModelAttr() {
 			return (TB2) new DerivedTestBean();
 		}
@@ -674,6 +690,7 @@ public class PortletAnnotationControllerTests extends TestCase {
 
 
 	@Controller
+	@SuppressWarnings("rawtypes")
 	private static class MyBinderInitializingCommandProvidingFormController extends MyCommandProvidingFormController {
 
 		@InitBinder
@@ -686,9 +703,9 @@ public class PortletAnnotationControllerTests extends TestCase {
 
 
 	@Controller
+	@SuppressWarnings("rawtypes")
 	private static class MySpecificBinderInitializingCommandProvidingFormController extends MyCommandProvidingFormController {
 
-		@SuppressWarnings("unused")
 		@InitBinder({"myCommand", "date"})
 		private void initBinder(WebDataBinder binder) {
 			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
@@ -796,13 +813,14 @@ public class PortletAnnotationControllerTests extends TestCase {
 
 	private static class TestView {
 
-		public void render(String viewName, Map model, PortletRequest request, MimeResponse response) throws Exception {
+		@SuppressWarnings("deprecation")
+		public void render(String viewName, Map<String, Object> model, PortletRequest request, MimeResponse response) throws Exception {
 			TestBean tb = (TestBean) model.get("testBean");
 			if (tb == null) {
 				tb = (TestBean) model.get("myCommand");
 			}
 			if (tb.getName().endsWith("myDefaultName")) {
-				assertTrue(tb.getDate().getYear() == 107);
+				assertEquals(107, tb.getDate().getYear());
 			}
 			Errors errors = (Errors) model.get(BindingResult.MODEL_KEY_PREFIX + "testBean");
 			if (errors == null) {
@@ -811,9 +829,9 @@ public class PortletAnnotationControllerTests extends TestCase {
 			if (errors.hasFieldErrors("date")) {
 				throw new IllegalStateException();
 			}
-			List<TestBean> testBeans = (List<TestBean>) model.get("testBeanList");
+			List<?> testBeans = (List<?>) model.get("testBeanList");
 			response.getWriter().write(viewName + "-" + tb.getName() + "-" + errors.getFieldError("age").getCode() +
-					"-" + testBeans.get(0).getName() + "-" + model.get("myKey"));
+					"-" + ((TestBean) testBeans.get(0)).getName() + "-" + model.get("myKey"));
 		}
 	}
 
@@ -830,7 +848,7 @@ public class PortletAnnotationControllerTests extends TestCase {
 
 		@Override
 		public org.springframework.web.servlet.ModelAndView resolveModelAndView(Method handlerMethod,
-				Class handlerType,
+				Class<?> handlerType,
 				Object returnValue,
 				ExtendedModelMap implicitModel,
 				NativeWebRequest webRequest) {

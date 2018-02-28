@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.util.Map;
 import javax.portlet.PortletConfig;
 import javax.portlet.PortletContext;
 import javax.portlet.PortletRequest;
+import javax.portlet.PortletResponse;
 import javax.portlet.PortletSession;
 import javax.servlet.ServletContext;
 
@@ -123,6 +124,7 @@ public abstract class PortletApplicationContextUtils {
 		}
 
 		bf.registerResolvableDependency(PortletRequest.class, new RequestObjectFactory());
+		bf.registerResolvableDependency(PortletResponse.class, new ResponseObjectFactory());
 		bf.registerResolvableDependency(PortletSession.class, new SessionObjectFactory());
 		bf.registerResolvableDependency(WebRequest.class, new WebRequestObjectFactory());
 	}
@@ -209,7 +211,7 @@ public abstract class PortletApplicationContextUtils {
 	public static void initPortletPropertySources(MutablePropertySources propertySources, ServletContext servletContext,
 			PortletContext portletContext, PortletConfig portletConfig) {
 
-		Assert.notNull(propertySources, "propertySources must not be null");
+		Assert.notNull(propertySources, "'propertySources' must not be null");
 		WebApplicationContextUtils.initServletPropertySources(propertySources, servletContext);
 
 		if (portletContext != null && propertySources.contains(StandardPortletEnvironment.PORTLET_CONTEXT_PROPERTY_SOURCE_NAME)) {
@@ -241,6 +243,7 @@ public abstract class PortletApplicationContextUtils {
 	@SuppressWarnings("serial")
 	private static class RequestObjectFactory implements ObjectFactory<PortletRequest>, Serializable {
 
+		@Override
 		public PortletRequest getObject() {
 			return currentRequestAttributes().getRequest();
 		}
@@ -253,11 +256,34 @@ public abstract class PortletApplicationContextUtils {
 
 
 	/**
+	 * Factory that exposes the current response object on demand.
+	 */
+	@SuppressWarnings("serial")
+	private static class ResponseObjectFactory implements ObjectFactory<PortletResponse>, Serializable {
+
+		@Override
+		public PortletResponse getObject() {
+			PortletResponse response = currentRequestAttributes().getResponse();
+			if (response == null) {
+				throw new IllegalStateException("Current portlet response not available");
+			}
+			return response;
+		}
+
+		@Override
+		public String toString() {
+			return "Current PortletResponse";
+		}
+	}
+
+
+	/**
 	 * Factory that exposes the current session object on demand.
 	 */
 	@SuppressWarnings("serial")
 	private static class SessionObjectFactory implements ObjectFactory<PortletSession>, Serializable {
 
+		@Override
 		public PortletSession getObject() {
 			return currentRequestAttributes().getRequest().getPortletSession();
 		}
@@ -275,8 +301,10 @@ public abstract class PortletApplicationContextUtils {
 	@SuppressWarnings("serial")
 	private static class WebRequestObjectFactory implements ObjectFactory<WebRequest>, Serializable {
 
+		@Override
 		public WebRequest getObject() {
-			return new PortletWebRequest(currentRequestAttributes().getRequest());
+			PortletRequestAttributes requestAttr = currentRequestAttributes();
+			return new PortletWebRequest(requestAttr.getRequest(), requestAttr.getResponse());
 		}
 
 		@Override

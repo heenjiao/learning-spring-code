@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
+import java.lang.reflect.Constructor;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,15 +34,24 @@ import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
 import javax.xml.transform.stream.StreamSource;
 
+import com.thoughtworks.xstream.MarshallingStrategy;
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.converters.ConversionException;
 import com.thoughtworks.xstream.converters.Converter;
+import com.thoughtworks.xstream.converters.ConverterLookup;
 import com.thoughtworks.xstream.converters.ConverterMatcher;
+import com.thoughtworks.xstream.converters.ConverterRegistry;
+import com.thoughtworks.xstream.converters.DataHolder;
 import com.thoughtworks.xstream.converters.SingleValueConverter;
+import com.thoughtworks.xstream.converters.reflection.ReflectionProvider;
+import com.thoughtworks.xstream.core.ClassLoaderReference;
+import com.thoughtworks.xstream.core.DefaultConverterLookup;
+import com.thoughtworks.xstream.core.util.CompositeClassLoader;
 import com.thoughtworks.xstream.io.HierarchicalStreamDriver;
 import com.thoughtworks.xstream.io.HierarchicalStreamReader;
 import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 import com.thoughtworks.xstream.io.StreamException;
+import com.thoughtworks.xstream.io.naming.NameCoder;
 import com.thoughtworks.xstream.io.xml.CompactWriter;
 import com.thoughtworks.xstream.io.xml.DomReader;
 import com.thoughtworks.xstream.io.xml.DomWriter;
@@ -49,9 +59,11 @@ import com.thoughtworks.xstream.io.xml.QNameMap;
 import com.thoughtworks.xstream.io.xml.SaxWriter;
 import com.thoughtworks.xstream.io.xml.StaxReader;
 import com.thoughtworks.xstream.io.xml.StaxWriter;
-import com.thoughtworks.xstream.io.xml.XmlFriendlyReplacer;
-import com.thoughtworks.xstream.io.xml.XppReader;
+import com.thoughtworks.xstream.io.xml.XmlFriendlyNameCoder;
+import com.thoughtworks.xstream.io.xml.XppDriver;
 import com.thoughtworks.xstream.mapper.CannotResolveClassException;
+import com.thoughtworks.xstream.mapper.Mapper;
+import com.thoughtworks.xstream.mapper.MapperWrapper;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -67,7 +79,6 @@ import org.springframework.oxm.UncategorizedMappingException;
 import org.springframework.oxm.UnmarshallingFailureException;
 import org.springframework.oxm.XmlMappingException;
 import org.springframework.oxm.support.AbstractMarshaller;
-import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
@@ -82,25 +93,27 @@ import org.springframework.util.xml.StaxUtils;
  * as this can result in <b>security vulnerabilities</b>. If you do use the
  * {@code XStreamMarshaller} to unmarshal external XML, set the
  * {@link #setSupportedClasses(Class[]) supportedClasses} and
- * {@link #setConverters(ConverterMatcher[]) converters} properties (possibly using a
- * {@link CatchAllConverter} as the last converter in the list) or override the
- * {@link #customizeXStream(XStream)} method to make sure it only accepts the classes
- * you want it to support.
+ * {@link #setConverters(ConverterMatcher[]) converters} properties (possibly using
+ * a {@link CatchAllConverter}) or override the {@link #customizeXStream(XStream)}
+ * method to make sure it only accepts the classes you want it to support.
  *
- * <p>Due to XStream's API, it is required to set the encoding used for writing to OutputStreams.
- * It defaults to {@code UTF-8}.
+ * <p>Due to XStream's API, it is required to set the encoding used for writing to
+ * OutputStreams. It defaults to {@code UTF-8}.
  *
  * <p><b>NOTE:</b> XStream is an XML serialization library, not a data binding library.
  * Therefore, it has limited namespace support. As such, it is rather unsuitable for
  * usage within Web Services.
  *
- * <p>This marshaller is compatible with XStream 1.3 and 1.4.
+ * <p>This marshaller requires XStream 1.4.5 or higher, as of Spring 4.3.
+ * Note that {@link XStream} construction has been reworked in 4.0, with the
+ * stream driver and the class loader getting passed into XStream itself now.
  *
  * @author Peter Meijer
  * @author Arjen Poutsma
+ * @author Juergen Hoeller
  * @since 3.0
  */
-public class XStreamMarshaller extends AbstractMarshaller implements InitializingBean, BeanClassLoaderAware {
+public class XStreamMarshaller extends AbstractMarshaller implements BeanClassLoaderAware, InitializingBean {
 
 	/**
 	 * The default encoding used for stream access: UTF-8.
@@ -108,36 +121,120 @@ public class XStreamMarshaller extends AbstractMarshaller implements Initializin
 	public static final String DEFAULT_ENCODING = "UTF-8";
 
 
-	private final XStream xstream = new XStream();
+	private ReflectionProvider reflectionProvider;
 
 	private HierarchicalStreamDriver streamDriver;
 
+	private HierarchicalStreamDriver defaultDriver;
+
+	private Mapper mapper;
+
+	private Class<? extends MapperWrapper>[] mapperWrappers;
+
+	private ConverterLookup converterLookup = new DefaultConverterLookup();
+
+	private ConverterRegistry converterRegistry = (ConverterRegistry) this.converterLookup;
+
+	private ConverterMatcher[] converters;
+
+	private MarshallingStrategy marshallingStrategy;
+
+	private Integer mode;
+
+	private Map<String, ?> aliases;
+
+	private Map<String, ?> aliasesByType;
+
+	private Map<String, String> fieldAliases;
+
+	private Class<?>[] useAttributeForTypes;
+
+	private Map<?, ?> useAttributeFor;
+
+	private Map<Class<?>, String> implicitCollections;
+
+	private Map<Class<?>, String> omittedFields;
+
+	private Class<?>[] annotatedClasses;
+
+	private boolean autodetectAnnotations;
+
 	private String encoding = DEFAULT_ENCODING;
+
+	private NameCoder nameCoder = new XmlFriendlyNameCoder();
 
 	private Class<?>[] supportedClasses;
 
-	private ClassLoader beanClassLoader;
+	private ClassLoader beanClassLoader = new CompositeClassLoader();
+
+	private XStream xstream;
 
 
 	/**
-	 * Return the XStream instance used by this marshaller.
-	 * <p><b>NOTE:</b> While this method can be overridden in Spring 3.x,
-	 * it wasn't originally meant to be. As of Spring 4.0, it will be
-	 * marked as final, with all of XStream 1.4's configurable strategies
-	 * to be exposed on XStreamMarshaller itself.
+	 * Set a custom XStream {@link ReflectionProvider} to use.
+	 * @since 4.0
 	 */
-	public XStream getXStream() {
-		return this.xstream;
+	public void setReflectionProvider(ReflectionProvider reflectionProvider) {
+		this.reflectionProvider = reflectionProvider;
 	}
 
 	/**
-	 * Set the XStream mode.
-	 * @see XStream#XPATH_REFERENCES
-	 * @see XStream#ID_REFERENCES
-	 * @see XStream#NO_REFERENCES
+	 * Set a XStream {@link HierarchicalStreamDriver} to be used for readers and writers.
+	 * <p>As of Spring 4.0, this stream driver will also be passed to the {@link XStream}
+	 * constructor and therefore used by streaming-related native API methods themselves.
 	 */
-	public void setMode(int mode) {
-		getXStream().setMode(mode);
+	public void setStreamDriver(HierarchicalStreamDriver streamDriver) {
+		this.streamDriver = streamDriver;
+		this.defaultDriver = streamDriver;
+	}
+
+	private HierarchicalStreamDriver getDefaultDriver() {
+		if (this.defaultDriver == null) {
+			this.defaultDriver = new XppDriver();
+		}
+		return this.defaultDriver;
+	}
+
+	/**
+	 * Set a custom XStream {@link Mapper} to use.
+	 * @since 4.0
+	 */
+	public void setMapper(Mapper mapper) {
+		this.mapper = mapper;
+	}
+
+	/**
+	 * Set one or more custom XStream {@link MapperWrapper} classes.
+	 * Each of those classes needs to have a constructor with a single argument
+	 * of type {@link Mapper} or {@link MapperWrapper}.
+	 * @since 4.0
+	 */
+	@SuppressWarnings("unchecked")
+	public void setMapperWrappers(Class<? extends MapperWrapper>... mapperWrappers) {
+		this.mapperWrappers = mapperWrappers;
+	}
+
+	/**
+	 * Set a custom XStream {@link ConverterLookup} to use.
+	 * Also used as {@link ConverterRegistry} if the given reference implements it as well.
+	 * @since 4.0
+	 * @see DefaultConverterLookup
+	 */
+	public void setConverterLookup(ConverterLookup converterLookup) {
+		this.converterLookup = converterLookup;
+		if (converterLookup instanceof ConverterRegistry) {
+			this.converterRegistry = (ConverterRegistry) converterLookup;
+		}
+	}
+
+	/**
+	 * Set a custom XStream {@link ConverterRegistry} to use.
+	 * @since 4.0
+	 * @see #setConverterLookup
+	 * @see DefaultConverterLookup
+	 */
+	public void setConverterRegistry(ConverterRegistry converterRegistry) {
+		this.converterRegistry = converterRegistry;
 	}
 
 	/**
@@ -147,41 +244,325 @@ public class XStreamMarshaller extends AbstractMarshaller implements Initializin
 	 * @see SingleValueConverter
 	 */
 	public void setConverters(ConverterMatcher... converters) {
-		for (int i = 0; i < converters.length; i++) {
-			if (converters[i] instanceof Converter) {
-				getXStream().registerConverter((Converter) converters[i], i);
-			}
-			else if (converters[i] instanceof SingleValueConverter) {
-				getXStream().registerConverter((SingleValueConverter) converters[i], i);
-			}
-			else {
-				throw new IllegalArgumentException("Invalid ConverterMatcher [" + converters[i] + "]");
-			}
-		}
+		this.converters = converters;
 	}
 
 	/**
-	 * Set an alias/type map, consisting of String aliases mapped to classes.
-	 * <p>Keys are aliases; values are either Class objects or String class names.
+	 * Set a custom XStream {@link MarshallingStrategy} to use.
+	 * @since 4.0
+	 */
+	public void setMarshallingStrategy(MarshallingStrategy marshallingStrategy) {
+		this.marshallingStrategy = marshallingStrategy;
+	}
+
+	/**
+	 * Set the XStream mode to use.
+	 * @see XStream#ID_REFERENCES
+	 * @see XStream#NO_REFERENCES
+	 */
+	public void setMode(int mode) {
+		this.mode = mode;
+	}
+
+	/**
+	 * Set the alias/type map, consisting of string aliases mapped to classes.
+	 * <p>Keys are aliases; values are either {@code Class} instances, or String class names.
 	 * @see XStream#alias(String, Class)
 	 */
-	public void setAliases(Map<String, ?> aliases) throws ClassNotFoundException {
-		Map<String, Class<?>> classMap = toClassMap(aliases);
-		for (Map.Entry<String, Class<?>> entry : classMap.entrySet()) {
-			getXStream().alias(entry.getKey(), entry.getValue());
-		}
+	public void setAliases(Map<String, ?> aliases) {
+		this.aliases = aliases;
 	}
 
 	/**
-	 * Set the aliases by type map, consisting of String aliases mapped to classes.
+	 * Set the <em>aliases by type</em> map, consisting of string aliases mapped to classes.
 	 * <p>Any class that is assignable to this type will be aliased to the same name.
-	 * Keys are aliases; values are either Class objects or String class names.
+	 * Keys are aliases; values are either {@code Class} instances, or String class names.
 	 * @see XStream#aliasType(String, Class)
 	 */
-	public void setAliasesByType(Map<String, ?> aliases) throws ClassNotFoundException {
-		Map<String, Class<?>> classMap = toClassMap(aliases);
-		for (Map.Entry<String, Class<?>> entry : classMap.entrySet()) {
-			getXStream().aliasType(entry.getKey(), entry.getValue());
+	public void setAliasesByType(Map<String, ?> aliasesByType) {
+		this.aliasesByType = aliasesByType;
+	}
+
+	/**
+	 * Set the field alias/type map, consisting of field names.
+	 * @see XStream#aliasField(String, Class, String)
+	 */
+	public void setFieldAliases(Map<String, String> fieldAliases) {
+		this.fieldAliases = fieldAliases;
+	}
+
+	/**
+	 * Set types to use XML attributes for.
+	 * @see XStream#useAttributeFor(Class)
+	 */
+	public void setUseAttributeForTypes(Class<?>... useAttributeForTypes) {
+		this.useAttributeForTypes = useAttributeForTypes;
+	}
+
+	/**
+	 * Set the types to use XML attributes for. The given map can contain
+	 * either {@code <String, Class>} pairs, in which case
+	 * {@link XStream#useAttributeFor(String, Class)} is called.
+	 * Alternatively, the map can contain {@code <Class, String>}
+	 * or {@code <Class, List<String>>} pairs, which results
+	 * in {@link XStream#useAttributeFor(Class, String)} calls.
+	 */
+	public void setUseAttributeFor(Map<?, ?> useAttributeFor) {
+		this.useAttributeFor = useAttributeFor;
+	}
+
+	/**
+	 * Specify implicit collection fields, as a Map consisting of {@code Class} instances
+	 * mapped to comma separated collection field names.
+	 * @see XStream#addImplicitCollection(Class, String)
+	 */
+	public void setImplicitCollections(Map<Class<?>, String> implicitCollections) {
+		this.implicitCollections = implicitCollections;
+	}
+
+	/**
+	 * Specify omitted fields, as a Map consisting of {@code Class} instances
+	 * mapped to comma separated field names.
+	 * @see XStream#omitField(Class, String)
+	 */
+	public void setOmittedFields(Map<Class<?>, String> omittedFields) {
+		this.omittedFields = omittedFields;
+	}
+
+	/**
+	 * Set annotated classes for which aliases will be read from class-level annotation metadata.
+	 * @see XStream#processAnnotations(Class[])
+	 */
+	public void setAnnotatedClasses(Class<?>... annotatedClasses) {
+		this.annotatedClasses = annotatedClasses;
+	}
+
+	/**
+	 * Activate XStream's autodetection mode.
+	 * <p><b>Note</b>: Autodetection implies that the XStream instance is being configured while
+	 * it is processing the XML streams, and thus introduces a potential concurrency problem.
+	 * @see XStream#autodetectAnnotations(boolean)
+	 */
+	public void setAutodetectAnnotations(boolean autodetectAnnotations) {
+		this.autodetectAnnotations = autodetectAnnotations;
+	}
+
+	/**
+	 * Set the encoding to be used for stream access.
+	 * @see #DEFAULT_ENCODING
+	 */
+	public void setEncoding(String encoding) {
+		this.encoding = encoding;
+	}
+
+	@Override
+	protected String getDefaultEncoding() {
+		return this.encoding;
+	}
+
+	/**
+	 * Set a custom XStream {@link NameCoder} to use.
+	 * The default is an {@link XmlFriendlyNameCoder}.
+	 * @since 4.0.4
+	 */
+	public void setNameCoder(NameCoder nameCoder) {
+		this.nameCoder = nameCoder;
+	}
+
+	/**
+	 * Set the classes supported by this marshaller.
+	 * <p>If this property is empty (the default), all classes are supported.
+	 * @see #supports(Class)
+	 */
+	public void setSupportedClasses(Class<?>... supportedClasses) {
+		this.supportedClasses = supportedClasses;
+	}
+
+	@Override
+	public void setBeanClassLoader(ClassLoader classLoader) {
+		this.beanClassLoader = classLoader;
+	}
+
+
+	@Override
+	public void afterPropertiesSet() {
+		this.xstream = buildXStream();
+	}
+
+	/**
+	 * Build the native XStream delegate to be used by this marshaller,
+	 * delegating to {@link #constructXStream()}, {@link #configureXStream}
+	 * and {@link #customizeXStream}.
+	 */
+	protected XStream buildXStream() {
+		XStream xstream = constructXStream();
+		configureXStream(xstream);
+		customizeXStream(xstream);
+		return xstream;
+	}
+
+	/**
+	 * Construct an XStream instance, either using one of the
+	 * standard constructors or creating a custom subclass.
+	 * @return the {@code XStream} instance
+	 */
+	protected XStream constructXStream() {
+		return new XStream(this.reflectionProvider, getDefaultDriver(), new ClassLoaderReference(this.beanClassLoader),
+				this.mapper, this.converterLookup, this.converterRegistry) {
+			@Override
+			protected MapperWrapper wrapMapper(MapperWrapper next) {
+				MapperWrapper mapperToWrap = next;
+				if (mapperWrappers != null) {
+					for (Class<? extends MapperWrapper> mapperWrapper : mapperWrappers) {
+						Constructor<? extends MapperWrapper> ctor;
+						try {
+							ctor = mapperWrapper.getConstructor(Mapper.class);
+						}
+						catch (NoSuchMethodException ex) {
+							try {
+								ctor = mapperWrapper.getConstructor(MapperWrapper.class);
+							}
+							catch (NoSuchMethodException ex2) {
+								throw new IllegalStateException("No appropriate MapperWrapper constructor found: " + mapperWrapper);
+							}
+						}
+						try {
+							mapperToWrap = ctor.newInstance(mapperToWrap);
+						}
+						catch (Throwable ex) {
+							throw new IllegalStateException("Failed to construct MapperWrapper: " + mapperWrapper);
+						}
+					}
+				}
+				return mapperToWrap;
+			}
+		};
+	}
+
+	/**
+	 * Configure the XStream instance with this marshaller's bean properties.
+	 * @param xstream the {@code XStream} instance
+	 */
+	protected void configureXStream(XStream xstream) {
+		if (this.converters != null) {
+			for (int i = 0; i < this.converters.length; i++) {
+				if (this.converters[i] instanceof Converter) {
+					xstream.registerConverter((Converter) this.converters[i], i);
+				}
+				else if (this.converters[i] instanceof SingleValueConverter) {
+					xstream.registerConverter((SingleValueConverter) this.converters[i], i);
+				}
+				else {
+					throw new IllegalArgumentException("Invalid ConverterMatcher [" + this.converters[i] + "]");
+				}
+			}
+		}
+
+		if (this.marshallingStrategy != null) {
+			xstream.setMarshallingStrategy(this.marshallingStrategy);
+		}
+		if (this.mode != null) {
+			xstream.setMode(this.mode);
+		}
+
+		try {
+			if (this.aliases != null) {
+				Map<String, Class<?>> classMap = toClassMap(this.aliases);
+				for (Map.Entry<String, Class<?>> entry : classMap.entrySet()) {
+					xstream.alias(entry.getKey(), entry.getValue());
+				}
+			}
+			if (this.aliasesByType != null) {
+				Map<String, Class<?>> classMap = toClassMap(this.aliasesByType);
+				for (Map.Entry<String, Class<?>> entry : classMap.entrySet()) {
+					xstream.aliasType(entry.getKey(), entry.getValue());
+				}
+			}
+			if (this.fieldAliases != null) {
+				for (Map.Entry<String, String> entry : this.fieldAliases.entrySet()) {
+					String alias = entry.getValue();
+					String field = entry.getKey();
+					int idx = field.lastIndexOf('.');
+					if (idx != -1) {
+						String className = field.substring(0, idx);
+						Class<?> clazz = ClassUtils.forName(className, this.beanClassLoader);
+						String fieldName = field.substring(idx + 1);
+						xstream.aliasField(alias, clazz, fieldName);
+					}
+					else {
+						throw new IllegalArgumentException("Field name [" + field + "] does not contain '.'");
+					}
+				}
+			}
+		}
+		catch (ClassNotFoundException ex) {
+			throw new IllegalStateException("Failed to load specified alias class", ex);
+		}
+
+		if (this.useAttributeForTypes != null) {
+			for (Class<?> type : this.useAttributeForTypes) {
+				xstream.useAttributeFor(type);
+			}
+		}
+		if (this.useAttributeFor != null) {
+			for (Map.Entry<?, ?> entry : this.useAttributeFor.entrySet()) {
+				if (entry.getKey() instanceof String) {
+					if (entry.getValue() instanceof Class) {
+						xstream.useAttributeFor((String) entry.getKey(), (Class<?>) entry.getValue());
+					}
+					else {
+						throw new IllegalArgumentException(
+								"'useAttributesFor' takes Map<String, Class> when using a map key of type String");
+					}
+				}
+				else if (entry.getKey() instanceof Class) {
+					Class<?> key = (Class<?>) entry.getKey();
+					if (entry.getValue() instanceof String) {
+						xstream.useAttributeFor(key, (String) entry.getValue());
+					}
+					else if (entry.getValue() instanceof List) {
+						@SuppressWarnings("unchecked")
+						List<Object> listValue = (List<Object>) entry.getValue();
+						for (Object element : listValue) {
+							if (element instanceof String) {
+								xstream.useAttributeFor(key, (String) element);
+							}
+						}
+					}
+					else {
+						throw new IllegalArgumentException("'useAttributesFor' property takes either Map<Class, String> " +
+								"or Map<Class, List<String>> when using a map key of type Class");
+					}
+				}
+				else {
+					throw new IllegalArgumentException(
+							"'useAttributesFor' property takes either a map key of type String or Class");
+				}
+			}
+		}
+
+		if (this.implicitCollections != null) {
+			for (Map.Entry<Class<?>, String> entry : this.implicitCollections.entrySet()) {
+				String[] collectionFields = StringUtils.commaDelimitedListToStringArray(entry.getValue());
+				for (String collectionField : collectionFields) {
+					xstream.addImplicitCollection(entry.getKey(), collectionField);
+				}
+			}
+		}
+		if (this.omittedFields != null) {
+			for (Map.Entry<Class<?>, String> entry : this.omittedFields.entrySet()) {
+				String[] fields = StringUtils.commaDelimitedListToStringArray(entry.getValue());
+				for (String field : fields) {
+					xstream.omitField(entry.getKey(), field);
+				}
+			}
+		}
+
+		if (this.annotatedClasses != null) {
+			xstream.processAnnotations(this.annotatedClasses);
+		}
+		if (this.autodetectAnnotations) {
+			xstream.autodetectAnnotations(true);
 		}
 	}
 
@@ -207,186 +588,28 @@ public class XStreamMarshaller extends AbstractMarshaller implements Initializin
 	}
 
 	/**
-	 * Set a field alias/type map, consisting of field names.
-	 * @see XStream#aliasField(String, Class, String)
-	 */
-	public void setFieldAliases(Map<String, String> aliases) throws ClassNotFoundException, NoSuchFieldException {
-		for (Map.Entry<String, String> entry : aliases.entrySet()) {
-			String alias = entry.getValue();
-			String field = entry.getKey();
-			int idx = field.lastIndexOf('.');
-			if (idx != -1) {
-				String className = field.substring(0, idx);
-				Class<?> clazz = ClassUtils.forName(className, this.beanClassLoader);
-				String fieldName = field.substring(idx + 1);
-				getXStream().aliasField(alias, clazz, fieldName);
-			}
-			else {
-				throw new IllegalArgumentException("Field name [" + field + "] does not contain '.'");
-			}
-		}
-	}
-
-	/**
-	 * Set types to use XML attributes for.
-	 * @see XStream#useAttributeFor(Class)
-	 */
-	public void setUseAttributeForTypes(Class<?>... types) {
-		for (Class<?> type : types) {
-			getXStream().useAttributeFor(type);
-		}
-	}
-
-	/**
-	 * Set the types to use XML attributes for. The given map can contain
-	 * either {@code <String, Class>} pairs, in which case
-	 * {@link XStream#useAttributeFor(String, Class)} is called.
-	 * Alternatively, the map can contain {@code <Class, String>}
-	 * or {@code <Class, List<String>>} pairs, which results in
-	 * {@link XStream#useAttributeFor(Class, String)} calls.
-	 */
-	public void setUseAttributeFor(Map<?, ?> attributes) {
-		for (Map.Entry<?, ?> entry : attributes.entrySet()) {
-			if (entry.getKey() instanceof String) {
-				if (entry.getValue() instanceof Class) {
-					getXStream().useAttributeFor((String) entry.getKey(), (Class) entry.getValue());
-				}
-				else {
-					throw new IllegalArgumentException(
-							"'useAttributesFor' takes Map<String, Class> when using a map key of type String");
-				}
-			}
-			else if (entry.getKey() instanceof Class) {
-				Class<?> key = (Class<?>) entry.getKey();
-				if (entry.getValue() instanceof String) {
-					getXStream().useAttributeFor(key, (String) entry.getValue());
-				}
-				else if (entry.getValue() instanceof List) {
-					List listValue = (List) entry.getValue();
-					for (Object element : listValue) {
-						if (element instanceof String) {
-							getXStream().useAttributeFor(key, (String) element);
-						}
-					}
-				}
-				else {
-					throw new IllegalArgumentException("'useAttributesFor' property takes either Map<Class, String> " +
-							"or Map<Class, List<String>> when using a map key of type Class");
-				}
-			}
-			else {
-				throw new IllegalArgumentException(
-						"'useAttributesFor' property takes either a map key of type String or Class");
-			}
-		}
-	}
-
-	/**
-	 * Specify implicit collection fields, as a Map consisting of {@code Class} instances
-	 * mapped to comma separated collection field names.
-	 * @see XStream#addImplicitCollection(Class, String)
-	 */
-	public void setImplicitCollections(Map<Class<?>, String> implicitCollections) {
-		for (Map.Entry<Class<?>, String> entry : implicitCollections.entrySet()) {
-			String[] collectionFields = StringUtils.commaDelimitedListToStringArray(entry.getValue());
-			for (String collectionField : collectionFields) {
-				getXStream().addImplicitCollection(entry.getKey(), collectionField);
-			}
-		}
-	}
-
-	/**
-	 * Specify omitted fields, as a Map consisting of {@code Class} instances
-	 * mapped to comma separated field names.
-	 * @see XStream#omitField(Class, String)
-	 */
-	public void setOmittedFields(Map<Class<?>, String> omittedFields) {
-		for (Map.Entry<Class<?>, String> entry : omittedFields.entrySet()) {
-			String[] fields = StringUtils.commaDelimitedListToStringArray(entry.getValue());
-			for (String field : fields) {
-				getXStream().omitField(entry.getKey(), field);
-			}
-		}
-	}
-
-	/**
-	 * Set the classes for which mappings will be read from class-level annotation metadata.
-	 * @see XStream#processAnnotations(Class)
-	 * @deprecated in favor of {@link #setAnnotatedClasses} with varargs
-	 */
-	@Deprecated
-	public void setAnnotatedClass(Class<?> annotatedClass) {
-		Assert.notNull(annotatedClass, "'annotatedClass' must not be null");
-		getXStream().processAnnotations(annotatedClass);
-	}
-
-	/**
-	 * Set annotated classes for which aliases will be read from class-level annotation metadata.
-	 * @see XStream#processAnnotations(Class[])
-	 */
-	public void setAnnotatedClasses(Class<?>... annotatedClasses) {
-		Assert.notEmpty(annotatedClasses, "'annotatedClasses' must not be empty");
-		getXStream().processAnnotations(annotatedClasses);
-	}
-
-	/**
-	 * Activate XStream's autodetection mode.
-	 * <p><b>Note</b>: Autodetection implies that the XStream instance is being configured while
-	 * it is processing the XML streams, and thus introduces a potential concurrency problem.
-	 * @see XStream#autodetectAnnotations(boolean)
-	 */
-	public void setAutodetectAnnotations(boolean autodetectAnnotations) {
-		getXStream().autodetectAnnotations(autodetectAnnotations);
-	}
-
-	/**
-	 * Set the XStream hierarchical stream driver to be used with stream readers and writers.
-	 */
-	public void setStreamDriver(HierarchicalStreamDriver streamDriver) {
-		this.streamDriver = streamDriver;
-	}
-
-	/**
-	 * Set the encoding to be used for stream access.
-	 * @see #DEFAULT_ENCODING
-	 */
-	public void setEncoding(String encoding) {
-		this.encoding = encoding;
-	}
-
-	@Override
-	protected String getDefaultEncoding() {
-		return this.encoding;
-	}
-
-	/**
-	 * Set the classes supported by this marshaller.
-	 * <p>If this property is empty (the default), all classes are supported.
-	 * @see #supports(Class)
-	 */
-	public void setSupportedClasses(Class<?>... supportedClasses) {
-		this.supportedClasses = supportedClasses;
-	}
-
-	public void setBeanClassLoader(ClassLoader classLoader) {
-		this.beanClassLoader = classLoader;
-		getXStream().setClassLoader(classLoader);
-	}
-
-
-	public final void afterPropertiesSet() throws Exception {
-		customizeXStream(getXStream());
-	}
-
-	/**
-	 * Template to allow for customizing of the given {@link XStream}.
+	 * Template to allow for customizing the given {@link XStream}.
 	 * <p>The default implementation is empty.
 	 * @param xstream the {@code XStream} instance
 	 */
 	protected void customizeXStream(XStream xstream) {
 	}
 
+	/**
+	 * Return the native XStream delegate used by this marshaller.
+	 * <p><b>NOTE: This method has been marked as final as of Spring 4.0.</b>
+	 * It can be used to access the fully configured XStream for marshalling
+	 * but not configuration purposes anymore.
+	 */
+	public final XStream getXStream() {
+		if (this.xstream == null) {
+			this.xstream = buildXStream();
+		}
+		return this.xstream;
+	}
 
+
+	@Override
 	public boolean supports(Class<?> clazz) {
 		if (ObjectUtils.isEmpty(this.supportedClasses)) {
 			return true;
@@ -408,27 +631,31 @@ public class XStreamMarshaller extends AbstractMarshaller implements Initializin
 	protected void marshalDomNode(Object graph, Node node) throws XmlMappingException {
 		HierarchicalStreamWriter streamWriter;
 		if (node instanceof Document) {
-			streamWriter = new DomWriter((Document) node);
+			streamWriter = new DomWriter((Document) node, this.nameCoder);
 		}
 		else if (node instanceof Element) {
-			streamWriter = new DomWriter((Element) node, node.getOwnerDocument(), new XmlFriendlyReplacer());
+			streamWriter = new DomWriter((Element) node, node.getOwnerDocument(), this.nameCoder);
 		}
 		else {
 			throw new IllegalArgumentException("DOMResult contains neither Document nor Element");
 		}
-		marshal(graph, streamWriter);
+		doMarshal(graph, streamWriter, null);
 	}
 
 	@Override
 	protected void marshalXmlEventWriter(Object graph, XMLEventWriter eventWriter) throws XmlMappingException {
 		ContentHandler contentHandler = StaxUtils.createContentHandler(eventWriter);
-		marshalSaxHandlers(graph, contentHandler, null);
+		LexicalHandler lexicalHandler = null;
+		if (contentHandler instanceof LexicalHandler) {
+			lexicalHandler = (LexicalHandler) contentHandler;
+		}
+		marshalSaxHandlers(graph, contentHandler, lexicalHandler);
 	}
 
 	@Override
 	protected void marshalXmlStreamWriter(Object graph, XMLStreamWriter streamWriter) throws XmlMappingException {
 		try {
-			marshal(graph, new StaxWriter(new QNameMap(), streamWriter));
+			doMarshal(graph, new StaxWriter(new QNameMap(), streamWriter, this.nameCoder), null);
 		}
 		catch (XMLStreamException ex) {
 			throw convertXStreamException(ex, true);
@@ -436,31 +663,43 @@ public class XStreamMarshaller extends AbstractMarshaller implements Initializin
 	}
 
 	@Override
-	protected void marshalOutputStream(Object graph, OutputStream outputStream) throws XmlMappingException, IOException {
-		if (this.streamDriver != null) {
-			marshal(graph, this.streamDriver.createWriter(outputStream));
-		}
-		else {
-			marshalWriter(graph, new OutputStreamWriter(outputStream, this.encoding));
-		}
-	}
-
-	@Override
 	protected void marshalSaxHandlers(Object graph, ContentHandler contentHandler, LexicalHandler lexicalHandler)
 			throws XmlMappingException {
 
-		SaxWriter saxWriter = new SaxWriter();
+		SaxWriter saxWriter = new SaxWriter(this.nameCoder);
 		saxWriter.setContentHandler(contentHandler);
-		marshal(graph, saxWriter);
+		doMarshal(graph, saxWriter, null);
 	}
 
 	@Override
-	protected void marshalWriter(Object graph, Writer writer) throws XmlMappingException, IOException {
+	public void marshalOutputStream(Object graph, OutputStream outputStream) throws XmlMappingException, IOException {
+		marshalOutputStream(graph, outputStream, null);
+	}
+
+	public void marshalOutputStream(Object graph, OutputStream outputStream, DataHolder dataHolder)
+			throws XmlMappingException, IOException {
+
 		if (this.streamDriver != null) {
-			marshal(graph, this.streamDriver.createWriter(writer));
+			doMarshal(graph, this.streamDriver.createWriter(outputStream), dataHolder);
 		}
 		else {
-			marshal(graph, new CompactWriter(writer));
+			marshalWriter(graph, new OutputStreamWriter(outputStream, this.encoding), dataHolder);
+		}
+	}
+
+	@Override
+	public void marshalWriter(Object graph, Writer writer) throws XmlMappingException, IOException {
+		marshalWriter(graph, writer, null);
+	}
+
+	public void marshalWriter(Object graph, Writer writer, DataHolder dataHolder)
+			throws XmlMappingException, IOException {
+
+		if (this.streamDriver != null) {
+			doMarshal(graph, this.streamDriver.createWriter(writer), dataHolder);
+		}
+		else {
+			doMarshal(graph, new CompactWriter(writer), dataHolder);
 		}
 	}
 
@@ -468,9 +707,9 @@ public class XStreamMarshaller extends AbstractMarshaller implements Initializin
 	 * Marshals the given graph to the given XStream HierarchicalStreamWriter.
 	 * Converts exceptions using {@link #convertXStreamException}.
 	 */
-	private void marshal(Object graph, HierarchicalStreamWriter streamWriter) {
+	private void doMarshal(Object graph, HierarchicalStreamWriter streamWriter, DataHolder dataHolder) {
 		try {
-			getXStream().marshal(graph, streamWriter);
+			getXStream().marshal(graph, streamWriter, dataHolder);
 		}
 		catch (Exception ex) {
 			throw convertXStreamException(ex, true);
@@ -505,15 +744,15 @@ public class XStreamMarshaller extends AbstractMarshaller implements Initializin
 	protected Object unmarshalDomNode(Node node) throws XmlMappingException {
 		HierarchicalStreamReader streamReader;
 		if (node instanceof Document) {
-			streamReader = new DomReader((Document) node);
+			streamReader = new DomReader((Document) node, this.nameCoder);
 		}
 		else if (node instanceof Element) {
-			streamReader = new DomReader((Element) node);
+			streamReader = new DomReader((Element) node, this.nameCoder);
 		}
 		else {
 			throw new IllegalArgumentException("DOMSource contains neither Document nor Element");
 		}
-        return unmarshal(streamReader);
+        return doUnmarshal(streamReader, null);
 	}
 
 	@Override
@@ -529,27 +768,7 @@ public class XStreamMarshaller extends AbstractMarshaller implements Initializin
 
 	@Override
 	protected Object unmarshalXmlStreamReader(XMLStreamReader streamReader) throws XmlMappingException {
-        return unmarshal(new StaxReader(new QNameMap(), streamReader));
-	}
-
-	@Override
-	protected Object unmarshalInputStream(InputStream inputStream) throws XmlMappingException, IOException {
-        if (this.streamDriver != null) {
-            return unmarshal(this.streamDriver.createReader(inputStream));
-        }
-        else {
-		    return unmarshalReader(new InputStreamReader(inputStream, this.encoding));
-        }
-	}
-
-	@Override
-	protected Object unmarshalReader(Reader reader) throws XmlMappingException, IOException {
-        if (this.streamDriver != null) {
-            return unmarshal(this.streamDriver.createReader(reader));
-        }
-        else {
-            return unmarshal(new XppReader(reader));
-        }
+        return doUnmarshal(new StaxReader(new QNameMap(), streamReader, this.nameCoder), null);
 	}
 
 	@Override
@@ -560,13 +779,36 @@ public class XStreamMarshaller extends AbstractMarshaller implements Initializin
 				"XStreamMarshaller does not support unmarshalling using SAX XMLReaders");
 	}
 
+	@Override
+	public Object unmarshalInputStream(InputStream inputStream) throws XmlMappingException, IOException {
+		return unmarshalInputStream(inputStream, null);
+	}
+
+	public Object unmarshalInputStream(InputStream inputStream, DataHolder dataHolder) throws XmlMappingException, IOException {
+        if (this.streamDriver != null) {
+            return doUnmarshal(this.streamDriver.createReader(inputStream), dataHolder);
+        }
+        else {
+		    return unmarshalReader(new InputStreamReader(inputStream, this.encoding), dataHolder);
+        }
+	}
+
+	@Override
+	public Object unmarshalReader(Reader reader) throws XmlMappingException, IOException {
+		return unmarshalReader(reader, null);
+	}
+
+	public Object unmarshalReader(Reader reader, DataHolder dataHolder) throws XmlMappingException, IOException {
+		return doUnmarshal(getDefaultDriver().createReader(reader), dataHolder);
+	}
+
     /**
      * Unmarshals the given graph to the given XStream HierarchicalStreamWriter.
      * Converts exceptions using {@link #convertXStreamException}.
      */
-    private Object unmarshal(HierarchicalStreamReader streamReader) {
+    private Object doUnmarshal(HierarchicalStreamReader streamReader, DataHolder dataHolder) {
         try {
-            return getXStream().unmarshal(streamReader);
+            return getXStream().unmarshal(streamReader, null, dataHolder);
         }
         catch (Exception ex) {
             throw convertXStreamException(ex, false);
@@ -579,7 +821,7 @@ public class XStreamMarshaller extends AbstractMarshaller implements Initializin
      * {@code org.springframework.oxm} hierarchy.
      * <p>A boolean flag is used to indicate whether this exception occurs during marshalling or
      * unmarshalling, since XStream itself does not make this distinction in its exception hierarchy.
-     * @param ex XStream exception that occured
+     * @param ex XStream exception that occurred
      * @param marshalling indicates whether the exception occurs during marshalling ({@code true}),
      * or unmarshalling ({@code false})
      * @return the corresponding {@code XmlMappingException}

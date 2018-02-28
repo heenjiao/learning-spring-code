@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ import org.springframework.beans.factory.BeanFactoryUtils;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.FactoryBeanNotInitializedException;
 import org.springframework.beans.factory.ListableBeanFactory;
-import org.springframework.core.OrderComparator;
+import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
 
@@ -218,12 +218,14 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 		this.classLoaderConfigured = (classLoader != null);
 	}
 
+	@Override
 	public void setBeanClassLoader(ClassLoader classLoader) {
 		if (!this.classLoaderConfigured) {
 			this.proxyClassLoader = classLoader;
 		}
 	}
 
+	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
 		this.beanFactory = beanFactory;
 		checkInterceptorNames();
@@ -237,6 +239,7 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 	 * {@code getObject()} for a proxy.
 	 * @return a fresh AOP proxy reflecting the current state of this factory
 	 */
+	@Override
 	public Object getObject() throws BeansException {
 		initializeAdvisorChain();
 		if (isSingleton()) {
@@ -257,6 +260,7 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 	 * a single one), the target bean type, or the TargetSource's target class.
 	 * @see org.springframework.aop.TargetSource#getTargetClass
 	 */
+	@Override
 	public Class<?> getObjectType() {
 		synchronized (this) {
 			if (this.singletonInstance != null) {
@@ -278,6 +282,7 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 		}
 	}
 
+	@Override
 	public boolean isSingleton() {
 		return this.singleton;
 	}
@@ -409,7 +414,7 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 	}
 
 	/**
-	 * Create the advisor (interceptor) chain. Aadvisors that are sourced
+	 * Create the advisor (interceptor) chain. Advisors that are sourced
 	 * from a BeanFactory will be refreshed each time a new prototype instance
 	 * is added. Interceptors added programmatically through the factory API
 	 * are unaffected by such changes.
@@ -520,7 +525,7 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 			beans.add(bean);
 			names.put(bean, name);
 		}
-		OrderComparator.sort(beans);
+		AnnotationAwareOrderComparator.sort(beans);
 		for (Object bean : beans) {
 			String name = names.get(bean);
 			if (name.startsWith(prefix)) {
@@ -638,10 +643,12 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 			return beanName;
 		}
 
+		@Override
 		public Advice getAdvice() {
 			throw new UnsupportedOperationException("Cannot invoke methods: " + this.message);
 		}
 
+		@Override
 		public boolean isPerInstance() {
 			throw new UnsupportedOperationException("Cannot invoke methods: " + this.message);
 		}

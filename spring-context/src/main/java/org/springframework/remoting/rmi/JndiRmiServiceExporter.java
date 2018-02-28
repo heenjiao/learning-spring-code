@@ -20,7 +20,6 @@ import java.rmi.NoSuchObjectException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.Properties;
-
 import javax.naming.NamingException;
 import javax.rmi.PortableRemoteObject;
 
@@ -101,6 +100,7 @@ public class JndiRmiServiceExporter extends RmiBasedExporter implements Initiali
 	}
 
 
+	@Override
 	public void afterPropertiesSet() throws NamingException, RemoteException {
 		prepare();
 	}
@@ -137,6 +137,7 @@ public class JndiRmiServiceExporter extends RmiBasedExporter implements Initiali
 	/**
 	 * Unbind the RMI service from JNDI on bean factory shutdown.
 	 */
+	@Override
 	public void destroy() throws NamingException, NoSuchObjectException {
 		if (logger.isInfoEnabled()) {
 			logger.info("Unbinding RMI service from JNDI location [" + this.jndiName + "]");

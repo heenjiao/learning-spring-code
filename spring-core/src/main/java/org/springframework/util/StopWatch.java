@@ -72,7 +72,7 @@ public class StopWatch {
 	 * Construct a new stop watch. Does not start any task.
 	 */
 	public StopWatch() {
-		this.id = "";
+		this("");
 	}
 
 	/**
@@ -86,6 +86,16 @@ public class StopWatch {
 		this.id = id;
 	}
 
+
+	/**
+	 * Return the id of this stop watch, as specified on construction.
+	 * @return the id (empty String by default)
+	 * @since 4.2.2
+	 * @see #StopWatch(String)
+	 */
+	public String getId() {
+		return this.id;
+	}
 
 	/**
 	 * Determine whether the TaskInfo array is built over time. Set this to
@@ -144,9 +154,19 @@ public class StopWatch {
 
 	/**
 	 * Return whether the stop watch is currently running.
+	 * @see #currentTaskName()
 	 */
 	public boolean isRunning() {
 		return this.running;
+	}
+
+	/**
+	 * Return the name of the currently running task, if any.
+	 * @since 4.2.2
+	 * @see #isRunning()
+	 */
+	public String currentTaskName() {
+		return this.currentTaskName;
 	}
 
 
@@ -217,7 +237,7 @@ public class StopWatch {
 	 * Return a short description of the total running time.
 	 */
 	public String shortSummary() {
-		return "StopWatch '" + this.id + "': running time (millis) = " + getTotalTimeMillis();
+		return "StopWatch '" + getId() + "': running time (millis) = " + getTotalTimeMillis();
 	}
 
 	/**

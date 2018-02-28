@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.springframework.beans.factory.support;
 
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.util.HashSet;
@@ -25,6 +26,7 @@ import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.beans.factory.config.ConstructorArgumentValues;
+import org.springframework.core.ResolvableType;
 import org.springframework.util.Assert;
 
 /**
@@ -48,14 +50,23 @@ import org.springframework.util.Assert;
 @SuppressWarnings("serial")
 public class RootBeanDefinition extends AbstractBeanDefinition {
 
-	boolean allowCaching = true;
-
 	private BeanDefinitionHolder decoratedDefinition;
 
-	private volatile Class<?> targetType;
+	private AnnotatedElement qualifiedElement;
+
+	boolean allowCaching = true;
 
 	boolean isFactoryMethodUnique = false;
 
+	volatile ResolvableType targetType;
+
+	/** Package-visible field for caching the determined Class of a given bean definition */
+	volatile Class<?> resolvedTargetType;
+
+	/** Package-visible field for caching the return type of a generically typed factory method */
+	volatile ResolvableType factoryMethodReturnType;
+
+	/** Common lock for the four constructor fields below */
 	final Object constructorArgumentLock = new Object();
 
 	/** Package-visible field for caching the resolved constructor or factory method */
@@ -70,6 +81,7 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	/** Package-visible field for caching partly prepared constructor arguments */
 	Object[] preparedConstructorArguments;
 
+	/** Common lock for the two post-processing fields below */
 	final Object postProcessingLock = new Object();
 
 	/** Package-visible field that indicates MergedBeanDefinitionPostProcessor having been applied */
@@ -89,10 +101,7 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	 * Create a new RootBeanDefinition, to be configured through its bean
 	 * properties and configuration methods.
 	 * @see #setBeanClass
-	 * @see #setBeanClassName
 	 * @see #setScope
-	 * @see #setAutowireMode
-	 * @see #setDependencyCheck
 	 * @see #setConstructorArgumentValues
 	 * @see #setPropertyValues
 	 */
@@ -103,37 +112,11 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	/**
 	 * Create a new RootBeanDefinition for a singleton.
 	 * @param beanClass the class of the bean to instantiate
+	 * @see #setBeanClass
 	 */
 	public RootBeanDefinition(Class<?> beanClass) {
 		super();
 		setBeanClass(beanClass);
-	}
-
-	/**
-	 * Create a new RootBeanDefinition with the given singleton status.
-	 * @param beanClass the class of the bean to instantiate
-	 * @param singleton the singleton status of the bean
-	 * @deprecated since Spring 2.5, in favor of {@link #setScope}
-	 */
-	@Deprecated
-	public RootBeanDefinition(Class beanClass, boolean singleton) {
-		super();
-		setBeanClass(beanClass);
-		setSingleton(singleton);
-	}
-
-	/**
-	 * Create a new RootBeanDefinition for a singleton,
-	 * using the given autowire mode.
-	 * @param beanClass the class of the bean to instantiate
-	 * @param autowireMode by name or type, using the constants in this interface
-	 * @deprecated as of Spring 3.0, in favor of {@link #setAutowireMode} usage
-	 */
-	@Deprecated
-	public RootBeanDefinition(Class beanClass, int autowireMode) {
-		super();
-		setBeanClass(beanClass);
-		setAutowireMode(autowireMode);
 	}
 
 	/**
@@ -149,36 +132,8 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 		setBeanClass(beanClass);
 		setAutowireMode(autowireMode);
 		if (dependencyCheck && getResolvedAutowireMode() != AUTOWIRE_CONSTRUCTOR) {
-			setDependencyCheck(RootBeanDefinition.DEPENDENCY_CHECK_OBJECTS);
+			setDependencyCheck(DEPENDENCY_CHECK_OBJECTS);
 		}
-	}
-
-	/**
-	 * Create a new RootBeanDefinition for a singleton,
-	 * providing property values.
-	 * @param beanClass the class of the bean to instantiate
-	 * @param pvs the property values to apply
-	 * @deprecated as of Spring 3.0, in favor of {@link #getPropertyValues} usage
-	 */
-	@Deprecated
-	public RootBeanDefinition(Class beanClass, MutablePropertyValues pvs) {
-		super(null, pvs);
-		setBeanClass(beanClass);
-	}
-
-	/**
-	 * Create a new RootBeanDefinition with the given singleton status,
-	 * providing property values.
-	 * @param beanClass the class of the bean to instantiate
-	 * @param pvs the property values to apply
-	 * @param singleton the singleton status of the bean
-	 * @deprecated since Spring 2.5, in favor of {@link #setScope}
-	 */
-	@Deprecated
-	public RootBeanDefinition(Class beanClass, MutablePropertyValues pvs, boolean singleton) {
-		super(null, pvs);
-		setBeanClass(beanClass);
-		setSingleton(singleton);
 	}
 
 	/**
@@ -222,11 +177,12 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	 * @param original the original bean definition to copy from
 	 */
 	public RootBeanDefinition(RootBeanDefinition original) {
-		super((BeanDefinition) original);
-		this.allowCaching = original.allowCaching;
+		super(original);
 		this.decoratedDefinition = original.decoratedDefinition;
-		this.targetType = original.targetType;
+		this.qualifiedElement = original.qualifiedElement;
+		this.allowCaching = original.allowCaching;
 		this.isFactoryMethodUnique = original.isFactoryMethodUnique;
+		this.targetType = original.targetType;
 	}
 
 	/**
@@ -239,10 +195,12 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	}
 
 
+	@Override
 	public String getParentName() {
 		return null;
 	}
 
+	@Override
 	public void setParentName(String parentName) {
 		if (parentName != null) {
 			throw new IllegalArgumentException("Root bean cannot be changed into a child bean with parent reference");
@@ -264,18 +222,51 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	}
 
 	/**
+	 * Specify the {@link AnnotatedElement} defining qualifiers,
+	 * to be used instead of the target class or factory method.
+	 * @since 4.3.3
+	 * @see #setTargetType(ResolvableType)
+	 * @see #getResolvedFactoryMethod()
+	 */
+	public void setQualifiedElement(AnnotatedElement qualifiedElement) {
+		this.qualifiedElement = qualifiedElement;
+	}
+
+	/**
+	 * Return the {@link AnnotatedElement} defining qualifiers, if any.
+	 * Otherwise, the factory method and target class will be checked.
+	 * @since 4.3.3
+	 */
+	public AnnotatedElement getQualifiedElement() {
+		return this.qualifiedElement;
+	}
+
+	/**
+	 * Specify a generics-containing target type of this bean definition, if known in advance.
+	 * @since 4.3.3
+	 */
+	public void setTargetType(ResolvableType targetType) {
+		this.targetType = targetType;
+	}
+
+	/**
 	 * Specify the target type of this bean definition, if known in advance.
+	 * @since 3.2.2
 	 */
 	public void setTargetType(Class<?> targetType) {
-		this.targetType = targetType;
+		this.targetType = (targetType != null ? ResolvableType.forClass(targetType) : null);
 	}
 
 	/**
 	 * Return the target type of this bean definition, if known
 	 * (either specified in advance or resolved on first instantiation).
+	 * @since 3.2.2
 	 */
 	public Class<?> getTargetType() {
-		return this.targetType;
+		if (this.resolvedTargetType != null) {
+			return this.resolvedTargetType;
+		}
+		return (this.targetType != null ? this.targetType.resolve() : null);
 	}
 
 	/**

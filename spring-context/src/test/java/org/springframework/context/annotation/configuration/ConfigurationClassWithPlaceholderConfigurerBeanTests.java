@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,19 @@
 
 package org.springframework.context.annotation.configuration;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertThat;
-
 import org.junit.Ignore;
 import org.junit.Test;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
-
 import org.springframework.tests.sample.beans.ITestBean;
 import org.springframework.tests.sample.beans.TestBean;
+
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
 /**
  * A configuration class that registers a placeholder configurer @Bean method
@@ -42,15 +41,16 @@ import org.springframework.tests.sample.beans.TestBean;
  * and @Value fields in the same configuration class are mutually exclusive.
  *
  * @author Chris Beams
+ * @author Juergen Hoeller
  */
 public class ConfigurationClassWithPlaceholderConfigurerBeanTests {
 
 	/**
 	 * Intentionally ignored test proving that a property placeholder bean
 	 * cannot be declared in the same configuration class that has a @Value
-	 * field in need of placeholder replacement.  It's an obvious chicken-and-egg issue.
+	 * field in need of placeholder replacement. It's an obvious chicken-and-egg issue.
 	 * The solution is to do as {@link #valueFieldsAreProcessedWhenPlaceholderConfigurerIsSegregated()}
-	 * does and segragate the two bean definitions across configuration classes.
+	 * does and segregate the two bean definitions across configuration classes.
 	 */
 	@Ignore @Test
 	public void valueFieldsAreNotProcessedWhenPlaceholderConfigurerIsIntegrated() {
@@ -76,44 +76,57 @@ public class ConfigurationClassWithPlaceholderConfigurerBeanTests {
 		TestBean testBean = ctx.getBean(TestBean.class);
 		assertThat(testBean.getName(), equalTo("foo"));
 	}
-}
 
-@Configuration
-class ConfigWithValueField {
+	@Test
+	public void valueFieldsResolveToPlaceholderSpecifiedDefaultValue() {
+		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
+		ctx.register(ConfigWithValueField.class);
+		ctx.register(ConfigWithPlaceholderConfigurer.class);
+		ctx.refresh();
 
-	@Value("${test.name}")
-	private String name;
-
-	@Bean
-	public ITestBean testBean() {
-		return new TestBean(this.name);
-	}
-}
-
-@Configuration
-class ConfigWithPlaceholderConfigurer {
-
-	@Bean
-	public PropertySourcesPlaceholderConfigurer ppc() {
-		return new PropertySourcesPlaceholderConfigurer();
+		TestBean testBean = ctx.getBean(TestBean.class);
+		assertThat(testBean.getName(), equalTo("bar"));
 	}
 
-}
 
-@Configuration
-class ConfigWithValueFieldAndPlaceholderConfigurer {
+	@Configuration
+	static class ConfigWithValueField {
 
-	@Value("${test.name}")
-	private String name;
+		@Value("${test.name:bar}")
+		private String name;
 
-	@Bean
-	public ITestBean testBean() {
-		return new TestBean(this.name);
+		@Bean
+		public ITestBean testBean() {
+			return new TestBean(this.name);
+		}
 	}
 
-	@Bean
-	public PropertySourcesPlaceholderConfigurer ppc() {
-		return new PropertySourcesPlaceholderConfigurer();
+
+	@Configuration
+	static class ConfigWithPlaceholderConfigurer {
+
+		@Bean
+		public PropertySourcesPlaceholderConfigurer ppc() {
+			return new PropertySourcesPlaceholderConfigurer();
+		}
+	}
+
+
+	@Configuration
+	static class ConfigWithValueFieldAndPlaceholderConfigurer {
+
+		@Value("${test.name}")
+		private String name;
+
+		@Bean
+		public ITestBean testBean() {
+			return new TestBean(this.name);
+		}
+
+		@Bean
+		public PropertySourcesPlaceholderConfigurer ppc() {
+			return new PropertySourcesPlaceholderConfigurer();
+		}
 	}
 
 }

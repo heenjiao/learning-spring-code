@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2005 the original author or authors.
+ * Copyright 2002-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import org.springframework.beans.factory.InitializingBean;
  * definition, as list element for the "typeDefinitions" bean property.
  * For example:
  *
- * <pre>
+ * <pre class="code">
  * &lt;bean id="sessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean"&gt;
  *   ...
  *   &lt;property name="typeDefinitions"&gt;
@@ -48,7 +48,9 @@ import org.springframework.beans.factory.InitializingBean;
  * @author Juergen Hoeller
  * @since 1.2
  * @see LocalSessionFactoryBean#setTypeDefinitions(TypeDefinitionBean[])
+ * @deprecated as of Spring 4.3, in favor of Hibernate 4.x/5.x
  */
+@Deprecated
 public class TypeDefinitionBean implements BeanNameAware, InitializingBean {
 
 	private String typeName;
@@ -111,12 +113,14 @@ public class TypeDefinitionBean implements BeanNameAware, InitializingBean {
 	 * the TypeDefinitionBean will be used.
 	 * @see #setTypeName
 	 */
+	@Override
 	public void setBeanName(String name) {
 		if (this.typeName == null) {
 			this.typeName = name;
 		}
 	}
 
+	@Override
 	public void afterPropertiesSet() {
 		if (this.typeName == null) {
 			throw new IllegalArgumentException("typeName is required");

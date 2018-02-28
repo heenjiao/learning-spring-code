@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2015 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,9 +30,6 @@ import org.springframework.core.convert.support.ConfigurableConversionService;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
-
-import static java.lang.String.*;
-import static org.springframework.util.StringUtils.*;
 
 /**
  * Abstract base class for {@link Environment} implementations. Supports the notion of
@@ -124,7 +121,7 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 	public AbstractEnvironment() {
 		customizePropertySources(this.propertySources);
 		if (this.logger.isDebugEnabled()) {
-			this.logger.debug(format(
+			this.logger.debug(String.format(
 					"Initialized %s with PropertySources %s", getClass().getSimpleName(), this.propertySources));
 		}
 	}
@@ -224,6 +221,7 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 	// Implementation of ConfigurableEnvironment interface
 	//---------------------------------------------------------------------
 
+	@Override
 	public String[] getActiveProfiles() {
 		return StringUtils.toStringArray(doGetActiveProfiles());
 	}
@@ -241,13 +239,15 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 			if (this.activeProfiles.isEmpty()) {
 				String profiles = getProperty(ACTIVE_PROFILES_PROPERTY_NAME);
 				if (StringUtils.hasText(profiles)) {
-					setActiveProfiles(commaDelimitedListToStringArray(trimAllWhitespace(profiles)));
+					setActiveProfiles(StringUtils.commaDelimitedListToStringArray(
+							StringUtils.trimAllWhitespace(profiles)));
 				}
 			}
 			return this.activeProfiles;
 		}
 	}
 
+	@Override
 	public void setActiveProfiles(String... profiles) {
 		Assert.notNull(profiles, "Profile array must not be null");
 		synchronized (this.activeProfiles) {
@@ -259,9 +259,10 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 		}
 	}
 
+	@Override
 	public void addActiveProfile(String profile) {
 		if (this.logger.isDebugEnabled()) {
-			this.logger.debug(format("Activating profile '%s'", profile));
+			this.logger.debug(String.format("Activating profile '%s'", profile));
 		}
 		validateProfile(profile);
 		doGetActiveProfiles();
@@ -271,6 +272,7 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 	}
 
 
+	@Override
 	public String[] getDefaultProfiles() {
 		return StringUtils.toStringArray(doGetDefaultProfiles());
 	}
@@ -292,7 +294,8 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 			if (this.defaultProfiles.equals(getReservedDefaultProfiles())) {
 				String profiles = getProperty(DEFAULT_PROFILES_PROPERTY_NAME);
 				if (StringUtils.hasText(profiles)) {
-					setDefaultProfiles(commaDelimitedListToStringArray(trimAllWhitespace(profiles)));
+					setDefaultProfiles(StringUtils.commaDelimitedListToStringArray(
+							StringUtils.trimAllWhitespace(profiles)));
 				}
 			}
 			return this.defaultProfiles;
@@ -307,6 +310,7 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 	 * @see #AbstractEnvironment()
 	 * @see #getReservedDefaultProfiles()
 	 */
+	@Override
 	public void setDefaultProfiles(String... profiles) {
 		Assert.notNull(profiles, "Profile array must not be null");
 		synchronized (this.defaultProfiles) {
@@ -318,6 +322,7 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 		}
 	}
 
+	@Override
 	public boolean acceptsProfiles(String... profiles) {
 		Assert.notEmpty(profiles, "Must specify at least one profile");
 		for (String profile : profiles) {
@@ -364,11 +369,13 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 		}
 	}
 
+	@Override
 	public MutablePropertySources getPropertySources() {
 		return this.propertySources;
 	}
 
-	@SuppressWarnings("unchecked")
+	@Override
+	@SuppressWarnings({"unchecked", "rawtypes"})
 	public Map<String, Object> getSystemEnvironment() {
 		if (suppressGetenvAccess()) {
 			return Collections.emptyMap();
@@ -385,7 +392,7 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 					}
 					catch (AccessControlException ex) {
 						if (logger.isInfoEnabled()) {
-							logger.info(format("Caught AccessControlException when accessing system " +
+							logger.info(String.format("Caught AccessControlException when accessing system " +
 									"environment variable [%s]; its value will be returned [null]. Reason: %s",
 									attributeName, ex.getMessage()));
 						}
@@ -411,7 +418,8 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 		return SpringProperties.getFlag(IGNORE_GETENV_PROPERTY_NAME);
 	}
 
-	@SuppressWarnings("unchecked")
+	@Override
+	@SuppressWarnings({"unchecked", "rawtypes"})
 	public Map<String, Object> getSystemProperties() {
 		try {
 			return (Map) System.getProperties();
@@ -425,7 +433,7 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 					}
 					catch (AccessControlException ex) {
 						if (logger.isInfoEnabled()) {
-							logger.info(format("Caught AccessControlException when accessing system " +
+							logger.info(String.format("Caught AccessControlException when accessing system " +
 									"property [%s]; its value will be returned [null]. Reason: %s",
 									attributeName, ex.getMessage()));
 						}
@@ -436,6 +444,7 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 		}
 	}
 
+	@Override
 	public void merge(ConfigurableEnvironment parent) {
 		for (PropertySource<?> ps : parent.getPropertySources()) {
 			if (!this.propertySources.contains(ps.getName())) {
@@ -466,34 +475,42 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 	// Implementation of ConfigurablePropertyResolver interface
 	//---------------------------------------------------------------------
 
+	@Override
 	public ConfigurableConversionService getConversionService() {
 		return this.propertyResolver.getConversionService();
 	}
 
+	@Override
 	public void setConversionService(ConfigurableConversionService conversionService) {
 		this.propertyResolver.setConversionService(conversionService);
 	}
 
+	@Override
 	public void setPlaceholderPrefix(String placeholderPrefix) {
 		this.propertyResolver.setPlaceholderPrefix(placeholderPrefix);
 	}
 
+	@Override
 	public void setPlaceholderSuffix(String placeholderSuffix) {
 		this.propertyResolver.setPlaceholderSuffix(placeholderSuffix);
 	}
 
+	@Override
 	public void setValueSeparator(String valueSeparator) {
 		this.propertyResolver.setValueSeparator(valueSeparator);
 	}
 
+	@Override
 	public void setIgnoreUnresolvableNestedPlaceholders(boolean ignoreUnresolvableNestedPlaceholders) {
 		this.propertyResolver.setIgnoreUnresolvableNestedPlaceholders(ignoreUnresolvableNestedPlaceholders);
 	}
 
+	@Override
 	public void setRequiredProperties(String... requiredProperties) {
 		this.propertyResolver.setRequiredProperties(requiredProperties);
 	}
 
+	@Override
 	public void validateRequiredProperties() throws MissingRequiredPropertiesException {
 		this.propertyResolver.validateRequiredProperties();
 	}
@@ -508,38 +525,48 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 		return this.propertyResolver.containsProperty(key);
 	}
 
+	@Override
 	public String getProperty(String key) {
 		return this.propertyResolver.getProperty(key);
 	}
 
+	@Override
 	public String getProperty(String key, String defaultValue) {
 		return this.propertyResolver.getProperty(key, defaultValue);
 	}
 
+	@Override
 	public <T> T getProperty(String key, Class<T> targetType) {
 		return this.propertyResolver.getProperty(key, targetType);
 	}
 
+	@Override
 	public <T> T getProperty(String key, Class<T> targetType, T defaultValue) {
 		return this.propertyResolver.getProperty(key, targetType, defaultValue);
 	}
 
+	@Override
+	@Deprecated
 	public <T> Class<T> getPropertyAsClass(String key, Class<T> targetType) {
 		return this.propertyResolver.getPropertyAsClass(key, targetType);
 	}
 
+	@Override
 	public String getRequiredProperty(String key) throws IllegalStateException {
 		return this.propertyResolver.getRequiredProperty(key);
 	}
 
+	@Override
 	public <T> T getRequiredProperty(String key, Class<T> targetType) throws IllegalStateException {
 		return this.propertyResolver.getRequiredProperty(key, targetType);
 	}
 
+	@Override
 	public String resolvePlaceholders(String text) {
 		return this.propertyResolver.resolvePlaceholders(text);
 	}
 
+	@Override
 	public String resolveRequiredPlaceholders(String text) throws IllegalArgumentException {
 		return this.propertyResolver.resolveRequiredPlaceholders(text);
 	}
@@ -547,7 +574,7 @@ public abstract class AbstractEnvironment implements ConfigurableEnvironment {
 
 	@Override
 	public String toString() {
-		return format("%s {activeProfiles=%s, defaultProfiles=%s, propertySources=%s}",
+		return String.format("%s {activeProfiles=%s, defaultProfiles=%s, propertySources=%s}",
 				getClass().getSimpleName(), this.activeProfiles, this.defaultProfiles,
 				this.propertySources);
 	}

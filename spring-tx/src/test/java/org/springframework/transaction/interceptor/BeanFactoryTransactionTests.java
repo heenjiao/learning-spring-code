@@ -69,6 +69,7 @@ public class BeanFactoryTransactionTests {
 	public void testGetsAreNotTransactionalWithProxyFactory1() throws NoSuchMethodException {
 		ITestBean testBean = (ITestBean) factory.getBean("proxyFactory1");
 		assertTrue("testBean is a dynamic proxy", Proxy.isProxyClass(testBean.getClass()));
+		assertFalse(testBean instanceof TransactionalProxy);
 		doTestGetsAreNotTransactional(testBean);
 	}
 
@@ -77,6 +78,7 @@ public class BeanFactoryTransactionTests {
 		this.factory.preInstantiateSingletons();
 		ITestBean testBean = (ITestBean) factory.getBean("proxyFactory2DynamicProxy");
 		assertTrue("testBean is a dynamic proxy", Proxy.isProxyClass(testBean.getClass()));
+		assertTrue(testBean instanceof TransactionalProxy);
 		doTestGetsAreNotTransactional(testBean);
 	}
 
@@ -84,6 +86,7 @@ public class BeanFactoryTransactionTests {
 	public void testGetsAreNotTransactionalWithProxyFactory2Cglib() throws NoSuchMethodException {
 		ITestBean testBean = (ITestBean) factory.getBean("proxyFactory2Cglib");
 		assertTrue("testBean is CGLIB advised", AopUtils.isCglibProxy(testBean));
+		assertTrue(testBean instanceof TransactionalProxy);
 		doTestGetsAreNotTransactional(testBean);
 	}
 
@@ -99,6 +102,7 @@ public class BeanFactoryTransactionTests {
 	public void testCglibTransactionProxyImplementsNoInterfaces() throws NoSuchMethodException {
 		ImplementsNoInterfaces ini = (ImplementsNoInterfaces) factory.getBean("cglibNoInterfaces");
 		assertTrue("testBean is CGLIB advised", AopUtils.isCglibProxy(ini));
+		assertTrue(ini instanceof TransactionalProxy);
 		String newName = "Gordon";
 
 		// Install facade
@@ -114,6 +118,7 @@ public class BeanFactoryTransactionTests {
 	public void testGetsAreNotTransactionalWithProxyFactory3() throws NoSuchMethodException {
 		ITestBean testBean = (ITestBean) factory.getBean("proxyFactory3");
 		assertTrue("testBean is a full proxy", testBean instanceof DerivedTestBean);
+		assertTrue(testBean instanceof TransactionalProxy);
 		InvocationCounterPointcut txnCounter = (InvocationCounterPointcut) factory.getBean("txnInvocationCounterPointcut");
 		InvocationCounterInterceptor preCounter = (InvocationCounterInterceptor) factory.getBean("preInvocationCounterInterceptor");
 		InvocationCounterInterceptor postCounter = (InvocationCounterInterceptor) factory.getBean("postInvocationCounterInterceptor");

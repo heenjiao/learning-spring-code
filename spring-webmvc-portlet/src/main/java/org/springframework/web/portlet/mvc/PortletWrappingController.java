@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.web.portlet.mvc;
 
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -61,7 +60,7 @@ import org.springframework.web.portlet.util.PortletUtils;
  *
  * <p><b>Example:</b>
  *
- * <pre>&lt;bean id="wrappingController" class="org.springframework.web.portlet.mvc.PortletWrappingController"&gt;
+ * <pre class="code">&lt;bean id="wrappingController" class="org.springframework.web.portlet.mvc.PortletWrappingController"&gt;
  *   &lt;property name="portletClass"&gt;
  *     &lt;value&gt;org.springframework.web.portlet.sample.HelloWorldPortlet&lt;/value&gt;
  *   &lt;/property&gt;
@@ -89,7 +88,7 @@ public class PortletWrappingController extends AbstractController
 
 	private PortletConfig portletConfig;
 
-	private Class portletClass;
+	private Class<?> portletClass;
 
 	private String portletName;
 
@@ -117,6 +116,7 @@ public class PortletWrappingController extends AbstractController
 		this.portletContext = portletContext;
 	}
 
+	@Override
 	public void setPortletConfig(PortletConfig portletConfig) {
 		this.portletConfig = portletConfig;
 	}
@@ -126,7 +126,7 @@ public class PortletWrappingController extends AbstractController
 	 * Needs to implement {@code javax.portlet.Portlet}.
 	 * @see javax.portlet.Portlet
 	 */
-	public void setPortletClass(Class portletClass) {
+	public void setPortletClass(Class<?> portletClass) {
 		this.portletClass = portletClass;
 	}
 
@@ -146,11 +146,13 @@ public class PortletWrappingController extends AbstractController
 		this.initParameters = initParameters;
 	}
 
+	@Override
 	public void setBeanName(String name) {
 		this.beanName = name;
 	}
 
 
+	@Override
 	public void afterPropertiesSet() throws Exception {
 		if (this.portletClass == null) {
 			throw new IllegalArgumentException("portletClass is required");
@@ -186,6 +188,7 @@ public class PortletWrappingController extends AbstractController
 		return null;
 	}
 
+	@Override
 	public ModelAndView handleResourceRequest(
 			ResourceRequest request, ResourceResponse response) throws Exception {
 
@@ -214,6 +217,7 @@ public class PortletWrappingController extends AbstractController
 		return null;
 	}
 
+	@Override
 	public void handleEventRequest(
 			EventRequest request, EventResponse response) throws Exception {
 
@@ -242,6 +246,7 @@ public class PortletWrappingController extends AbstractController
 	}
 
 
+	@Override
 	public void destroy() {
 		this.portletInstance.destroy();
 	}
@@ -255,46 +260,57 @@ public class PortletWrappingController extends AbstractController
 	 */
 	private class DelegatingPortletConfig implements PortletConfig {
 
+		@Override
 		public String getPortletName() {
 			return portletName;
 		}
 
+		@Override
 		public PortletContext getPortletContext() {
 			return portletContext;
 		}
 
+		@Override
 		public String getInitParameter(String paramName) {
 			return initParameters.get(paramName);
 		}
 
+		@Override
 		public Enumeration<String> getInitParameterNames() {
 			return Collections.enumeration(initParameters.keySet());
 		}
 
+		@Override
 		public ResourceBundle getResourceBundle(Locale locale) {
 			return (portletConfig != null ? portletConfig.getResourceBundle(locale) : null);
 		}
 
+		@Override
 		public Enumeration<String> getPublicRenderParameterNames() {
-			return Collections.enumeration(new HashSet<String>());
+			return Collections.enumeration(Collections.<String>emptySet());
 		}
 
+		@Override
 		public String getDefaultNamespace() {
 			return XMLConstants.NULL_NS_URI;
 		}
 
+		@Override
 		public Enumeration<QName> getPublishingEventQNames() {
-			return Collections.enumeration(new HashSet<QName>());
+			return Collections.enumeration(Collections.<QName>emptySet());
 		}
 
+		@Override
 		public Enumeration<QName> getProcessingEventQNames() {
-			return Collections.enumeration(new HashSet<QName>());
+			return Collections.enumeration(Collections.<QName>emptySet());
 		}
 
+		@Override
 		public Enumeration<Locale> getSupportedLocales() {
-			return Collections.enumeration(new HashSet<Locale>());
+			return Collections.enumeration(Collections.<Locale>emptySet());
 		}
 
+		@Override
 		public Map<String, String[]> getContainerRuntimeOptions() {
 			return (portletConfig != null ? portletConfig.getContainerRuntimeOptions() : null);
 		}

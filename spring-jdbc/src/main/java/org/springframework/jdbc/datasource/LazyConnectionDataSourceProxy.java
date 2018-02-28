@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ import org.springframework.core.Constants;
  * without paying a performance penalty if no actual data access happens.
  *
  * <p>This DataSource proxy gives you behavior analogous to JTA and a
- * transactional JNDI DataSource (as provided by the J2EE server), even
+ * transactional JNDI DataSource (as provided by the Java EE server), even
  * with a local transaction strategy like DataSourceTransactionManager or
  * HibernateTransactionManager. It does not add value with Spring's
  * JtaTransactionManager as transaction strategy.
@@ -219,7 +219,7 @@ public class LazyConnectionDataSourceProxy extends DelegatingDataSource {
 	public Connection getConnection() throws SQLException {
 		return (Connection) Proxy.newProxyInstance(
 				ConnectionProxy.class.getClassLoader(),
-				new Class[] {ConnectionProxy.class},
+				new Class<?>[] {ConnectionProxy.class},
 				new LazyConnectionInvocationHandler());
 	}
 
@@ -237,7 +237,7 @@ public class LazyConnectionDataSourceProxy extends DelegatingDataSource {
 	public Connection getConnection(String username, String password) throws SQLException {
 		return (Connection) Proxy.newProxyInstance(
 				ConnectionProxy.class.getClassLoader(),
-				new Class[] {ConnectionProxy.class},
+				new Class<?>[] {ConnectionProxy.class},
 				new LazyConnectionInvocationHandler(username, password));
 	}
 
@@ -273,6 +273,7 @@ public class LazyConnectionDataSourceProxy extends DelegatingDataSource {
 			this.password = password;
 		}
 
+		@Override
 		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 			// Invocation on ConnectionProxy interface coming in...
 
@@ -288,12 +289,12 @@ public class LazyConnectionDataSourceProxy extends DelegatingDataSource {
 				return System.identityHashCode(proxy);
 			}
 			else if (method.getName().equals("unwrap")) {
-				if (((Class) args[0]).isInstance(proxy)) {
+				if (((Class<?>) args[0]).isInstance(proxy)) {
 					return proxy;
 				}
 			}
 			else if (method.getName().equals("isWrapperFor")) {
-				if (((Class) args[0]).isInstance(proxy)) {
+				if (((Class<?>) args[0]).isInstance(proxy)) {
 					return true;
 				}
 			}

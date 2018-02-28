@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,29 +33,39 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * @author Juergen Hoeller
  * @since 3.1
  */
-class SpringSessionSynchronization implements TransactionSynchronization, Ordered {
+public class SpringSessionSynchronization implements TransactionSynchronization, Ordered {
 
 	private final SessionHolder sessionHolder;
 
 	private final SessionFactory sessionFactory;
 
+	private final boolean newSession;
+
 	private boolean holderActive = true;
 
 
 	public SpringSessionSynchronization(SessionHolder sessionHolder, SessionFactory sessionFactory) {
+		this(sessionHolder, sessionFactory, false);
+	}
+
+	public SpringSessionSynchronization(SessionHolder sessionHolder, SessionFactory sessionFactory, boolean newSession) {
 		this.sessionHolder = sessionHolder;
 		this.sessionFactory = sessionFactory;
+		this.newSession = newSession;
 	}
+
 
 	private Session getCurrentSession() {
 		return this.sessionHolder.getSession();
 	}
 
 
+	@Override
 	public int getOrder() {
 		return SessionFactoryUtils.SESSION_SYNCHRONIZATION_ORDER;
 	}
 
+	@Override
 	public void suspend() {
 		if (this.holderActive) {
 			TransactionSynchronizationManager.unbindResource(this.sessionFactory);
@@ -64,12 +74,14 @@ class SpringSessionSynchronization implements TransactionSynchronization, Ordere
 		}
 	}
 
+	@Override
 	public void resume() {
 		if (this.holderActive) {
 			TransactionSynchronizationManager.bindResource(this.sessionFactory, this.sessionHolder);
 		}
 	}
 
+	@Override
 	public void flush() {
 		try {
 			SessionFactoryUtils.logger.debug("Flushing Hibernate Session on explicit request");
@@ -80,12 +92,13 @@ class SpringSessionSynchronization implements TransactionSynchronization, Ordere
 		}
 	}
 
+	@Override
 	public void beforeCommit(boolean readOnly) throws DataAccessException {
 		if (!readOnly) {
 			Session session = getCurrentSession();
 			// Read-write transaction -> flush the Hibernate Session.
 			// Further check: only flush when not FlushMode.MANUAL.
-			if (!FlushMode.isManualFlushMode(session.getFlushMode())) {
+			if (!session.getFlushMode().equals(FlushMode.MANUAL)) {
 				try {
 					SessionFactoryUtils.logger.debug("Flushing Hibernate Session on transaction synchronization");
 					session.flush();
@@ -97,19 +110,31 @@ class SpringSessionSynchronization implements TransactionSynchronization, Ordere
 		}
 	}
 
+	@Override
 	public void beforeCompletion() {
-		Session session = this.sessionHolder.getSession();
-		if (this.sessionHolder.getPreviousFlushMode() != null) {
-			// In case of pre-bound Session, restore previous flush mode.
-			session.setFlushMode(this.sessionHolder.getPreviousFlushMode());
+		try {
+			Session session = this.sessionHolder.getSession();
+			if (this.sessionHolder.getPreviousFlushMode() != null) {
+				// In case of pre-bound Session, restore previous flush mode.
+				session.setFlushMode(this.sessionHolder.getPreviousFlushMode());
+			}
+			// Eagerly disconnect the Session here, to make release mode "on_close" work nicely.
+			session.disconnect();
 		}
-		// Eagerly disconnect the Session here, to make release mode "on_close" work nicely.
-		session.disconnect();
+		finally {
+			// Unbind at this point if it's a new Session...
+			if (this.newSession) {
+				TransactionSynchronizationManager.unbindResource(this.sessionFactory);
+				this.holderActive = false;
+			}
+		}
 	}
 
+	@Override
 	public void afterCommit() {
 	}
 
+	@Override
 	public void afterCompletion(int status) {
 		try {
 			if (status != STATUS_COMMITTED) {
@@ -120,6 +145,10 @@ class SpringSessionSynchronization implements TransactionSynchronization, Ordere
 		}
 		finally {
 			this.sessionHolder.setSynchronizedWithTransaction(false);
+			// Call close() at this point if it's a new Session...
+			if (this.newSession) {
+				SessionFactoryUtils.closeSession(this.sessionHolder.getSession());
+			}
 		}
 	}
 

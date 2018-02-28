@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,17 +20,16 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.rmi.RemoteException;
-
 import javax.transaction.TransactionRolledbackException;
 
 import org.aopalliance.intercept.MethodInvocation;
 import org.junit.Test;
+
 import org.springframework.aop.ThrowsAdvice;
 import org.springframework.tests.aop.advice.MethodCounter;
 
 import static org.junit.Assert.*;
 import static org.mockito.BDDMockito.*;
-
 
 /**
  * @author Rod Johnson
@@ -79,7 +78,7 @@ public final class ThrowsAdviceInterceptorTests {
 		ThrowsAdviceInterceptor ti = new ThrowsAdviceInterceptor(th);
 		FileNotFoundException ex = new FileNotFoundException();
 		MethodInvocation mi = mock(MethodInvocation.class);
-		given(mi.getMethod()).willReturn(Object.class.getMethod("hashCode", (Class[]) null));
+		given(mi.getMethod()).willReturn(Object.class.getMethod("hashCode"));
 		given(mi.getThis()).willReturn(new Object());
 		given(mi.proceed()).willThrow(ex);
 		try {
@@ -141,12 +140,15 @@ public final class ThrowsAdviceInterceptorTests {
 		assertEquals(1, th.getCalls("remoteException"));
 	}
 
+
 	@SuppressWarnings("serial")
 	static class MyThrowsHandler extends MethodCounter implements ThrowsAdvice {
+
 		// Full method signature
 		public void afterThrowing(Method m, Object[] args, Object target, IOException ex) {
 			count("ioException");
 		}
+
 		public void afterThrowing(RemoteException ex) throws Throwable {
 			count("remoteException");
 		}

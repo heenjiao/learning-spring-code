@@ -70,6 +70,7 @@ public class SimpleMetadataReaderFactory implements MetadataReaderFactory {
 	}
 
 
+	@Override
 	public MetadataReader getMetadataReader(String className) throws IOException {
 		String resourcePath = ResourceLoader.CLASSPATH_URL_PREFIX +
 				ClassUtils.convertClassNameToResourcePath(className) + ClassUtils.CLASS_FILE_SUFFIX;
@@ -92,6 +93,7 @@ public class SimpleMetadataReaderFactory implements MetadataReaderFactory {
 		return getMetadataReader(resource);
 	}
 
+	@Override
 	public MetadataReader getMetadataReader(Resource resource) throws IOException {
 		return new SimpleMetadataReader(resource, this.resourceLoader.getClassLoader());
 	}

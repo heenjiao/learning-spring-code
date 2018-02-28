@@ -50,7 +50,7 @@ public class EmptyTargetSource implements TargetSource, Serializable {
 	 * @param targetClass the target Class (may be {@code null})
 	 * @see #getTargetClass()
 	 */
-	public static EmptyTargetSource forClass(Class targetClass) {
+	public static EmptyTargetSource forClass(Class<?> targetClass) {
 		return forClass(targetClass, true);
 	}
 
@@ -60,7 +60,7 @@ public class EmptyTargetSource implements TargetSource, Serializable {
 	 * @param isStatic whether the TargetSource should be marked as static
 	 * @see #getTargetClass()
 	 */
-	public static EmptyTargetSource forClass(Class targetClass, boolean isStatic) {
+	public static EmptyTargetSource forClass(Class<?> targetClass, boolean isStatic) {
 		return (targetClass == null && isStatic ? INSTANCE : new EmptyTargetSource(targetClass, isStatic));
 	}
 
@@ -69,7 +69,7 @@ public class EmptyTargetSource implements TargetSource, Serializable {
 	// Instance implementation
 	//---------------------------------------------------------------------
 
-	private final Class targetClass;
+	private final Class<?> targetClass;
 
 	private final boolean isStatic;
 
@@ -81,7 +81,7 @@ public class EmptyTargetSource implements TargetSource, Serializable {
 	 * @param targetClass the target class to expose (may be {@code null})
 	 * @param isStatic whether the TargetSource is marked as static
 	 */
-	private EmptyTargetSource(Class targetClass, boolean isStatic) {
+	private EmptyTargetSource(Class<?> targetClass, boolean isStatic) {
 		this.targetClass = targetClass;
 		this.isStatic = isStatic;
 	}
@@ -89,6 +89,7 @@ public class EmptyTargetSource implements TargetSource, Serializable {
 	/**
 	 * Always returns the specified target Class, or {@code null} if none.
 	 */
+	@Override
 	public Class<?> getTargetClass() {
 		return this.targetClass;
 	}
@@ -96,6 +97,7 @@ public class EmptyTargetSource implements TargetSource, Serializable {
 	/**
 	 * Always returns {@code true}.
 	 */
+	@Override
 	public boolean isStatic() {
 		return this.isStatic;
 	}
@@ -103,6 +105,7 @@ public class EmptyTargetSource implements TargetSource, Serializable {
 	/**
 	 * Always returns {@code null}.
 	 */
+	@Override
 	public Object getTarget() {
 		return null;
 	}
@@ -110,6 +113,7 @@ public class EmptyTargetSource implements TargetSource, Serializable {
 	/**
 	 * Nothing to release.
 	 */
+	@Override
 	public void releaseTarget(Object target) {
 	}
 

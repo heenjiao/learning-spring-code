@@ -18,7 +18,6 @@ package org.springframework.ejb.access;
 
 import java.lang.reflect.InvocationTargetException;
 import java.rmi.RemoteException;
-
 import javax.ejb.CreateException;
 import javax.ejb.EJBObject;
 import javax.naming.NamingException;
@@ -171,6 +170,7 @@ public class SimpleRemoteSlsbInvokerInterceptor extends AbstractRemoteSlsbInvoke
 	/**
 	 * Remove the cached session bean instance, if necessary.
 	 */
+	@Override
 	public void destroy() {
 		if (this.cacheSessionBean) {
 			synchronized (this.beanInstanceMonitor) {

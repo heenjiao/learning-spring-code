@@ -145,18 +145,7 @@ public final class BeanFactoryUtilsTests {
 		lbf.addBean("t3", t3);
 		lbf.addBean("t4", t4);
 
-		Map<String, ?> beans = BeanFactoryUtils.beansOfTypeIncludingAncestors(lbf, ITestBean.class, true, false);
-		assertEquals(2, beans.size());
-		assertEquals(t1, beans.get("t1"));
-		assertEquals(t2, beans.get("t2"));
-
-		beans = BeanFactoryUtils.beansOfTypeIncludingAncestors(lbf, ITestBean.class, false, true);
-		assertEquals(3, beans.size());
-		assertEquals(t1, beans.get("t1"));
-		assertEquals(t2, beans.get("t2"));
-		assertEquals(t3.getObject(), beans.get("t3"));
-
-		beans = BeanFactoryUtils.beansOfTypeIncludingAncestors(lbf, ITestBean.class, true, true);
+		Map<String, ?> beans = BeanFactoryUtils.beansOfTypeIncludingAncestors(lbf, ITestBean.class, true, true);
 		assertEquals(4, beans.size());
 		assertEquals(t1, beans.get("t1"));
 		assertEquals(t2, beans.get("t2"));

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import javax.sql.DataSource;
 
-import org.springframework.core.JdkVersion;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.CannotSerializeTransactionException;
 import org.springframework.dao.DataAccessException;
@@ -82,12 +81,7 @@ public class SQLErrorCodeSQLExceptionTranslator extends AbstractFallbackSQLExcep
 	 * The SqlErrorCodes or DataSource property must be set.
 	 */
 	public SQLErrorCodeSQLExceptionTranslator() {
-		if (JdkVersion.getMajorJavaVersion() >= JdkVersion.JAVA_16) {
-			setFallbackTranslator(new SQLExceptionSubclassTranslator());
-		}
-		else {
-			setFallbackTranslator(new SQLStateSQLExceptionTranslator());
-		}
+		setFallbackTranslator(new SQLExceptionSubclassTranslator());
 	}
 
 	/**
@@ -319,65 +313,65 @@ public class SQLErrorCodeSQLExceptionTranslator extends AbstractFallbackSQLExcep
 	 * @see CustomSQLErrorCodesTranslation#setExceptionClass
 	 */
 	protected DataAccessException createCustomException(
-			String task, String sql, SQLException sqlEx, Class exceptionClass) {
+			String task, String sql, SQLException sqlEx, Class<?> exceptionClass) {
 
 		// find appropriate constructor
 		try {
 			int constructorType = 0;
-			Constructor[] constructors = exceptionClass.getConstructors();
-			for (Constructor constructor : constructors) {
-				Class[] parameterTypes = constructor.getParameterTypes();
-				if (parameterTypes.length == 1 && parameterTypes[0].equals(String.class)) {
+			Constructor<?>[] constructors = exceptionClass.getConstructors();
+			for (Constructor<?> constructor : constructors) {
+				Class<?>[] parameterTypes = constructor.getParameterTypes();
+				if (parameterTypes.length == 1 && String.class == parameterTypes[0]) {
 					if (constructorType < MESSAGE_ONLY_CONSTRUCTOR)
 						constructorType = MESSAGE_ONLY_CONSTRUCTOR;
 				}
-				if (parameterTypes.length == 2 && parameterTypes[0].equals(String.class) &&
-						parameterTypes[1].equals(Throwable.class)) {
+				if (parameterTypes.length == 2 && String.class == parameterTypes[0] &&
+						Throwable.class == parameterTypes[1]) {
 					if (constructorType < MESSAGE_THROWABLE_CONSTRUCTOR)
 						constructorType = MESSAGE_THROWABLE_CONSTRUCTOR;
 				}
-				if (parameterTypes.length == 2 && parameterTypes[0].equals(String.class) &&
-						parameterTypes[1].equals(SQLException.class)) {
+				if (parameterTypes.length == 2 && String.class == parameterTypes[0] &&
+						SQLException.class == parameterTypes[1]) {
 					if (constructorType < MESSAGE_SQLEX_CONSTRUCTOR)
 						constructorType = MESSAGE_SQLEX_CONSTRUCTOR;
 				}
-				if (parameterTypes.length == 3 && parameterTypes[0].equals(String.class) &&
-						parameterTypes[1].equals(String.class) && parameterTypes[2].equals(Throwable.class)) {
+				if (parameterTypes.length == 3 && String.class == parameterTypes[0] &&
+						String.class == parameterTypes[1] && Throwable.class == parameterTypes[2]) {
 					if (constructorType < MESSAGE_SQL_THROWABLE_CONSTRUCTOR)
 						constructorType = MESSAGE_SQL_THROWABLE_CONSTRUCTOR;
 				}
-				if (parameterTypes.length == 3 && parameterTypes[0].equals(String.class) &&
-						parameterTypes[1].equals(String.class) && parameterTypes[2].equals(SQLException.class)) {
+				if (parameterTypes.length == 3 && String.class == parameterTypes[0] &&
+						String.class == parameterTypes[1] && SQLException.class == parameterTypes[2]) {
 					if (constructorType < MESSAGE_SQL_SQLEX_CONSTRUCTOR)
 						constructorType = MESSAGE_SQL_SQLEX_CONSTRUCTOR;
 				}
 			}
 
 			// invoke constructor
-			Constructor exceptionConstructor;
+			Constructor<?> exceptionConstructor;
 			switch (constructorType) {
 				case MESSAGE_SQL_SQLEX_CONSTRUCTOR:
-					Class[] messageAndSqlAndSqlExArgsClass = new Class[] {String.class, String.class, SQLException.class};
+					Class<?>[] messageAndSqlAndSqlExArgsClass = new Class<?>[] {String.class, String.class, SQLException.class};
 					Object[] messageAndSqlAndSqlExArgs = new Object[] {task, sql, sqlEx};
 					exceptionConstructor = exceptionClass.getConstructor(messageAndSqlAndSqlExArgsClass);
 					return (DataAccessException) exceptionConstructor.newInstance(messageAndSqlAndSqlExArgs);
 				case MESSAGE_SQL_THROWABLE_CONSTRUCTOR:
-					Class[] messageAndSqlAndThrowableArgsClass = new Class[] {String.class, String.class, Throwable.class};
+					Class<?>[] messageAndSqlAndThrowableArgsClass = new Class<?>[] {String.class, String.class, Throwable.class};
 					Object[] messageAndSqlAndThrowableArgs = new Object[] {task, sql, sqlEx};
 					exceptionConstructor = exceptionClass.getConstructor(messageAndSqlAndThrowableArgsClass);
 					return (DataAccessException) exceptionConstructor.newInstance(messageAndSqlAndThrowableArgs);
 				case MESSAGE_SQLEX_CONSTRUCTOR:
-					Class[] messageAndSqlExArgsClass = new Class[] {String.class, SQLException.class};
+					Class<?>[] messageAndSqlExArgsClass = new Class<?>[] {String.class, SQLException.class};
 					Object[] messageAndSqlExArgs = new Object[] {task + ": " + sqlEx.getMessage(), sqlEx};
 					exceptionConstructor = exceptionClass.getConstructor(messageAndSqlExArgsClass);
 					return (DataAccessException) exceptionConstructor.newInstance(messageAndSqlExArgs);
 				case MESSAGE_THROWABLE_CONSTRUCTOR:
-					Class[] messageAndThrowableArgsClass = new Class[] {String.class, Throwable.class};
+					Class<?>[] messageAndThrowableArgsClass = new Class<?>[] {String.class, Throwable.class};
 					Object[] messageAndThrowableArgs = new Object[] {task + ": " + sqlEx.getMessage(), sqlEx};
 					exceptionConstructor = exceptionClass.getConstructor(messageAndThrowableArgsClass);
 					return (DataAccessException)exceptionConstructor.newInstance(messageAndThrowableArgs);
 				case MESSAGE_ONLY_CONSTRUCTOR:
-					Class[] messageOnlyArgsClass = new Class[] {String.class};
+					Class<?>[] messageOnlyArgsClass = new Class<?>[] {String.class};
 					Object[] messageOnlyArgs = new Object[] {task + ": " + sqlEx.getMessage()};
 					exceptionConstructor = exceptionClass.getConstructor(messageOnlyArgsClass);
 					return (DataAccessException) exceptionConstructor.newInstance(messageOnlyArgs);

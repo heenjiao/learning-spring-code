@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import java.util.List;
 import org.springframework.util.Assert;
 
 /**
- * A comparator that chains a sequence of one or more more Comparators.
+ * A comparator that chains a sequence of one or more Comparators.
  *
  * <p>A compound comparator calls each Comparator in sequence until a single
  * Comparator returns a non-zero result, or the comparators are exhausted and
@@ -37,10 +37,10 @@ import org.springframework.util.Assert;
  * @author Juergen Hoeller
  * @since 1.2.2
  */
-@SuppressWarnings("serial")
+@SuppressWarnings({"serial", "rawtypes"})
 public class CompoundComparator<T> implements Comparator<T>, Serializable {
 
-	private final List<InvertibleComparator<T>> comparators;
+	private final List<InvertibleComparator> comparators;
 
 
 	/**
@@ -49,7 +49,7 @@ public class CompoundComparator<T> implements Comparator<T>, Serializable {
 	 * IllegalStateException is thrown.
 	 */
 	public CompoundComparator() {
-		this.comparators = new ArrayList<InvertibleComparator<T>>();
+		this.comparators = new ArrayList<InvertibleComparator>();
 	}
 
 	/**
@@ -59,12 +59,12 @@ public class CompoundComparator<T> implements Comparator<T>, Serializable {
 	 * @param comparators the comparators to build into a compound comparator
 	 * @see InvertibleComparator
 	 */
-	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@SuppressWarnings("unchecked")
 	public CompoundComparator(Comparator... comparators) {
 		Assert.notNull(comparators, "Comparators must not be null");
-		this.comparators = new ArrayList<InvertibleComparator<T>>(comparators.length);
+		this.comparators = new ArrayList<InvertibleComparator>(comparators.length);
 		for (Comparator comparator : comparators) {
-			this.addComparator(comparator);
+			addComparator(comparator);
 		}
 	}
 
@@ -76,12 +76,13 @@ public class CompoundComparator<T> implements Comparator<T>, Serializable {
 	 * @param comparator the Comparator to add to the end of the chain
 	 * @see InvertibleComparator
 	 */
-	public void addComparator(Comparator<T> comparator) {
+	@SuppressWarnings("unchecked")
+	public void addComparator(Comparator<? extends T> comparator) {
 		if (comparator instanceof InvertibleComparator) {
-			this.comparators.add((InvertibleComparator<T>) comparator);
+			this.comparators.add((InvertibleComparator) comparator);
 		}
 		else {
-			this.comparators.add(new InvertibleComparator<T>(comparator));
+			this.comparators.add(new InvertibleComparator(comparator));
 		}
 	}
 
@@ -90,8 +91,9 @@ public class CompoundComparator<T> implements Comparator<T>, Serializable {
 	 * @param comparator the Comparator to add to the end of the chain
 	 * @param ascending the sort order: ascending (true) or descending (false)
 	 */
-	public void addComparator(Comparator<T> comparator, boolean ascending) {
-		this.comparators.add(new InvertibleComparator<T>(comparator, ascending));
+	@SuppressWarnings("unchecked")
+	public void addComparator(Comparator<? extends T> comparator, boolean ascending) {
+		this.comparators.add(new InvertibleComparator(comparator, ascending));
 	}
 
 	/**
@@ -102,12 +104,13 @@ public class CompoundComparator<T> implements Comparator<T>, Serializable {
 	 * @param comparator the Comparator to place at the given index
 	 * @see InvertibleComparator
 	 */
-	public void setComparator(int index, Comparator<T> comparator) {
+	@SuppressWarnings("unchecked")
+	public void setComparator(int index, Comparator<? extends T> comparator) {
 		if (comparator instanceof InvertibleComparator) {
-			this.comparators.set(index, (InvertibleComparator<T>) comparator);
+			this.comparators.set(index, (InvertibleComparator) comparator);
 		}
 		else {
-			this.comparators.set(index, new InvertibleComparator<T>(comparator));
+			this.comparators.set(index, new InvertibleComparator(comparator));
 		}
 	}
 
@@ -126,7 +129,7 @@ public class CompoundComparator<T> implements Comparator<T>, Serializable {
 	 * comparator.
 	 */
 	public void invertOrder() {
-		for (InvertibleComparator<T> comparator : this.comparators) {
+		for (InvertibleComparator comparator : this.comparators) {
 			comparator.invertOrder();
 		}
 	}
@@ -162,10 +165,12 @@ public class CompoundComparator<T> implements Comparator<T>, Serializable {
 		return this.comparators.size();
 	}
 
+	@Override
+	@SuppressWarnings("unchecked")
 	public int compare(T o1, T o2) {
 		Assert.state(this.comparators.size() > 0,
 				"No sort definitions have been added to this CompoundComparator to compare");
-		for (InvertibleComparator<T> comparator : this.comparators) {
+		for (InvertibleComparator comparator : this.comparators) {
 			int result = comparator.compare(o1, o2);
 			if (result != 0) {
 				return result;

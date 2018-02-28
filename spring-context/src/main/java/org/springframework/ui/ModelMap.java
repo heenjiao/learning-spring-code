@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,7 +89,7 @@ public class ModelMap extends LinkedHashMap<String, Object> {
 	 */
 	public ModelMap addAttribute(Object attributeValue) {
 		Assert.notNull(attributeValue, "Model object must not be null");
-		if (attributeValue instanceof Collection && ((Collection) attributeValue).isEmpty()) {
+		if (attributeValue instanceof Collection && ((Collection<?>) attributeValue).isEmpty()) {
 			return this;
 		}
 		return addAttribute(Conventions.getVariableName(attributeValue), attributeValue);
@@ -127,9 +127,10 @@ public class ModelMap extends LinkedHashMap<String, Object> {
 	 */
 	public ModelMap mergeAttributes(Map<String, ?> attributes) {
 		if (attributes != null) {
-			for (String key : attributes.keySet()) {
+			for (Map.Entry<String, ?> entry : attributes.entrySet()) {
+				String key = entry.getKey();
 				if (!containsKey(key)) {
-					put(key, attributes.get(key));
+					put(key, entry.getValue());
 				}
 			}
 		}
@@ -143,39 +144,6 @@ public class ModelMap extends LinkedHashMap<String, Object> {
 	 */
 	public boolean containsAttribute(String attributeName) {
 		return containsKey(attributeName);
-	}
-
-
-	/**
-	 * @deprecated as of Spring 2.5, in favor of {@link #addAttribute(String, Object)}
-	 */
-	@Deprecated
-	public ModelMap addObject(String modelName, Object modelObject) {
-		return addAttribute(modelName, modelObject);
-	}
-
-	/**
-	 * @deprecated as of Spring 2.5, in favor of {@link #addAttribute(Object)}
-	 */
-	@Deprecated
-	public ModelMap addObject(Object modelObject) {
-		return addAttribute(modelObject);
-	}
-
-	/**
-	 * @deprecated as of Spring 2.5, in favor of {@link #addAllAttributes(Collection)}
-	 */
-	@Deprecated
-	public ModelMap addAllObjects(Collection objects) {
-		return addAllAttributes(objects);
-	}
-
-	/**
-	 * @deprecated as of Spring 2.5, in favor of {@link #addAllAttributes(Map)}
-	 */
-	@Deprecated
-	public ModelMap addAllObjects(Map objects) {
-		return addAllAttributes(objects);
 	}
 
 }

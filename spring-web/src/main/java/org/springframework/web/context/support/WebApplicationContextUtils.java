@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import javax.faces.context.FacesContext;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpSession;
 
 import org.springframework.beans.factory.ObjectFactory;
@@ -67,7 +68,7 @@ public abstract class WebApplicationContextUtils {
 
 
 	/**
-	 * Find the root {@link WebApplicationContext} for this web app, typically
+	 * Find the root {@code WebApplicationContext} for this web app, typically
 	 * loaded via {@link org.springframework.web.context.ContextLoaderListener}.
 	 * <p>Will rethrow an exception that happened on root context startup,
 	 * to differentiate between a failed context startup and no context at all.
@@ -85,7 +86,7 @@ public abstract class WebApplicationContextUtils {
 	}
 
 	/**
-	 * Find the root {@link WebApplicationContext} for this web app, typically
+	 * Find the root {@code WebApplicationContext} for this web app, typically
 	 * loaded via {@link org.springframework.web.context.ContextLoaderListener}.
 	 * <p>Will rethrow an exception that happened on root context startup,
 	 * to differentiate between a failed context startup and no context at all.
@@ -98,7 +99,7 @@ public abstract class WebApplicationContextUtils {
 	}
 
 	/**
-	 * Find a custom {@link WebApplicationContext} for this web app.
+	 * Find a custom {@code WebApplicationContext} for this web app.
 	 * @param sc ServletContext to find the web application context for
 	 * @param attrName the name of the ServletContext attribute to look for
 	 * @return the desired WebApplicationContext for this web app, or {@code null} if none
@@ -122,6 +123,40 @@ public abstract class WebApplicationContextUtils {
 			throw new IllegalStateException("Context attribute is not of type WebApplicationContext: " + attr);
 		}
 		return (WebApplicationContext) attr;
+	}
+
+	/**
+	 * Find a unique {@code WebApplicationContext} for this web app: either the
+	 * root web app context (preferred) or a unique {@code WebApplicationContext}
+	 * among the registered {@code ServletContext} attributes (typically coming
+	 * from a single {@code DispatcherServlet} in the current web application).
+	 * <p>Note that {@code DispatcherServlet}'s exposure of its context can be
+	 * controlled through its {@code publishContext} property, which is {@code true}
+	 * by default but can be selectively switched to only publish a single context
+	 * despite multiple {@code DispatcherServlet} registrations in the web app.
+	 * @param sc ServletContext to find the web application context for
+	 * @return the desired WebApplicationContext for this web app, or {@code null} if none
+	 * @since 4.2
+	 * @see #getWebApplicationContext(ServletContext)
+	 * @see ServletContext#getAttributeNames()
+	 */
+	public static WebApplicationContext findWebApplicationContext(ServletContext sc) {
+		WebApplicationContext wac = getWebApplicationContext(sc);
+		if (wac == null) {
+			Enumeration<String> attrNames = sc.getAttributeNames();
+			while (attrNames.hasMoreElements()) {
+				String attrName = attrNames.nextElement();
+				Object attrValue = sc.getAttribute(attrName);
+				if (attrValue instanceof WebApplicationContext) {
+					if (wac != null) {
+						throw new IllegalStateException("No unique WebApplicationContext found: more than one " +
+								"DispatcherServlet registered with publishContext=true?");
+					}
+					wac = (WebApplicationContext) attrValue;
+				}
+			}
+		}
+		return wac;
 	}
 
 
@@ -152,6 +187,7 @@ public abstract class WebApplicationContextUtils {
 		}
 
 		beanFactory.registerResolvableDependency(ServletRequest.class, new RequestObjectFactory());
+		beanFactory.registerResolvableDependency(ServletResponse.class, new ResponseObjectFactory());
 		beanFactory.registerResolvableDependency(HttpSession.class, new SessionObjectFactory());
 		beanFactory.registerResolvableDependency(WebRequest.class, new WebRequestObjectFactory());
 		if (jsfPresent) {
@@ -252,7 +288,7 @@ public abstract class WebApplicationContextUtils {
 	public static void initServletPropertySources(
 			MutablePropertySources propertySources, ServletContext servletContext, ServletConfig servletConfig) {
 
-		Assert.notNull(propertySources, "propertySources must not be null");
+		Assert.notNull(propertySources, "'propertySources' must not be null");
 		if (servletContext != null && propertySources.contains(StandardServletEnvironment.SERVLET_CONTEXT_PROPERTY_SOURCE_NAME) &&
 				propertySources.get(StandardServletEnvironment.SERVLET_CONTEXT_PROPERTY_SOURCE_NAME) instanceof StubPropertySource) {
 			propertySources.replace(StandardServletEnvironment.SERVLET_CONTEXT_PROPERTY_SOURCE_NAME,
@@ -284,6 +320,7 @@ public abstract class WebApplicationContextUtils {
 	@SuppressWarnings("serial")
 	private static class RequestObjectFactory implements ObjectFactory<ServletRequest>, Serializable {
 
+		@Override
 		public ServletRequest getObject() {
 			return currentRequestAttributes().getRequest();
 		}
@@ -296,11 +333,35 @@ public abstract class WebApplicationContextUtils {
 
 
 	/**
+	 * Factory that exposes the current response object on demand.
+	 */
+	@SuppressWarnings("serial")
+	private static class ResponseObjectFactory implements ObjectFactory<ServletResponse>, Serializable {
+
+		@Override
+		public ServletResponse getObject() {
+			ServletResponse response = currentRequestAttributes().getResponse();
+			if (response == null) {
+				throw new IllegalStateException("Current servlet response not available - " +
+						"consider using RequestContextFilter instead of RequestContextListener");
+			}
+			return response;
+		}
+
+		@Override
+		public String toString() {
+			return "Current HttpServletResponse";
+		}
+	}
+
+
+	/**
 	 * Factory that exposes the current session object on demand.
 	 */
 	@SuppressWarnings("serial")
 	private static class SessionObjectFactory implements ObjectFactory<HttpSession>, Serializable {
 
+		@Override
 		public HttpSession getObject() {
 			return currentRequestAttributes().getRequest().getSession();
 		}
@@ -318,8 +379,10 @@ public abstract class WebApplicationContextUtils {
 	@SuppressWarnings("serial")
 	private static class WebRequestObjectFactory implements ObjectFactory<WebRequest>, Serializable {
 
+		@Override
 		public WebRequest getObject() {
-			return new ServletWebRequest(currentRequestAttributes().getRequest());
+			ServletRequestAttributes requestAttr = currentRequestAttributes();
+			return new ServletWebRequest(requestAttr.getRequest(), requestAttr.getResponse());
 		}
 
 		@Override
@@ -336,6 +399,7 @@ public abstract class WebApplicationContextUtils {
 
 		public static void registerFacesDependencies(ConfigurableListableBeanFactory beanFactory) {
 			beanFactory.registerResolvableDependency(FacesContext.class, new ObjectFactory<FacesContext>() {
+				@Override
 				public FacesContext getObject() {
 					return FacesContext.getCurrentInstance();
 				}
@@ -345,6 +409,7 @@ public abstract class WebApplicationContextUtils {
 				}
 			});
 			beanFactory.registerResolvableDependency(ExternalContext.class, new ObjectFactory<ExternalContext>() {
+				@Override
 				public ExternalContext getObject() {
 					return FacesContext.getCurrentInstance().getExternalContext();
 				}

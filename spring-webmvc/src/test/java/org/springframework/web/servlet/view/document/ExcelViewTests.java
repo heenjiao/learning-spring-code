@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,6 @@ import org.apache.poi.hssf.usermodel.HSSFCell;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -56,9 +55,8 @@ import static org.junit.Assert.*;
  * @author Alef Arendsen
  * @author Bram Smeets
  */
+@SuppressWarnings("deprecation")
 public class ExcelViewTests {
-
-	private MockServletContext servletCtx;
 
 	private MockHttpServletRequest request;
 
@@ -69,7 +67,7 @@ public class ExcelViewTests {
 
 	@Before
 	public void setUp() {
-		servletCtx = new MockServletContext("org/springframework/web/servlet/view/document");
+		MockServletContext servletCtx = new MockServletContext("org/springframework/web/servlet/view/document");
 		request = new MockHttpServletRequest(servletCtx);
 		response = new MockHttpServletResponse();
 		webAppCtx = new StaticWebApplicationContext();
@@ -98,12 +96,11 @@ public class ExcelViewTests {
 
 		excelView.render(new HashMap<String, Object>(), request, response);
 
-		POIFSFileSystem poiFs = new POIFSFileSystem(new ByteArrayInputStream(response.getContentAsByteArray()));
-		HSSFWorkbook wb = new HSSFWorkbook(poiFs);
+		HSSFWorkbook wb = new HSSFWorkbook(new ByteArrayInputStream(response.getContentAsByteArray()));
 		assertEquals("Test Sheet", wb.getSheetName(0));
 		HSSFSheet sheet = wb.getSheet("Test Sheet");
 		HSSFRow row = sheet.getRow(2);
-		HSSFCell cell = row.getCell((short) 4);
+		HSSFCell cell = row.getCell(4);
 		assertEquals("Test Value", cell.getStringCellValue());
 	}
 
@@ -133,11 +130,10 @@ public class ExcelViewTests {
 		excelView.setUrl("template");
 		excelView.render(new HashMap<String, Object>(), request, response);
 
-		POIFSFileSystem poiFs = new POIFSFileSystem(new ByteArrayInputStream(response.getContentAsByteArray()));
-		HSSFWorkbook wb = new HSSFWorkbook(poiFs);
+		HSSFWorkbook wb = new HSSFWorkbook(new ByteArrayInputStream(response.getContentAsByteArray()));
 		HSSFSheet sheet = wb.getSheet("Sheet1");
 		HSSFRow row = sheet.getRow(0);
-		HSSFCell cell = row.getCell((short) 0);
+		HSSFCell cell = row.getCell(0);
 		assertEquals("Test Template", cell.getStringCellValue());
 	}
 
@@ -167,11 +163,10 @@ public class ExcelViewTests {
 		excelView.setUrl("template");
 		excelView.render(new HashMap<String, Object>(), request, response);
 
-		POIFSFileSystem poiFs = new POIFSFileSystem(new ByteArrayInputStream(response.getContentAsByteArray()));
-		HSSFWorkbook wb = new HSSFWorkbook(poiFs);
+		HSSFWorkbook wb = new HSSFWorkbook(new ByteArrayInputStream(response.getContentAsByteArray()));
 		HSSFSheet sheet = wb.getSheet("Sheet1");
 		HSSFRow row = sheet.getRow(0);
-		HSSFCell cell = row.getCell((short) 0);
+		HSSFCell cell = row.getCell(0);
 		assertEquals("Test Template American English", cell.getStringCellValue());
 	}
 
@@ -201,11 +196,10 @@ public class ExcelViewTests {
 		excelView.setUrl("template");
 		excelView.render(new HashMap<String, Object>(), request, response);
 
-		POIFSFileSystem poiFs = new POIFSFileSystem(new ByteArrayInputStream(response.getContentAsByteArray()));
-		HSSFWorkbook wb = new HSSFWorkbook(poiFs);
+		HSSFWorkbook wb = new HSSFWorkbook(new ByteArrayInputStream(response.getContentAsByteArray()));
 		HSSFSheet sheet = wb.getSheet("Sheet1");
 		HSSFRow row = sheet.getRow(0);
-		HSSFCell cell = row.getCell((short) 0);
+		HSSFCell cell = row.getCell(0);
 		assertEquals("Test Template auf Deutsch", cell.getStringCellValue());
 	}
 
@@ -336,8 +330,8 @@ public class ExcelViewTests {
 	 * Workaround JXL bug that causes ArrayIndexOutOfBounds exceptions when running in
 	 * *nix machines. Same bug as reported at http://jira.pentaho.com/browse/PDI-5031.
 	 * <p>We want to use the latest JXL code because it doesn't include log4j config files
-	 * inside the jar. Since the project appears to be abandoned, AbstractJExcelView will
-	 * eventually get deprecated.
+	 * inside the jar. Since the project appears to be abandoned, AbstractJExcelView is
+	 * deprecated as of Spring 4.0.
 	 */
 	private static abstract class UnixSafeAbstractJExcelView extends AbstractJExcelView {
 

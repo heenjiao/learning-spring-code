@@ -17,7 +17,6 @@
 package org.springframework.web.servlet.mvc.multiaction;
 
 import java.util.Properties;
-
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.logging.Log;
@@ -80,7 +79,9 @@ import org.springframework.web.util.WebUtils;
  * @see #setMethodParamNames
  * @see #setLogicalMappings
  * @see #setDefaultMethodName
+ * @deprecated as of 4.3, in favor of annotation-driven handler methods
  */
+@Deprecated
 public class ParameterMethodNameResolver implements MethodNameResolver {
 
 	/**
@@ -157,6 +158,7 @@ public class ParameterMethodNameResolver implements MethodNameResolver {
 	}
 
 
+	@Override
 	public String getHandlerMethodName(HttpServletRequest request) throws NoSuchRequestHandlingMethodException {
 		String methodName = null;
 

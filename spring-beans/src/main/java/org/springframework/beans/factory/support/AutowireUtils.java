@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,6 +58,7 @@ abstract class AutowireUtils {
 	 */
 	public static void sortConstructors(Constructor<?>[] constructors) {
 		Arrays.sort(constructors, new Comparator<Constructor<?>>() {
+			@Override
 			public int compare(Constructor<?> c1, Constructor<?> c2) {
 				boolean p1 = Modifier.isPublic(c1.getModifiers());
 				boolean p2 = Modifier.isPublic(c2.getModifiers());
@@ -66,7 +67,7 @@ abstract class AutowireUtils {
 				}
 				int c1pl = c1.getParameterTypes().length;
 				int c2pl = c2.getParameterTypes().length;
-				return (new Integer(c1pl)).compareTo(c2pl) * -1;
+				return (c1pl < c2pl ? 1 : (c1pl > c2pl ? -1 : 0));
 			}
 		});
 	}
@@ -80,6 +81,7 @@ abstract class AutowireUtils {
 	 */
 	public static void sortFactoryMethods(Method[] factoryMethods) {
 		Arrays.sort(factoryMethods, new Comparator<Method>() {
+			@Override
 			public int compare(Method fm1, Method fm2) {
 				boolean p1 = Modifier.isPublic(fm1.getModifiers());
 				boolean p2 = Modifier.isPublic(fm2.getModifiers());
@@ -88,7 +90,7 @@ abstract class AutowireUtils {
 				}
 				int c1pl = fm1.getParameterTypes().length;
 				int c2pl = fm2.getParameterTypes().length;
-				return (new Integer(c1pl)).compareTo(c2pl) * -1;
+				return (c1pl < c2pl ? 1 : (c1pl > c2pl ? -1 : 0));
 			}
 		});
 	}
@@ -160,8 +162,8 @@ abstract class AutowireUtils {
 	 * Determine the target type for the generic return type of the given
 	 * <em>generic factory method</em>, where formal type variables are declared
 	 * on the given method itself.
-	 * <p>For example, given a factory method with the following signature,
-	 * if {@code resolveReturnTypeForFactoryMethod()} is invoked with the reflected
+	 * <p>For example, given a factory method with the following signature, if
+	 * {@code resolveReturnTypeForFactoryMethod()} is invoked with the reflected
 	 * method for {@code creatProxy()} and an {@code Object[]} array containing
 	 * {@code MyService.class}, {@code resolveReturnTypeForFactoryMethod()} will
 	 * infer that the target return type is {@code MyService}.
@@ -182,9 +184,9 @@ abstract class AutowireUtils {
 	 * @param method the method to introspect (never {@code null})
 	 * @param args the arguments that will be supplied to the method when it is
 	 * invoked (never {@code null})
-	 * @param classLoader the ClassLoader to resolve class names against, if necessary
-	 * (never {@code null})
-	 * @return the resolved target return type, the standard return type, or {@code null}
+	 * @param classLoader the ClassLoader to resolve class names against,
+	 * if necessary (never {@code null})
+	 * @return the resolved target return type or the standard method return type
 	 * @since 3.2.5
 	 */
 	public static Class<?> resolveReturnTypeForFactoryMethod(Method method, Object[] args, ClassLoader classLoader) {
@@ -287,6 +289,7 @@ abstract class AutowireUtils {
 			this.objectFactory = objectFactory;
 		}
 
+		@Override
 		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 			String methodName = method.getName();
 			if (methodName.equals("equals")) {

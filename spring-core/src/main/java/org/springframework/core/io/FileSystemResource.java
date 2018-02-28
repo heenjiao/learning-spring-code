@@ -109,8 +109,29 @@ public class FileSystemResource extends AbstractResource implements WritableReso
 	 * This implementation opens a FileInputStream for the underlying file.
 	 * @see java.io.FileInputStream
 	 */
+	@Override
 	public InputStream getInputStream() throws IOException {
 		return new FileInputStream(this.file);
+	}
+
+	/**
+	 * This implementation checks whether the underlying file is marked as writable
+	 * (and corresponds to an actual file with content, not to a directory).
+	 * @see java.io.File#canWrite()
+	 * @see java.io.File#isDirectory()
+	 */
+	@Override
+	public boolean isWritable() {
+		return (this.file.canWrite() && !this.file.isDirectory());
+	}
+
+	/**
+	 * This implementation opens a FileOutputStream for the underlying file.
+	 * @see java.io.FileOutputStream
+	 */
+	@Override
+	public OutputStream getOutputStream() throws IOException {
+		return new FileOutputStream(this.file);
 	}
 
 	/**
@@ -172,29 +193,9 @@ public class FileSystemResource extends AbstractResource implements WritableReso
 	 * path of the file.
 	 * @see java.io.File#getAbsolutePath()
 	 */
+	@Override
 	public String getDescription() {
 		return "file [" + this.file.getAbsolutePath() + "]";
-	}
-
-
-	// implementation of WritableResource
-
-	/**
-	 * This implementation checks whether the underlying file is marked as writable
-	 * (and corresponds to an actual file with content, not to a directory).
-	 * @see java.io.File#canWrite()
-	 * @see java.io.File#isDirectory()
-	 */
-	public boolean isWritable() {
-		return (this.file.canWrite() && !this.file.isDirectory());
-	}
-
-	/**
-	 * This implementation opens a FileOutputStream for the underlying file.
-	 * @see java.io.FileOutputStream
-	 */
-	public OutputStream getOutputStream() throws IOException {
-		return new FileOutputStream(this.file);
 	}
 
 

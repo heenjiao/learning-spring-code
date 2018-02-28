@@ -28,6 +28,7 @@ import org.springframework.core.BridgeMethodResolver;
 import org.springframework.core.GenericTypeResolver;
 import org.springframework.core.MethodParameter;
 import org.springframework.util.ClassUtils;
+import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 /**
@@ -38,7 +39,7 @@ import org.springframework.util.StringUtils;
  * @author Juergen Hoeller
  * @since 2.5.2
  */
-class GenericTypeAwarePropertyDescriptor extends PropertyDescriptor {
+final class GenericTypeAwarePropertyDescriptor extends PropertyDescriptor {
 
 	private final Class<?> beanClass;
 
@@ -81,21 +82,32 @@ class GenericTypeAwarePropertyDescriptor extends PropertyDescriptor {
 		this.readMethod = readMethodToUse;
 		this.writeMethod = writeMethodToUse;
 
-		if (this.writeMethod != null && this.readMethod == null) {
-			// Write method not matched against read method: potentially ambiguous through
-			// several overloaded variants, in which case an arbitrary winner has been chosen
-			// by the JDK's JavaBeans Introspector...
-			Set<Method> ambiguousCandidates = new HashSet<Method>();
-			for (Method method : beanClass.getMethods()) {
-				if (method.getName().equals(writeMethodToUse.getName()) &&
-						!method.equals(writeMethodToUse) && !method.isBridge() &&
-						method.getParameterTypes().length == writeMethodToUse.getParameterTypes().length) {
-					ambiguousCandidates.add(method);
+		if (this.writeMethod != null) {
+			if (this.readMethod == null) {
+				// Write method not matched against read method: potentially ambiguous through
+				// several overloaded variants, in which case an arbitrary winner has been chosen
+				// by the JDK's JavaBeans Introspector...
+				Set<Method> ambiguousCandidates = new HashSet<Method>();
+				for (Method method : beanClass.getMethods()) {
+					if (method.getName().equals(writeMethodToUse.getName()) &&
+							!method.equals(writeMethodToUse) && !method.isBridge() &&
+							method.getParameterTypes().length == writeMethodToUse.getParameterTypes().length) {
+						ambiguousCandidates.add(method);
+					}
+				}
+				if (!ambiguousCandidates.isEmpty()) {
+					this.ambiguousWriteMethods = ambiguousCandidates;
 				}
 			}
-			if (!ambiguousCandidates.isEmpty()) {
-				this.ambiguousWriteMethods = ambiguousCandidates;
-			}
+			this.writeMethodParameter = new MethodParameter(this.writeMethod, 0);
+			GenericTypeResolver.resolveParameterType(this.writeMethodParameter, this.beanClass);
+		}
+
+		if (this.readMethod != null) {
+			this.propertyType = GenericTypeResolver.resolveReturnType(this.readMethod, this.beanClass);
+		}
+		else if (this.writeMethodParameter != null) {
+			this.propertyType = this.writeMethodParameter.getParameterType();
 		}
 
 		this.propertyEditorClass = propertyEditorClass;
@@ -127,39 +139,39 @@ class GenericTypeAwarePropertyDescriptor extends PropertyDescriptor {
 		return this.writeMethod;
 	}
 
-	public synchronized MethodParameter getWriteMethodParameter() {
-		if (this.writeMethod == null) {
-			return null;
-		}
-		if (this.writeMethodParameter == null) {
-			this.writeMethodParameter = new MethodParameter(this.writeMethod, 0);
-			GenericTypeResolver.resolveParameterType(this.writeMethodParameter, this.beanClass);
-		}
+	public MethodParameter getWriteMethodParameter() {
 		return this.writeMethodParameter;
 	}
 
 	@Override
-	public synchronized Class<?> getPropertyType() {
-		if (this.propertyType == null) {
-			if (this.readMethod != null) {
-				this.propertyType = GenericTypeResolver.resolveReturnType(this.readMethod, this.beanClass);
-			}
-			else {
-				MethodParameter writeMethodParam = getWriteMethodParameter();
-				if (writeMethodParam != null) {
-					this.propertyType = writeMethodParam.getParameterType();
-				}
-				else {
-					this.propertyType = super.getPropertyType();
-				}
-			}
-		}
+	public Class<?> getPropertyType() {
 		return this.propertyType;
 	}
 
 	@Override
 	public Class<?> getPropertyEditorClass() {
 		return this.propertyEditorClass;
+	}
+
+
+	@Override
+	public boolean equals(Object other) {
+		if (this == other) {
+			return true;
+		}
+		if (!(other instanceof GenericTypeAwarePropertyDescriptor)) {
+			return false;
+		}
+		GenericTypeAwarePropertyDescriptor otherPd = (GenericTypeAwarePropertyDescriptor) other;
+		return (getBeanClass().equals(otherPd.getBeanClass()) && PropertyDescriptorUtils.equals(this, otherPd));
+	}
+
+	@Override
+	public int hashCode() {
+		int hashCode = getBeanClass().hashCode();
+		hashCode = 29 * hashCode + ObjectUtils.nullSafeHashCode(getReadMethod());
+		hashCode = 29 * hashCode + ObjectUtils.nullSafeHashCode(getWriteMethod());
+		return hashCode;
 	}
 
 }

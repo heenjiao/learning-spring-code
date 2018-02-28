@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,7 +71,7 @@ public abstract class Pointcuts {
 	 * @param args arguments to the method
 	 * @return whether there's a runtime match
 	 */
-	public static boolean matches(Pointcut pointcut, Method method, Class targetClass, Object[] args) {
+	public static boolean matches(Pointcut pointcut, Method method, Class<?> targetClass, Object... args) {
 		Assert.notNull(pointcut, "Pointcut must not be null");
 		if (pointcut == Pointcut.TRUE) {
 			return true;
@@ -96,10 +96,11 @@ public abstract class Pointcuts {
 
 		public static SetterPointcut INSTANCE = new SetterPointcut();
 
-		public boolean matches(Method method, Class targetClass) {
-			return method.getName().startsWith("set") &&
-				method.getParameterTypes().length == 1 &&
-				method.getReturnType() == Void.TYPE;
+		@Override
+		public boolean matches(Method method, Class<?> targetClass) {
+			return (method.getName().startsWith("set") &&
+					method.getParameterTypes().length == 1 &&
+					method.getReturnType() == Void.TYPE);
 		}
 
 		private Object readResolve() {
@@ -116,9 +117,10 @@ public abstract class Pointcuts {
 
 		public static GetterPointcut INSTANCE = new GetterPointcut();
 
-		public boolean matches(Method method, Class targetClass) {
-			return method.getName().startsWith("get") &&
-				method.getParameterTypes().length == 0;
+		@Override
+		public boolean matches(Method method, Class<?> targetClass) {
+			return (method.getName().startsWith("get") &&
+					method.getParameterTypes().length == 0);
 		}
 
 		private Object readResolve() {

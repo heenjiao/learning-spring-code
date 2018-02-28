@@ -65,7 +65,7 @@ public class DeclareParentsAdvisor implements IntroductionAdvisor {
 
 	/**
 	 * Private constructor to share common code between impl-based delegate and reference-based delegate
-	 * (cannot use method such as init() to share common code, due the the use of final fields)
+	 * (cannot use method such as init() to share common code, due the use of final fields)
 	 * @param interfaceType static field defining the introduction
 	 * @param typePattern type pattern the introduction is restricted to
 	 * @param implementationClass implementation class
@@ -77,6 +77,7 @@ public class DeclareParentsAdvisor implements IntroductionAdvisor {
 
 		// Excludes methods implemented.
 		ClassFilter exclusion = new ClassFilter() {
+			@Override
 			public boolean matches(Class<?> clazz) {
 				return !(introducedInterface.isAssignableFrom(clazz));
 			}
@@ -87,22 +88,27 @@ public class DeclareParentsAdvisor implements IntroductionAdvisor {
 	}
 
 
+	@Override
 	public ClassFilter getClassFilter() {
 		return this.typePatternClassFilter;
 	}
 
+	@Override
 	public void validateInterfaces() throws IllegalArgumentException {
 		// Do nothing
 	}
 
+	@Override
 	public boolean isPerInstance() {
 		return true;
 	}
 
+	@Override
 	public Advice getAdvice() {
 		return this.advice;
 	}
 
+	@Override
 	public Class<?>[] getInterfaces() {
 		return new Class<?>[] {this.introducedInterface};
 	}

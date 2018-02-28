@@ -75,7 +75,7 @@ public abstract aspect AbstractDependencyInjectionAspect {
 	 */
 	@SuppressAjWarnings("adviceDidNotMatch")
 	before(Object bean) :
-			beanConstruction(bean) && preConstructionCondition() && inConfigurableBean()  {
+		beanConstruction(bean) && preConstructionCondition() && inConfigurableBean()  {
 		configureBean(bean);
 	}
 
@@ -84,7 +84,7 @@ public abstract aspect AbstractDependencyInjectionAspect {
 	 */
 	@SuppressAjWarnings("adviceDidNotMatch")
 	after(Object bean) returning :
-			beanConstruction(bean) && postConstructionCondition() && inConfigurableBean() {
+		beanConstruction(bean) && postConstructionCondition() && inConfigurableBean() {
 		configureBean(bean);
 	}
 
@@ -93,7 +93,7 @@ public abstract aspect AbstractDependencyInjectionAspect {
 	 */
 	@SuppressAjWarnings("adviceDidNotMatch")
 	after(Object bean) returning :
-			beanDeserialization(bean) && inConfigurableBean() {
+		beanDeserialization(bean) && inConfigurableBean() {
 		configureBean(bean);
 	}
 

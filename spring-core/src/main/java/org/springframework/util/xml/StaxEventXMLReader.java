@@ -17,8 +17,6 @@
 package org.springframework.util.xml;
 
 import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import javax.xml.namespace.QName;
 import javax.xml.stream.Location;
 import javax.xml.stream.XMLEventReader;
@@ -58,13 +56,12 @@ import org.springframework.util.StringUtils;
  * @see #setEntityResolver(org.xml.sax.EntityResolver)
  * @see #setErrorHandler(org.xml.sax.ErrorHandler)
  */
+@SuppressWarnings("rawtypes")
 class StaxEventXMLReader extends AbstractStaxXMLReader {
 
 	private static final String DEFAULT_XML_VERSION = "1.0";
 
 	private final XMLEventReader reader;
-
-	private final Map<String, String> namespaces = new LinkedHashMap<String, String>();
 
 	private String xmlVersion = DEFAULT_XML_VERSION;
 
@@ -168,21 +165,27 @@ class StaxEventXMLReader extends AbstractStaxXMLReader {
 		if (getContentHandler() != null) {
 			final Location location = event.getLocation();
 			getContentHandler().setDocumentLocator(new Locator2() {
+				@Override
 				public int getColumnNumber() {
 					return (location != null ? location.getColumnNumber() : -1);
 				}
+				@Override
 				public int getLineNumber() {
 					return (location != null ? location.getLineNumber() : -1);
 				}
+				@Override
 				public String getPublicId() {
 					return (location != null ? location.getPublicId() : null);
 				}
+				@Override
 				public String getSystemId() {
 					return (location != null ? location.getSystemId() : null);
 				}
+				@Override
 				public String getXMLVersion() {
 					return xmlVersion;
 				}
+				@Override
 				public String getEncoding() {
 					return encoding;
 				}

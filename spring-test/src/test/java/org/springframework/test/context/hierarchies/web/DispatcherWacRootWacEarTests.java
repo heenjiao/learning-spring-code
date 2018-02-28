@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,7 +18,9 @@ package org.springframework.test.context.hierarchies.web;
 
 import javax.servlet.ServletContext;
 
+import org.junit.Ignore;
 import org.junit.Test;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ContextConfiguration;
@@ -47,12 +49,14 @@ public class DispatcherWacRootWacEarTests extends RootWacEarTests {
 	private String dispatcher;
 
 
+	@Ignore("Superseded by verifyDispatcherWacConfig()")
 	@Test
 	@Override
 	public void verifyEarConfig() {
 		/* no-op */
 	}
 
+	@Ignore("Superseded by verifyDispatcherWacConfig()")
 	@Test
 	@Override
 	public void verifyRootWacConfig() {

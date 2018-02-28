@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,8 @@ import org.springframework.core.Constants;
  * corresponding Commons Pool defaults.
  *
  * <p>Compatible with Apache Commons Pool 1.5.x and 1.6.
+ * Note that this class doesn't declare Commons Pool 1.6's generic type
+ * in order to remain compatible with Commons Pool 1.5.x at runtime.
  *
  * @author Rod Johnson
  * @author Rob Harrop
@@ -56,8 +58,10 @@ import org.springframework.core.Constants;
  * @see #setMaxWait
  * @see #setTimeBetweenEvictionRunsMillis
  * @see #setMinEvictableIdleTimeMillis
+ * @deprecated as of Spring 4.2, in favor of {@link CommonsPool2TargetSource}
  */
-@SuppressWarnings("serial")
+@SuppressWarnings({"rawtypes", "unchecked", "serial"})
+@Deprecated
 public class CommonsPoolTargetSource extends AbstractPoolingTargetSource implements PoolableObjectFactory {
 
 	private static final Constants constants = new Constants(GenericObjectPool.class);
@@ -76,7 +80,7 @@ public class CommonsPoolTargetSource extends AbstractPoolingTargetSource impleme
 	private byte whenExhaustedAction = GenericObjectPool.DEFAULT_WHEN_EXHAUSTED_ACTION;
 
 	/**
-	 * The Jakarta Commons {@code ObjectPool} used to pool target objects
+	 * The Apache Commons {@code ObjectPool} used to pool target objects
 	 */
 	private ObjectPool pool;
 
@@ -252,10 +256,12 @@ public class CommonsPoolTargetSource extends AbstractPoolingTargetSource impleme
 		this.pool.returnObject(target);
 	}
 
+	@Override
 	public int getActiveCount() throws UnsupportedOperationException {
 		return this.pool.getNumActive();
 	}
 
+	@Override
 	public int getIdleCount() throws UnsupportedOperationException {
 		return this.pool.getNumIdle();
 	}
@@ -264,6 +270,7 @@ public class CommonsPoolTargetSource extends AbstractPoolingTargetSource impleme
 	/**
 	 * Closes the underlying {@code ObjectPool} when destroying this object.
 	 */
+	@Override
 	public void destroy() throws Exception {
 		logger.debug("Closing Commons ObjectPool");
 		this.pool.close();
@@ -274,21 +281,26 @@ public class CommonsPoolTargetSource extends AbstractPoolingTargetSource impleme
 	// Implementation of org.apache.commons.pool.PoolableObjectFactory interface
 	//----------------------------------------------------------------------------
 
+	@Override
 	public Object makeObject() throws BeansException {
 		return newPrototypeInstance();
 	}
 
+	@Override
 	public void destroyObject(Object obj) throws Exception {
 		destroyPrototypeInstance(obj);
 	}
 
+	@Override
 	public boolean validateObject(Object obj) {
 		return true;
 	}
 
+	@Override
 	public void activateObject(Object obj) {
 	}
 
+	@Override
 	public void passivateObject(Object obj) {
 	}
 

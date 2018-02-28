@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.util.HashMap;
 
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 /**
@@ -49,11 +50,9 @@ public final class FlashMap extends HashMap<String, Object> implements Comparabl
 
 	private String targetRequestPath;
 
-	private final MultiValueMap<String, String> targetRequestParams = new LinkedMultiValueMap<String, String>();
+	private final MultiValueMap<String, String> targetRequestParams = new LinkedMultiValueMap<String, String>(4);
 
-	private long expirationStartTime;
-
-	private int timeToLive;
+	private long expirationTime = -1;
 
 
 	/**
@@ -111,8 +110,25 @@ public final class FlashMap extends HashMap<String, Object> implements Comparabl
 	 * @param timeToLive the number of seconds before expiration
 	 */
 	public void startExpirationPeriod(int timeToLive) {
-		this.expirationStartTime = System.currentTimeMillis();
-		this.timeToLive = timeToLive;
+		this.expirationTime = System.currentTimeMillis() + timeToLive * 1000;
+	}
+
+	/**
+	 * Set the expiration time for the FlashMap. This is provided for serialization
+	 * purposes but can also be used instead {@link #startExpirationPeriod(int)}.
+	 * @since 4.2
+	 */
+	public void setExpirationTime(long expirationTime) {
+		this.expirationTime = expirationTime;
+	}
+
+	/**
+	 * Return the expiration time for the FlashMap or -1 if the expiration
+	 * period has not started.
+	 * @since 4.2
+	 */
+	public long getExpirationTime() {
+		return this.expirationTime;
 	}
 
 	/**
@@ -120,8 +136,7 @@ public final class FlashMap extends HashMap<String, Object> implements Comparabl
 	 * elapsed time since the call to {@link #startExpirationPeriod}.
 	 */
 	public boolean isExpired() {
-		return (this.expirationStartTime != 0 &&
-				(System.currentTimeMillis() - this.expirationStartTime > this.timeToLive * 1000));
+		return (this.expirationTime != -1 && System.currentTimeMillis() > this.expirationTime);
 	}
 
 
@@ -130,6 +145,7 @@ public final class FlashMap extends HashMap<String, Object> implements Comparabl
 	 * path or has more target URL parameters. Before comparing FlashMap
 	 * instances ensure that they match a given request.
 	 */
+	@Override
 	public int compareTo(FlashMap other) {
 		int thisUrlPath = (this.targetRequestPath != null ? 1 : 0);
 		int otherUrlPath = (other.targetRequestPath != null ? 1 : 0);
@@ -142,12 +158,31 @@ public final class FlashMap extends HashMap<String, Object> implements Comparabl
 	}
 
 	@Override
+	public boolean equals(Object other) {
+		if (this == other) {
+			return true;
+		}
+		if (!(other instanceof FlashMap)) {
+			return false;
+		}
+		FlashMap otherFlashMap = (FlashMap) other;
+		return (super.equals(otherFlashMap) &&
+				ObjectUtils.nullSafeEquals(this.targetRequestPath, otherFlashMap.targetRequestPath) &&
+				this.targetRequestParams.equals(otherFlashMap.targetRequestParams));
+	}
+
+	@Override
+	public int hashCode() {
+		int result = super.hashCode();
+		result = 31 * result + ObjectUtils.nullSafeHashCode(this.targetRequestPath);
+		result = 31 * result + this.targetRequestParams.hashCode();
+		return result;
+	}
+
+	@Override
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append("FlashMap [attributes=").append(super.toString());
-		sb.append(", targetRequestPath=").append(this.targetRequestPath);
-		sb.append(", targetRequestParams=").append(this.targetRequestParams).append("]");
-		return sb.toString();
+		return "FlashMap [attributes=" + super.toString() + ", targetRequestPath=" +
+				this.targetRequestPath + ", targetRequestParams=" + this.targetRequestParams + "]";
 	}
 
 }

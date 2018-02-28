@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import java.util.Arrays;
 
 /**
  * {@link Resource} implementation for a given byte array.
- * Creates a ByteArrayInputStreams for the given byte array.
+ * <p>Creates a {@link ByteArrayInputStream} for the given byte array.
  *
  * <p>Useful for loading content from any given byte array,
  * without having to resort to a single-use {@link InputStreamResource}.
@@ -31,6 +31,7 @@ import java.util.Arrays;
  * where JavaMail needs to be able to read the stream multiple times.
  *
  * @author Juergen Hoeller
+ * @author Sam Brannen
  * @since 1.2.3
  * @see java.io.ByteArrayInputStream
  * @see InputStreamResource
@@ -93,15 +94,18 @@ public class ByteArrayResource extends AbstractResource {
 	 * underlying byte array.
 	 * @see java.io.ByteArrayInputStream
 	 */
+	@Override
 	public InputStream getInputStream() throws IOException {
 		return new ByteArrayInputStream(this.byteArray);
 	}
 
 	/**
-	 * This implementation returns the passed-in description, if any.
+	 * This implementation returns a description that includes the passed-in
+	 * {@code description}, if any.
 	 */
+	@Override
 	public String getDescription() {
-		return this.description;
+		return "Byte array resource [" + this.description + "]";
 	}
 
 

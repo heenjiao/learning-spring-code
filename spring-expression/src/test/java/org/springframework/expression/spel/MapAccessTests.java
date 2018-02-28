@@ -29,7 +29,11 @@ import org.springframework.expression.PropertyAccessor;
 import org.springframework.expression.TypedValue;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
+import org.springframework.tests.Assume;
+import org.springframework.tests.TestGroup;
+import org.springframework.util.StopWatch;
 
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 /**
@@ -37,7 +41,7 @@ import static org.junit.Assert.*;
  *
  * @author Andy Clement
  */
-public class MapAccessTests extends ExpressionTestCase {
+public class MapAccessTests extends AbstractExpressionTests {
 
 	@Test
 	public void testSimpleMapAccess01() {
@@ -89,11 +93,29 @@ public class MapAccessTests extends ExpressionTestCase {
 	public void testGetValueFromRootMap() {
 		Map<String, String> map = new HashMap<String, String>();
 		map.put("key", "value");
-		EvaluationContext context = new StandardEvaluationContext(map);
 
 		ExpressionParser spelExpressionParser = new SpelExpressionParser();
 		Expression expr = spelExpressionParser.parseExpression("#root['key']");
 		assertEquals("value", expr.getValue(map));
+	}
+
+	@Test
+	public void testGetValuePerformance() throws Exception {
+		Assume.group(TestGroup.PERFORMANCE);
+		Map<String, String> map = new HashMap<String, String>();
+		map.put("key", "value");
+		EvaluationContext context = new StandardEvaluationContext(map);
+
+		ExpressionParser spelExpressionParser = new SpelExpressionParser();
+		Expression expr = spelExpressionParser.parseExpression("#root['key']");
+
+		StopWatch s = new StopWatch();
+		s.start();
+		for (int i = 0; i < 10000; i++) {
+			expr.getValue(context);
+		}
+		s.stop();
+		assertThat(s.getTotalTimeMillis(), lessThan(200L));
 	}
 
 
@@ -145,11 +167,11 @@ public class MapAccessTests extends ExpressionTestCase {
 			this.priority = priority;
 		}
 
-		public Map getProperties() {
+		public Map<String,String> getProperties() {
 			return properties;
 		}
 
-		public void setProperties(Map properties) {
+		public void setProperties(Map<String,String> properties) {
 			this.properties = properties;
 		}
 	}
@@ -159,12 +181,12 @@ public class MapAccessTests extends ExpressionTestCase {
 
 		@Override
 		public boolean canRead(EvaluationContext context, Object target, String name) throws AccessException {
-			return (((Map) target).containsKey(name));
+			return (((Map<?, ?>) target).containsKey(name));
 		}
 
 		@Override
 		public TypedValue read(EvaluationContext context, Object target, String name) throws AccessException {
-			return new TypedValue(((Map) target).get(name));
+			return new TypedValue(((Map<? ,?>) target).get(name));
 		}
 
 		@Override
@@ -175,7 +197,7 @@ public class MapAccessTests extends ExpressionTestCase {
 		@Override
 		@SuppressWarnings("unchecked")
 		public void write(EvaluationContext context, Object target, String name, Object newValue) throws AccessException {
-			((Map) target).put(name, newValue);
+			((Map<Object,Object>) target).put(name, newValue);
 		}
 
 		@Override

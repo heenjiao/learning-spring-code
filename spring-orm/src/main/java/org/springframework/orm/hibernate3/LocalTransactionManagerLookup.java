@@ -17,7 +17,6 @@
 package org.springframework.orm.hibernate3;
 
 import java.util.Properties;
-
 import javax.transaction.Transaction;
 import javax.transaction.TransactionManager;
 
@@ -42,7 +41,9 @@ import org.hibernate.transaction.TransactionManagerLookup;
  * @since 1.2
  * @see LocalSessionFactoryBean#setJtaTransactionManager
  * @see org.springframework.transaction.jta.JtaTransactionManager#setTransactionManager
+ * @deprecated as of Spring 4.3, in favor of Hibernate 4.x/5.x
  */
+@Deprecated
 public class LocalTransactionManagerLookup implements TransactionManagerLookup {
 
 	private final TransactionManager transactionManager;
@@ -58,14 +59,17 @@ public class LocalTransactionManagerLookup implements TransactionManagerLookup {
 		this.transactionManager = tm;
 	}
 
+	@Override
 	public TransactionManager getTransactionManager(Properties props) {
 		return this.transactionManager;
 	}
 
+	@Override
 	public String getUserTransactionName() {
 		return null;
 	}
 
+	@Override
 	public Object getTransactionIdentifier(Transaction transaction) {
 		return transaction;
 	}

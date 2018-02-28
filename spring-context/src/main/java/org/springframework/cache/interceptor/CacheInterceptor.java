@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2011 the original author or authors.
+ * Copyright 2002-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,22 +41,17 @@ import org.aopalliance.intercept.MethodInvocation;
 @SuppressWarnings("serial")
 public class CacheInterceptor extends CacheAspectSupport implements MethodInterceptor, Serializable {
 
-	private static class ThrowableWrapper extends RuntimeException {
-		private final Throwable original;
-
-		ThrowableWrapper(Throwable original) {
-			this.original = original;
-		}
-	}
-
+	@Override
 	public Object invoke(final MethodInvocation invocation) throws Throwable {
 		Method method = invocation.getMethod();
 
-		Invoker aopAllianceInvoker = new Invoker() {
+		CacheOperationInvoker aopAllianceInvoker = new CacheOperationInvoker() {
+			@Override
 			public Object invoke() {
 				try {
 					return invocation.proceed();
-				} catch (Throwable ex) {
+				}
+				catch (Throwable ex) {
 					throw new ThrowableWrapper(ex);
 				}
 			}
@@ -64,8 +59,10 @@ public class CacheInterceptor extends CacheAspectSupport implements MethodInterc
 
 		try {
 			return execute(aopAllianceInvoker, invocation.getThis(), method, invocation.getArguments());
-		} catch (ThrowableWrapper th) {
-			throw th.original;
+		}
+		catch (CacheOperationInvoker.ThrowableWrapper th) {
+			throw th.getOriginal();
 		}
 	}
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.springframework.beans.factory.annotation;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -24,17 +25,16 @@ import java.util.Set;
 
 import org.springframework.beans.SimpleTypeConverter;
 import org.springframework.beans.TypeConverter;
-import org.springframework.beans.factory.BeanFactory;
-import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
-import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.DependencyDescriptor;
 import org.springframework.beans.factory.support.AutowireCandidateQualifier;
 import org.springframework.beans.factory.support.AutowireCandidateResolver;
+import org.springframework.beans.factory.support.GenericTypeAwareAutowireCandidateResolver;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.core.MethodParameter;
+import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
@@ -50,18 +50,17 @@ import org.springframework.util.StringUtils;
  *
  * @author Mark Fisher
  * @author Juergen Hoeller
+ * @author Stephane Nicoll
  * @since 2.5
  * @see AutowireCandidateQualifier
  * @see Qualifier
  * @see Value
  */
-public class QualifierAnnotationAutowireCandidateResolver implements AutowireCandidateResolver, BeanFactoryAware {
+public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwareAutowireCandidateResolver {
 
-	private final Set<Class<? extends Annotation>> qualifierTypes = new LinkedHashSet<Class<? extends Annotation>>();
+	private final Set<Class<? extends Annotation>> qualifierTypes = new LinkedHashSet<Class<? extends Annotation>>(2);
 
 	private Class<? extends Annotation> valueAnnotationType = Value.class;
-
-	private BeanFactory beanFactory;
 
 
 	/**
@@ -129,10 +128,6 @@ public class QualifierAnnotationAutowireCandidateResolver implements AutowireCan
 		this.valueAnnotationType = valueAnnotationType;
 	}
 
-	public void setBeanFactory(BeanFactory beanFactory) {
-		this.beanFactory = beanFactory;
-	}
-
 
 	/**
 	 * Determine whether the provided bean definition is an autowire candidate.
@@ -146,22 +141,18 @@ public class QualifierAnnotationAutowireCandidateResolver implements AutowireCan
 	 * attribute does not match.
 	 * @see Qualifier
 	 */
+	@Override
 	public boolean isAutowireCandidate(BeanDefinitionHolder bdHolder, DependencyDescriptor descriptor) {
-		if (!bdHolder.getBeanDefinition().isAutowireCandidate()) {
-			// if explicitly false, do not proceed with qualifier check
-			return false;
-		}
-		if (descriptor == null) {
-			// no qualification necessary
-			return true;
-		}
-		boolean match = checkQualifiers(bdHolder, descriptor.getAnnotations());
-		if (match) {
-			MethodParameter methodParam = descriptor.getMethodParameter();
-			if (methodParam != null) {
-				Method method = methodParam.getMethod();
-				if (method == null || void.class.equals(method.getReturnType())) {
-					match = checkQualifiers(bdHolder, methodParam.getMethodAnnotations());
+		boolean match = super.isAutowireCandidate(bdHolder, descriptor);
+		if (match && descriptor != null) {
+			match = checkQualifiers(bdHolder, descriptor.getAnnotations());
+			if (match) {
+				MethodParameter methodParam = descriptor.getMethodParameter();
+				if (methodParam != null) {
+					Method method = methodParam.getMethod();
+					if (method == null || void.class == method.getReturnType()) {
+						match = checkQualifiers(bdHolder, methodParam.getMethodAnnotations());
+					}
 				}
 			}
 		}
@@ -236,8 +227,12 @@ public class QualifierAnnotationAutowireCandidateResolver implements AutowireCan
 			qualifier = bd.getQualifier(ClassUtils.getShortName(type));
 		}
 		if (qualifier == null) {
-			// First, check annotation on factory method, if applicable
-			Annotation targetAnnotation = getFactoryMethodAnnotation(bd, type);
+			// First, check annotation on qualified element, if any
+			Annotation targetAnnotation = getQualifiedElementAnnotation(bd, type);
+			// Then, check annotation on factory method, if applicable
+			if (targetAnnotation == null) {
+				targetAnnotation = getFactoryMethodAnnotation(bd, type);
+			}
 			if (targetAnnotation == null) {
 				RootBeanDefinition dbd = getResolvedDecoratedDefinition(bd);
 				if (dbd != null) {
@@ -246,9 +241,9 @@ public class QualifierAnnotationAutowireCandidateResolver implements AutowireCan
 			}
 			if (targetAnnotation == null) {
 				// Look for matching annotation on the target class
-				if (this.beanFactory != null) {
+				if (getBeanFactory() != null) {
 					try {
-						Class<?> beanType = this.beanFactory.getType(bdHolder.getBeanName());
+						Class<?> beanType = getBeanFactory().getType(bdHolder.getBeanName());
 						if (beanType != null) {
 							targetAnnotation = AnnotationUtils.getAnnotation(ClassUtils.getUserClass(beanType), type);
 						}
@@ -302,18 +297,9 @@ public class QualifierAnnotationAutowireCandidateResolver implements AutowireCan
 		return true;
 	}
 
-	protected RootBeanDefinition getResolvedDecoratedDefinition(RootBeanDefinition rbd) {
-		BeanDefinitionHolder decDef = rbd.getDecoratedDefinition();
-		if (decDef != null && this.beanFactory instanceof ConfigurableListableBeanFactory) {
-			ConfigurableListableBeanFactory clbf = (ConfigurableListableBeanFactory) this.beanFactory;
-			if (clbf.containsBeanDefinition(decDef.getBeanName())) {
-				BeanDefinition dbd = clbf.getMergedBeanDefinition(decDef.getBeanName());
-				if (dbd instanceof RootBeanDefinition) {
-					return (RootBeanDefinition) dbd;
-				}
-			}
-		}
-		return null;
+	protected Annotation getQualifiedElementAnnotation(RootBeanDefinition bd, Class<? extends Annotation> type) {
+		AnnotatedElement qualifiedElement = bd.getQualifiedElement();
+		return (qualifiedElement != null ? AnnotationUtils.getAnnotation(qualifiedElement, type) : null);
 	}
 
 	protected Annotation getFactoryMethodAnnotation(RootBeanDefinition bd, Class<? extends Annotation> type) {
@@ -323,9 +309,24 @@ public class QualifierAnnotationAutowireCandidateResolver implements AutowireCan
 
 
 	/**
-	 * Determine whether the given dependency carries a value annotation.
+	 * Determine whether the given dependency declares an autowired annotation,
+	 * checking its required flag.
+	 * @see Autowired#required()
+	 */
+	@Override
+	public boolean isRequired(DependencyDescriptor descriptor) {
+		if (!super.isRequired(descriptor)) {
+			return false;
+		}
+		Autowired autowired = descriptor.getAnnotation(Autowired.class);
+		return (autowired == null || autowired.required());
+	}
+
+	/**
+	 * Determine whether the given dependency declares a value annotation.
 	 * @see Value
 	 */
+	@Override
 	public Object getSuggestedValue(DependencyDescriptor descriptor) {
 		Object value = findValue(descriptor.getAnnotations());
 		if (value == null) {
@@ -341,25 +342,20 @@ public class QualifierAnnotationAutowireCandidateResolver implements AutowireCan
 	 * Determine a suggested value from any of the given candidate annotations.
 	 */
 	protected Object findValue(Annotation[] annotationsToSearch) {
-		for (Annotation annotation : annotationsToSearch) {
-			if (this.valueAnnotationType.isInstance(annotation)) {
-				return extractValue(annotation);
-			}
-		}
-		for (Annotation annotation : annotationsToSearch) {
-			Annotation metaAnn = annotation.annotationType().getAnnotation(this.valueAnnotationType);
-			if (metaAnn != null) {
-				return extractValue(metaAnn);
-			}
+		AnnotationAttributes attr = AnnotatedElementUtils.getMergedAnnotationAttributes(
+				AnnotatedElementUtils.forAnnotations(annotationsToSearch), this.valueAnnotationType);
+		if (attr != null) {
+			return extractValue(attr);
 		}
 		return null;
 	}
 
 	/**
 	 * Extract the value attribute from the given annotation.
+	 * @since 4.3
 	 */
-	protected Object extractValue(Annotation valueAnnotation) {
-		Object value = AnnotationUtils.getValue(valueAnnotation);
+	protected Object extractValue(AnnotationAttributes attr) {
+		Object value = attr.get(AnnotationUtils.VALUE);
 		if (value == null) {
 			throw new IllegalStateException("Value annotation must have a value attribute");
 		}

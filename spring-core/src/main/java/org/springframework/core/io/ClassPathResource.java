@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,8 +27,8 @@ import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 /**
- * {@link Resource} implementation for class path resources.
- * Uses either a given ClassLoader or a given Class for loading resources.
+ * {@link Resource} implementation for class path resources. Uses either a
+ * given {@link ClassLoader} or a given {@link Class} for loading resources.
  *
  * <p>Supports resolution as {@code java.io.File} if the class path
  * resource resides in the file system, but not for resources in a JAR.
@@ -156,6 +156,7 @@ public class ClassPathResource extends AbstractFileResolvingResource {
 	 * @see java.lang.ClassLoader#getResourceAsStream(String)
 	 * @see java.lang.Class#getResourceAsStream(String)
 	 */
+	@Override
 	public InputStream getInputStream() throws IOException {
 		InputStream is;
 		if (this.clazz != null) {
@@ -212,6 +213,7 @@ public class ClassPathResource extends AbstractFileResolvingResource {
 	/**
 	 * This implementation returns a description that includes the class path location.
 	 */
+	@Override
 	public String getDescription() {
 		StringBuilder builder = new StringBuilder("class path resource [");
 		String pathToUse = path;
@@ -226,6 +228,7 @@ public class ClassPathResource extends AbstractFileResolvingResource {
 		builder.append(']');
 		return builder.toString();
 	}
+
 
 	/**
 	 * This implementation compares the underlying class path locations.

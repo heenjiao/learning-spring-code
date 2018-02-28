@@ -18,6 +18,9 @@ package org.springframework.core.type.filter;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.springframework.core.type.ClassMetadata;
 import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
@@ -36,6 +39,8 @@ import org.springframework.core.type.classreading.MetadataReaderFactory;
  */
 public abstract class AbstractTypeHierarchyTraversingFilter implements TypeFilter {
 
+	protected final Log logger = LogFactory.getLog(getClass());
+
 	private final boolean considerInherited;
 
 	private final boolean considerInterfaces;
@@ -47,6 +52,7 @@ public abstract class AbstractTypeHierarchyTraversingFilter implements TypeFilte
 	}
 
 
+	@Override
 	public boolean match(MetadataReader metadataReader, MetadataReaderFactory metadataReaderFactory)
 			throws IOException {
 
@@ -60,40 +66,50 @@ public abstract class AbstractTypeHierarchyTraversingFilter implements TypeFilte
 			return true;
 		}
 
-		if (!this.considerInherited) {
-			return false;
-		}
-		if (metadata.hasSuperClass()) {
-			// Optimization to avoid creating ClassReader for super class.
-			Boolean superClassMatch = matchSuperClass(metadata.getSuperClassName());
-			if (superClassMatch != null) {
-				if (superClassMatch.booleanValue()) {
-					return true;
+		if (this.considerInherited) {
+			if (metadata.hasSuperClass()) {
+				// Optimization to avoid creating ClassReader for super class.
+				Boolean superClassMatch = matchSuperClass(metadata.getSuperClassName());
+				if (superClassMatch != null) {
+					if (superClassMatch.booleanValue()) {
+						return true;
+					}
 				}
-			}
-			else {
-				// Need to read super class to determine a match...
-				if (match(metadata.getSuperClassName(), metadataReaderFactory)) {
-					return true;
-				}
+				else {
+					// Need to read super class to determine a match...
+					try {
+						if (match(metadata.getSuperClassName(), metadataReaderFactory)) {
+							return true;
+						}
+					}
+					catch (IOException ex) {
+						logger.debug("Could not read super class [" + metadata.getSuperClassName() +
+								"] of type-filtered class [" + metadata.getClassName() + "]");
+					}
+ 				}
 			}
 		}
 
-		if (!this.considerInterfaces) {
-			return false;
-		}
-		for (String ifc : metadata.getInterfaceNames()) {
-			// Optimization to avoid creating ClassReader for super class
-			Boolean interfaceMatch = matchInterface(ifc);
-			if (interfaceMatch != null) {
-				if (interfaceMatch.booleanValue()) {
-					return true;
+		if (this.considerInterfaces) {
+			for (String ifc : metadata.getInterfaceNames()) {
+				// Optimization to avoid creating ClassReader for super class
+				Boolean interfaceMatch = matchInterface(ifc);
+				if (interfaceMatch != null) {
+					if (interfaceMatch.booleanValue()) {
+						return true;
+					}
 				}
-			}
-			else {
-				// Need to read interface to determine a match...
-				if (match(ifc, metadataReaderFactory)) {
-					return true;
+				else {
+					// Need to read interface to determine a match...
+					try {
+						if (match(ifc, metadataReaderFactory)) {
+							return true;
+						}
+					}
+					catch (IOException ex) {
+						logger.debug("Could not read interface [" + ifc + "] for type-filtered class [" +
+								metadata.getClassName() + "]");
+					}
 				}
 			}
 		}

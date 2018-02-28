@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2008 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,9 @@ import org.springframework.util.Assert;
  * @author Rod Johnson
  * @author Juergen Hoeller
  * @since 02.02.2004
+ * @deprecated as of Spring Framework 4.3.6
  */
+@Deprecated
 public abstract class ControlFlowFactory {
 
 	/**
@@ -61,11 +63,12 @@ public abstract class ControlFlowFactory {
 		/**
 		 * Searches for class name match in a StackTraceElement.
 		 */
-		public boolean under(Class clazz) {
+		@Override
+		public boolean under(Class<?> clazz) {
 			Assert.notNull(clazz, "Class must not be null");
 			String className = clazz.getName();
-			for (int i = 0; i < stack.length; i++) {
-				if (this.stack[i].getClassName().equals(className)) {
+			for (StackTraceElement element : this.stack) {
+				if (element.getClassName().equals(className)) {
 					return true;
 				}
 			}
@@ -76,13 +79,14 @@ public abstract class ControlFlowFactory {
 		 * Searches for class name match plus method name match
 		 * in a StackTraceElement.
 		 */
-		public boolean under(Class clazz, String methodName) {
+		@Override
+		public boolean under(Class<?> clazz, String methodName) {
 			Assert.notNull(clazz, "Class must not be null");
 			Assert.notNull(methodName, "Method name must not be null");
 			String className = clazz.getName();
-			for (int i = 0; i < this.stack.length; i++) {
-				if (this.stack[i].getClassName().equals(className) &&
-						this.stack[i].getMethodName().equals(methodName)) {
+			for (StackTraceElement element : this.stack) {
+				if (element.getClassName().equals(className) &&
+						element.getMethodName().equals(methodName)) {
 					return true;
 				}
 			}
@@ -93,6 +97,7 @@ public abstract class ControlFlowFactory {
 		 * Leave it up to the caller to decide what matches.
 		 * Caller must understand stack trace format, so there's less abstraction.
 		 */
+		@Override
 		public boolean underToken(String token) {
 			if (token == null) {
 				return false;
@@ -100,7 +105,7 @@ public abstract class ControlFlowFactory {
 			StringWriter sw = new StringWriter();
 			new Throwable().printStackTrace(new PrintWriter(sw));
 			String stackTrace = sw.toString();
-			return stackTrace.indexOf(token) != -1;
+			return stackTrace.contains(token);
 		}
 
 		@Override

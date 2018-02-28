@@ -16,8 +16,6 @@
 
 package org.springframework.expression.spel;
 
-import org.springframework.expression.spel.SpelParseException;
-
 /**
  * Wraps a real parse exception. This exception flows to the top parse method and then
  * the wrapped exception is thrown as the real problem.
@@ -32,6 +30,7 @@ public class InternalParseException extends RuntimeException {
 		super(cause);
 	}
 
+	@Override
 	public SpelParseException getCause() {
 		return (SpelParseException) super.getCause();
 	}

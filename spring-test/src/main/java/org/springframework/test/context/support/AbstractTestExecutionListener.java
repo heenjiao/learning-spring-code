@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.springframework.test.context.support;
 
+import org.springframework.core.Ordered;
 import org.springframework.test.context.TestContext;
 import org.springframework.test.context.TestExecutionListener;
 
@@ -28,12 +29,13 @@ import org.springframework.test.context.TestExecutionListener;
  * @author Juergen Hoeller
  * @since 2.5
  */
-public abstract class AbstractTestExecutionListener implements TestExecutionListener {
+public abstract class AbstractTestExecutionListener implements TestExecutionListener, Ordered {
 
 	/**
 	 * The default implementation is <em>empty</em>. Can be overridden by
 	 * subclasses as necessary.
 	 */
+	@Override
 	public void beforeTestClass(TestContext testContext) throws Exception {
 		/* no-op */
 	}
@@ -42,6 +44,7 @@ public abstract class AbstractTestExecutionListener implements TestExecutionList
 	 * The default implementation is <em>empty</em>. Can be overridden by
 	 * subclasses as necessary.
 	 */
+	@Override
 	public void prepareTestInstance(TestContext testContext) throws Exception {
 		/* no-op */
 	}
@@ -50,6 +53,7 @@ public abstract class AbstractTestExecutionListener implements TestExecutionList
 	 * The default implementation is <em>empty</em>. Can be overridden by
 	 * subclasses as necessary.
 	 */
+	@Override
 	public void beforeTestMethod(TestContext testContext) throws Exception {
 		/* no-op */
 	}
@@ -58,6 +62,7 @@ public abstract class AbstractTestExecutionListener implements TestExecutionList
 	 * The default implementation is <em>empty</em>. Can be overridden by
 	 * subclasses as necessary.
 	 */
+	@Override
 	public void afterTestMethod(TestContext testContext) throws Exception {
 		/* no-op */
 	}
@@ -66,8 +71,21 @@ public abstract class AbstractTestExecutionListener implements TestExecutionList
 	 * The default implementation is <em>empty</em>. Can be overridden by
 	 * subclasses as necessary.
 	 */
+	@Override
 	public void afterTestClass(TestContext testContext) throws Exception {
 		/* no-op */
+	}
+
+	/**
+	 * The default implementation returns {@link Ordered#LOWEST_PRECEDENCE},
+	 * thereby ensuring that custom listeners are ordered after default
+	 * listeners supplied by the framework. Can be overridden by subclasses
+	 * as necessary.
+	 * @since 4.1
+	 */
+	@Override
+	public int getOrder() {
+		return Ordered.LOWEST_PRECEDENCE;
 	}
 
 }

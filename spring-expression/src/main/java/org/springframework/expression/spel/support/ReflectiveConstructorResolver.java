@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,25 +49,26 @@ public class ReflectiveConstructorResolver implements ConstructorResolver {
 	 * registered type converter.
 	 * </ol>
 	 */
-	public ConstructorExecutor resolve(EvaluationContext context, String typename, List<TypeDescriptor> argumentTypes)
+	@Override
+	public ConstructorExecutor resolve(EvaluationContext context, String typeName, List<TypeDescriptor> argumentTypes)
 			throws AccessException {
 
 		try {
 			TypeConverter typeConverter = context.getTypeConverter();
-			Class<?> type = context.getTypeLocator().findType(typename);
+			Class<?> type = context.getTypeLocator().findType(typeName);
 			Constructor<?>[] ctors = type.getConstructors();
 
 			Arrays.sort(ctors, new Comparator<Constructor<?>>() {
+				@Override
 				public int compare(Constructor<?> c1, Constructor<?> c2) {
 					int c1pl = c1.getParameterTypes().length;
 					int c2pl = c2.getParameterTypes().length;
-					return (new Integer(c1pl)).compareTo(c2pl);
+					return (c1pl < c2pl ? -1 : (c1pl > c2pl ? 1 : 0));
 				}
 			});
 
 			Constructor<?> closeMatch = null;
-			int[] argsToConvert = null;
-			Constructor matchRequiringConversion = null;
+			Constructor<?> matchRequiringConversion = null;
 
 			for (Constructor<?> ctor : ctors) {
 				Class<?>[] paramTypes = ctor.getParameterTypes();
@@ -91,23 +92,22 @@ public class ReflectiveConstructorResolver implements ConstructorResolver {
 				}
 				if (matchInfo != null) {
 					if (matchInfo.isExactMatch()) {
-						return new ReflectiveConstructorExecutor(ctor, null);
+						return new ReflectiveConstructorExecutor(ctor);
 					}
 					else if (matchInfo.isCloseMatch()) {
 						closeMatch = ctor;
 					}
 					else if (matchInfo.isMatchRequiringConversion()) {
-						argsToConvert = matchInfo.argsRequiringConversion;
 						matchRequiringConversion = ctor;
 					}
 				}
 			}
 
 			if (closeMatch != null) {
-				return new ReflectiveConstructorExecutor(closeMatch, null);
+				return new ReflectiveConstructorExecutor(closeMatch);
 			}
 			else if (matchRequiringConversion != null) {
-				return new ReflectiveConstructorExecutor(matchRequiringConversion, argsToConvert);
+				return new ReflectiveConstructorExecutor(matchRequiringConversion);
 			}
 			else {
 				return null;

@@ -78,9 +78,12 @@ public class DeferredResult<T> {
 
 	/**
 	 * Create a DeferredResult with a timeout value.
+	 * <p>By default not set in which case the default configured in the MVC
+	 * Java Config or the MVC namespace is used, or if that's not set, then the
+	 * timeout depends on the default of the underlying server.
 	 * @param timeout timeout value in milliseconds
 	 */
-	public DeferredResult(long timeout) {
+	public DeferredResult(Long timeout) {
 		this(timeout, RESULT_NONE);
 	}
 
@@ -106,6 +109,25 @@ public class DeferredResult<T> {
 	 */
 	public final boolean isSetOrExpired() {
 		return (this.result != RESULT_NONE || this.expired);
+	}
+
+	/**
+	 * Return {@code true} if the DeferredResult has been set.
+	 * @since 4.0
+	 */
+	public boolean hasResult() {
+		return (this.result != RESULT_NONE);
+	}
+
+	/**
+	 * Return the result, or {@code null} if the result wasn't set. Since the result
+	 * can also be {@code null}, it is recommended to use {@link #hasResult()} first
+	 * to check if there is a result prior to calling this method.
+	 * @since 4.0
+	 */
+	public Object getResult() {
+		Object resultToCheck = this.result;
+		return (resultToCheck != RESULT_NONE ? resultToCheck : null);
 	}
 
 	/**

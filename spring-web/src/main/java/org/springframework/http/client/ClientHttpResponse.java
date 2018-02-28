@@ -58,6 +58,7 @@ public interface ClientHttpResponse extends HttpInputMessage, Closeable {
 	/**
 	 * Close this response, freeing any resources created.
 	 */
+	@Override
 	void close();
 
 }

@@ -46,111 +46,148 @@ class WebMvcConfigurerComposite implements WebMvcConfigurer {
 	}
 
 
-	public void addFormatters(FormatterRegistry registry) {
-		for (WebMvcConfigurer delegate : this.delegates) {
-			delegate.addFormatters(registry);
-		}
-	}
-
-	public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
-		for (WebMvcConfigurer delegate : this.delegates) {
-			delegate.configureContentNegotiation(configurer);
-		}
-	}
-
-	public void configureAsyncSupport(AsyncSupportConfigurer configurer) {
-		for (WebMvcConfigurer delegate : this.delegates) {
-			delegate.configureAsyncSupport(configurer);
-		}
-	}
-
+	@Override
 	public void configurePathMatch(PathMatchConfigurer configurer) {
 		for (WebMvcConfigurer delegate : this.delegates) {
 			delegate.configurePathMatch(configurer);
 		}
 	}
 
-	public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
+	@Override
+	public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
 		for (WebMvcConfigurer delegate : this.delegates) {
-			delegate.configureMessageConverters(converters);
+			delegate.configureContentNegotiation(configurer);
 		}
 	}
 
-	public void addArgumentResolvers(List<HandlerMethodArgumentResolver> argumentResolvers) {
+	@Override
+	public void configureAsyncSupport(AsyncSupportConfigurer configurer) {
 		for (WebMvcConfigurer delegate : this.delegates) {
-			delegate.addArgumentResolvers(argumentResolvers);
+			delegate.configureAsyncSupport(configurer);
 		}
 	}
 
-	public void addReturnValueHandlers(List<HandlerMethodReturnValueHandler> returnValueHandlers) {
-		for (WebMvcConfigurer delegate : this.delegates) {
-			delegate.addReturnValueHandlers(returnValueHandlers);
-		}
-	}
-
-	public void configureHandlerExceptionResolvers(List<HandlerExceptionResolver> exceptionResolvers) {
-		for (WebMvcConfigurer delegate : this.delegates) {
-			delegate.configureHandlerExceptionResolvers(exceptionResolvers);
-		}
-	}
-
-	public void addInterceptors(InterceptorRegistry registry) {
-		for (WebMvcConfigurer delegate : this.delegates) {
-			delegate.addInterceptors(registry);
-		}
-	}
-
-	public void addViewControllers(ViewControllerRegistry registry) {
-		for (WebMvcConfigurer delegate : this.delegates) {
-			delegate.addViewControllers(registry);
-		}
-	}
-
-	public void addResourceHandlers(ResourceHandlerRegistry registry) {
-		for (WebMvcConfigurer delegate : this.delegates) {
-			delegate.addResourceHandlers(registry);
-		}
-	}
-
+	@Override
 	public void configureDefaultServletHandling(DefaultServletHandlerConfigurer configurer) {
 		for (WebMvcConfigurer delegate : this.delegates) {
 			delegate.configureDefaultServletHandling(configurer);
 		}
 	}
 
+	@Override
+	public void addFormatters(FormatterRegistry registry) {
+		for (WebMvcConfigurer delegate : this.delegates) {
+			delegate.addFormatters(registry);
+		}
+	}
+
+	@Override
+	public void addInterceptors(InterceptorRegistry registry) {
+		for (WebMvcConfigurer delegate : this.delegates) {
+			delegate.addInterceptors(registry);
+		}
+	}
+
+	@Override
+	public void addResourceHandlers(ResourceHandlerRegistry registry) {
+		for (WebMvcConfigurer delegate : this.delegates) {
+			delegate.addResourceHandlers(registry);
+		}
+	}
+
+	@Override
+	public void addCorsMappings(CorsRegistry registry) {
+		for (WebMvcConfigurer delegate : this.delegates) {
+			delegate.addCorsMappings(registry);
+		}
+	}
+
+	@Override
+	public void addViewControllers(ViewControllerRegistry registry) {
+		for (WebMvcConfigurer delegate : this.delegates) {
+			delegate.addViewControllers(registry);
+		}
+	}
+
+	@Override
+	public void configureViewResolvers(ViewResolverRegistry registry) {
+		for (WebMvcConfigurer delegate : this.delegates) {
+			delegate.configureViewResolvers(registry);
+		}
+	}
+
+	@Override
+	public void addArgumentResolvers(List<HandlerMethodArgumentResolver> argumentResolvers) {
+		for (WebMvcConfigurer delegate : this.delegates) {
+			delegate.addArgumentResolvers(argumentResolvers);
+		}
+	}
+
+	@Override
+	public void addReturnValueHandlers(List<HandlerMethodReturnValueHandler> returnValueHandlers) {
+		for (WebMvcConfigurer delegate : this.delegates) {
+			delegate.addReturnValueHandlers(returnValueHandlers);
+		}
+	}
+
+	@Override
+	public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
+		for (WebMvcConfigurer delegate : this.delegates) {
+			delegate.configureMessageConverters(converters);
+		}
+	}
+
+	@Override
+	public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
+		for (WebMvcConfigurer delegate : this.delegates) {
+			delegate.extendMessageConverters(converters);
+		}
+	}
+
+	@Override
+	public void configureHandlerExceptionResolvers(List<HandlerExceptionResolver> exceptionResolvers) {
+		for (WebMvcConfigurer delegate : this.delegates) {
+			delegate.configureHandlerExceptionResolvers(exceptionResolvers);
+		}
+	}
+
+	@Override
+	public void extendHandlerExceptionResolvers(List<HandlerExceptionResolver> exceptionResolvers) {
+		for (WebMvcConfigurer delegate : this.delegates) {
+			delegate.extendHandlerExceptionResolvers(exceptionResolvers);
+		}
+	}
+
+	@Override
 	public Validator getValidator() {
-		List<Validator> candidates = new ArrayList<Validator>();
+		Validator selected = null;
 		for (WebMvcConfigurer configurer : this.delegates) {
 			Validator validator = configurer.getValidator();
 			if (validator != null) {
-				candidates.add(validator);
+				if (selected != null) {
+					throw new IllegalStateException("No unique Validator found: {" +
+							selected + ", " + validator + "}");
+				}
+				selected = validator;
 			}
 		}
-		return selectSingleInstance(candidates, Validator.class);
+		return selected;
 	}
 
+	@Override
 	public MessageCodesResolver getMessageCodesResolver() {
-		List<MessageCodesResolver> candidates = new ArrayList<MessageCodesResolver>();
+		MessageCodesResolver selected = null;
 		for (WebMvcConfigurer configurer : this.delegates) {
 			MessageCodesResolver messageCodesResolver = configurer.getMessageCodesResolver();
 			if (messageCodesResolver != null) {
-				candidates.add(messageCodesResolver);
+				if (selected != null) {
+					throw new IllegalStateException("No unique MessageCodesResolver found: {" +
+							selected + ", " + messageCodesResolver + "}");
+				}
+				selected = messageCodesResolver;
 			}
 		}
-		return selectSingleInstance(candidates, MessageCodesResolver.class);
-	}
-
-	private <T> T selectSingleInstance(List<T> instances, Class<T> instanceType) {
-		if (instances.size() > 1) {
-			throw new IllegalStateException(
-					"Only one [" + instanceType + "] was expected but multiple instances were provided: " + instances);
-		}
-		else if (instances.size() == 1) {
-			return instances.get(0);
-		}
-		else {
-			return null;
-		}
+		return selected;
 	}
 
 }

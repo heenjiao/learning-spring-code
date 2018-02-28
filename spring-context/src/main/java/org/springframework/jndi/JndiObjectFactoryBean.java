@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -219,7 +219,7 @@ public class JndiObjectFactoryBean extends JndiObjectLocator
 	}
 
 	/**
-	 * Lookup variant that that returns the specified "defaultObject"
+	 * Lookup variant that returns the specified "defaultObject"
 	 * (if any) in case of lookup failure.
 	 * @return the located object, or the "defaultObject" as fallback
 	 * @throws NamingException in case of lookup failure without fallback
@@ -258,10 +258,12 @@ public class JndiObjectFactoryBean extends JndiObjectLocator
 	/**
 	 * Return the singleton JNDI object.
 	 */
+	@Override
 	public Object getObject() {
 		return this.jndiObject;
 	}
 
+	@Override
 	public Class<?> getObjectType() {
 		if (this.proxyInterfaces != null) {
 			if (this.proxyInterfaces.length == 1) {
@@ -279,6 +281,7 @@ public class JndiObjectFactoryBean extends JndiObjectLocator
 		}
 	}
 
+	@Override
 	public boolean isSingleton() {
 		return true;
 	}
@@ -353,6 +356,7 @@ public class JndiObjectFactoryBean extends JndiObjectLocator
 			this.jndiTemplate = jndiTemplate;
 		}
 
+		@Override
 		public Object invoke(MethodInvocation invocation) throws Throwable {
 			Context ctx = (isEligible(invocation.getMethod()) ? this.jndiTemplate.getContext() : null);
 			try {
@@ -364,7 +368,7 @@ public class JndiObjectFactoryBean extends JndiObjectLocator
 		}
 
 		protected boolean isEligible(Method method) {
-			return !Object.class.equals(method.getDeclaringClass());
+			return (Object.class != method.getDeclaringClass());
 		}
 	}
 

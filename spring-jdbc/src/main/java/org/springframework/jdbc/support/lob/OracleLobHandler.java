@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -111,15 +111,15 @@ public class OracleLobHandler extends AbstractLobHandler {
 
 	private Boolean releaseResourcesAfterRead = Boolean.FALSE;
 
-	private Class blobClass;
+	private Class<?> blobClass;
 
-	private Class clobClass;
+	private Class<?> clobClass;
 
-	private final Map<Class, Integer> durationSessionConstants = new HashMap<Class, Integer>(2);
+	private final Map<Class<?>, Integer> durationSessionConstants = new HashMap<Class<?>, Integer>(2);
 
-	private final Map<Class, Integer> modeReadWriteConstants = new HashMap<Class, Integer>(2);
+	private final Map<Class<?>, Integer> modeReadWriteConstants = new HashMap<Class<?>, Integer>(2);
 
-	private final Map<Class, Integer> modeReadOnlyConstants = new HashMap<Class, Integer>(2);
+	private final Map<Class<?>, Integer> modeReadOnlyConstants = new HashMap<Class<?>, Integer>(2);
 
 
 	/**
@@ -227,6 +227,7 @@ public class OracleLobHandler extends AbstractLobHandler {
 	}
 
 
+	@Override
 	public byte[] getBlobAsBytes(ResultSet rs, int columnIndex) throws SQLException {
 		logger.debug("Returning Oracle BLOB as bytes");
 		Blob blob = rs.getBlob(columnIndex);
@@ -236,6 +237,7 @@ public class OracleLobHandler extends AbstractLobHandler {
 		return retVal;
 	}
 
+	@Override
 	public InputStream getBlobAsBinaryStream(ResultSet rs, int columnIndex) throws SQLException {
 		logger.debug("Returning Oracle BLOB as binary stream");
 		Blob blob = rs.getBlob(columnIndex);
@@ -245,6 +247,7 @@ public class OracleLobHandler extends AbstractLobHandler {
 		return retVal;
 	}
 
+	@Override
 	public String getClobAsString(ResultSet rs, int columnIndex) throws SQLException {
 		logger.debug("Returning Oracle CLOB as string");
 		Clob clob = rs.getClob(columnIndex);
@@ -254,6 +257,7 @@ public class OracleLobHandler extends AbstractLobHandler {
 		return retVal;
 	}
 
+	@Override
 	public InputStream getClobAsAsciiStream(ResultSet rs, int columnIndex) throws SQLException {
 		logger.debug("Returning Oracle CLOB as ASCII stream");
 		Clob clob = rs.getClob(columnIndex);
@@ -263,6 +267,7 @@ public class OracleLobHandler extends AbstractLobHandler {
 		return retVal;
 	}
 
+	@Override
 	public Reader getClobAsCharacterStream(ResultSet rs, int columnIndex) throws SQLException {
 		logger.debug("Returning Oracle CLOB as character stream");
 		Clob clob = rs.getClob(columnIndex);
@@ -272,6 +277,7 @@ public class OracleLobHandler extends AbstractLobHandler {
 		return retVal;
 	}
 
+	@Override
 	public LobCreator getLobCreator() {
 		return new OracleLobCreator();
 	}
@@ -384,11 +390,13 @@ public class OracleLobHandler extends AbstractLobHandler {
 
 		private final List<Object> temporaryLobs = new LinkedList<Object>();
 
+		@Override
 		public void setBlobAsBytes(PreparedStatement ps, int paramIndex, final byte[] content)
 				throws SQLException {
 
 			if (content != null) {
 				Blob blob = (Blob) createLob(ps, false, new LobCallback() {
+					@Override
 					public void populateLob(Object lob) throws Exception {
 						Method methodToInvoke = lob.getClass().getMethod("getBinaryOutputStream");
 						OutputStream out = (OutputStream) methodToInvoke.invoke(lob);
@@ -406,12 +414,14 @@ public class OracleLobHandler extends AbstractLobHandler {
 			}
 		}
 
+		@Override
 		public void setBlobAsBinaryStream(
 				PreparedStatement ps, int paramIndex, final InputStream binaryStream, int contentLength)
 				throws SQLException {
 
 			if (binaryStream != null) {
 				Blob blob = (Blob) createLob(ps, false, new LobCallback() {
+					@Override
 					public void populateLob(Object lob) throws Exception {
 						Method methodToInvoke = lob.getClass().getMethod("getBinaryOutputStream", (Class[]) null);
 						OutputStream out = (OutputStream) methodToInvoke.invoke(lob, (Object[]) null);
@@ -429,11 +439,13 @@ public class OracleLobHandler extends AbstractLobHandler {
 			}
 		}
 
+		@Override
 		public void setClobAsString(PreparedStatement ps, int paramIndex, final String content)
 			throws SQLException {
 
 			if (content != null) {
 				Clob clob = (Clob) createLob(ps, true, new LobCallback() {
+					@Override
 					public void populateLob(Object lob) throws Exception {
 						Method methodToInvoke = lob.getClass().getMethod("getCharacterOutputStream", (Class[]) null);
 						Writer writer = (Writer) methodToInvoke.invoke(lob, (Object[]) null);
@@ -451,12 +463,14 @@ public class OracleLobHandler extends AbstractLobHandler {
 			}
 		}
 
+		@Override
 		public void setClobAsAsciiStream(
 				PreparedStatement ps, int paramIndex, final InputStream asciiStream, int contentLength)
 			throws SQLException {
 
 			if (asciiStream != null) {
 				Clob clob = (Clob) createLob(ps, true, new LobCallback() {
+					@Override
 					public void populateLob(Object lob) throws Exception {
 						Method methodToInvoke = lob.getClass().getMethod("getAsciiOutputStream", (Class[]) null);
 						OutputStream out = (OutputStream) methodToInvoke.invoke(lob, (Object[]) null);
@@ -474,12 +488,14 @@ public class OracleLobHandler extends AbstractLobHandler {
 			}
 		}
 
+		@Override
 		public void setClobAsCharacterStream(
 				PreparedStatement ps, int paramIndex, final Reader characterStream, int contentLength)
 			throws SQLException {
 
 			if (characterStream != null) {
 				Clob clob = (Clob) createLob(ps, true, new LobCallback() {
+					@Override
 					public void populateLob(Object lob) throws Exception {
 						Method methodToInvoke = lob.getClass().getMethod("getCharacterOutputStream", (Class[]) null);
 						Writer writer = (Writer) methodToInvoke.invoke(lob, (Object[]) null);
@@ -553,7 +569,7 @@ public class OracleLobHandler extends AbstractLobHandler {
 		/**
 		 * Create and open an oracle.sql.BLOB/CLOB instance via reflection.
 		 */
-		protected Object prepareLob(Connection con, Class lobClass) throws Exception {
+		protected Object prepareLob(Connection con, Class<?> lobClass) throws Exception {
 			/*
 			BLOB blob = BLOB.createTemporary(con, false, BLOB.DURATION_SESSION);
 			blob.open(BLOB.MODE_READWRITE);
@@ -570,9 +586,10 @@ public class OracleLobHandler extends AbstractLobHandler {
 		/**
 		 * Free all temporary BLOBs and CLOBs created by this creator.
 		 */
+		@Override
 		public void close() {
 			try {
-				for (Iterator it = this.temporaryLobs.iterator(); it.hasNext();) {
+				for (Iterator<?> it = this.temporaryLobs.iterator(); it.hasNext();) {
 					/*
 					BLOB blob = (BLOB) it.next();
 					blob.freeTemporary();
@@ -596,7 +613,7 @@ public class OracleLobHandler extends AbstractLobHandler {
 	/**
 	 * Internal callback interface for use with createLob.
 	 */
-	protected static interface LobCallback {
+	protected interface LobCallback {
 
 		/**
 		 * Populate the given BLOB or CLOB instance with content.

@@ -25,7 +25,7 @@ import org.springframework.util.Assert;
 /**
  * {@link org.springframework.beans.factory.parsing.ComponentDefinition}
  * that bridges the gap between the advisor bean definition configured
- * by the {@code &lt;aop:advisor&gt;} tag and the component definition
+ * by the {@code <aop:advisor>} tag and the component definition
  * infrastructure.
  *
  * @author Rob Harrop
@@ -91,6 +91,7 @@ public class AdvisorComponentDefinition extends AbstractComponentDefinition {
 	}
 
 
+	@Override
 	public String getName() {
 		return this.advisorBeanName;
 	}
@@ -110,6 +111,7 @@ public class AdvisorComponentDefinition extends AbstractComponentDefinition {
 		return this.beanReferences;
 	}
 
+	@Override
 	public Object getSource() {
 		return this.advisorDefinition.getSource();
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,8 @@
 
 package org.springframework.orm.jpa;
 
-import java.util.List;
 import java.lang.reflect.Proxy;
-
+import java.util.List;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
@@ -27,8 +26,8 @@ import javax.persistence.TransactionRequiredException;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.support.PersistenceExceptionTranslator;
 import org.springframework.orm.jpa.domain.Person;
-import org.springframework.test.annotation.ExpectedException;
-import org.springframework.test.annotation.NotTransactional;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Integration tests using in-memory database for container-managed JPA
@@ -36,14 +35,15 @@ import org.springframework.test.annotation.NotTransactional;
  * @author Rod Johnson
  * @since 2.0
  */
+@SuppressWarnings("deprecation")
 public class ContainerManagedEntityManagerIntegrationTests extends AbstractEntityManagerFactoryIntegrationTests {
 
-	@NotTransactional
+	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	public void testExceptionTranslationWithDialectFoundOnIntroducedEntityManagerInfo() throws Exception {
 		doTestExceptionTranslationWithDialectFound(((EntityManagerFactoryInfo) entityManagerFactory).getJpaDialect());
 	}
 
-	@NotTransactional
+	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	public void testExceptionTranslationWithDialectFoundOnEntityManagerFactoryBean() throws Exception {
 		AbstractEntityManagerFactoryBean aefb =
 				(AbstractEntityManagerFactoryBean) applicationContext.getBean("&entityManagerFactory");
@@ -60,6 +60,7 @@ public class ContainerManagedEntityManagerIntegrationTests extends AbstractEntit
 		assertSame(in2, dex.getCause());
 	}
 
+	@SuppressWarnings("unchecked")
 	public void testEntityManagerProxyIsProxy() {
 		EntityManager em = createContainerManagedEntityManager();
 		assertTrue(Proxy.isProxyClass(em.getClass()));
@@ -79,9 +80,14 @@ public class ContainerManagedEntityManagerIntegrationTests extends AbstractEntit
 	}
 
 	// This would be legal, at least if not actually _starting_ a tx
-	@ExpectedException(IllegalStateException.class)
 	public void testEntityManagerProxyRejectsProgrammaticTxManagement() {
-		createContainerManagedEntityManager().getTransaction();
+		try {
+			createContainerManagedEntityManager().getTransaction();
+			fail("Should have thrown an IllegalStateException");
+		}
+		catch (IllegalStateException e) {
+			/* expected */
+		}
 	}
 
 	/*
@@ -92,10 +98,15 @@ public class ContainerManagedEntityManagerIntegrationTests extends AbstractEntit
 		createContainerManagedEntityManager().joinTransaction();
 	}
 
-	@NotTransactional
-	@ExpectedException(TransactionRequiredException.class)
+	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	public void testContainerEntityManagerProxyRejectsJoinTransactionWithoutTransaction() {
-		createContainerManagedEntityManager().joinTransaction();
+		try {
+			createContainerManagedEntityManager().joinTransaction();
+			fail("Should have thrown a TransactionRequiredException");
+		}
+		catch (TransactionRequiredException e) {
+			/* expected */
+		}
 	}
 
 	public void testInstantiateAndSave() {
@@ -104,8 +115,7 @@ public class ContainerManagedEntityManagerIntegrationTests extends AbstractEntit
 	}
 
 	public void doInstantiateAndSave(EntityManager em) {
-		assertEquals("Should be no people from previous transactions",
-				0, countRowsInTable("person"));
+		assertEquals("Should be no people from previous transactions", 0, countRowsInTable(em, "person"));
 		Person p = new Person();
 
 		p.setFirstName("Tony");
@@ -113,7 +123,7 @@ public class ContainerManagedEntityManagerIntegrationTests extends AbstractEntit
 		em.persist(p);
 
 		em.flush();
-		assertEquals("1 row must have been inserted", 1, countRowsInTable("person"));
+		assertEquals("1 row must have been inserted", 1, countRowsInTable(em, "person"));
 	}
 
 	public void testReuseInNewTransaction() {
@@ -131,19 +141,17 @@ public class ContainerManagedEntityManagerIntegrationTests extends AbstractEntit
 		doInstantiateAndSave(em);
 		setComplete();
 		endTransaction();	// Should rollback
-		assertEquals("Tx must have committed back",
-				1, countRowsInTable("person"));
+		assertEquals("Tx must have committed back", 1, countRowsInTable(em, "person"));
 
 		// Now clean up the database
-		deleteFromTables(new String[] { "person" });
+		deleteFromTables("person");
 	}
 
 	public void testRollbackOccurs() {
 		EntityManager em = createContainerManagedEntityManager();
 		doInstantiateAndSave(em);
 		endTransaction();	// Should rollback
-		assertEquals("Tx must have been rolled back",
-				0, countRowsInTable("person"));
+		assertEquals("Tx must have been rolled back", 0, countRowsInTable(em, "person"));
 	}
 
 	public void testCommitOccurs() {
@@ -151,26 +159,10 @@ public class ContainerManagedEntityManagerIntegrationTests extends AbstractEntit
 		doInstantiateAndSave(em);
 		setComplete();
 		endTransaction();	// Should rollback
-		assertEquals("Tx must have committed back",
-				1, countRowsInTable("person"));
+		assertEquals("Tx must have committed back", 1, countRowsInTable(em, "person"));
 
 		// Now clean up the database
-		deleteFromTables(new String[] { "person" });
+		deleteFromTables("person");
 	}
-
-	/*
-	 * TODO: This displays incorrect behavior in TopLink because of its EJBQLException -
-	 * which is not a subclass of PersistenceException but rather of TopLinkException!
-	public void testEntityManagerProxyException() {
-		EntityManager em = entityManagerFactory.createEntityManager();
-		try {
-			em.createQuery("select p from Person p where p.o=0").getResultList();
-			fail("Semantic nonsense should be rejected");
-		}
-		catch (PersistenceException ex) {
-			// expected
-		}
-	}
-	*/
 
 }

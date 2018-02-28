@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,15 @@
 
 package org.springframework.orm.jpa.hibernate;
 
-import java.util.List;
+import javax.persistence.EntityManager;
 
-import org.hibernate.Query;
-import org.hibernate.SessionFactory;
 import org.hibernate.ejb.HibernateEntityManager;
 import org.hibernate.ejb.HibernateEntityManagerFactory;
+
+import org.springframework.aop.framework.ProxyFactory;
+import org.springframework.aop.target.SingletonTargetSource;
 import org.springframework.orm.jpa.AbstractContainerEntityManagerFactoryIntegrationTests;
 import org.springframework.orm.jpa.EntityManagerFactoryInfo;
-import org.springframework.orm.jpa.domain.Person;
-import org.springframework.test.annotation.IfProfileValue;
 
 /**
  * Hibernate-specific JPA tests.
@@ -33,23 +32,14 @@ import org.springframework.test.annotation.IfProfileValue;
  * @author Juergen Hoeller
  * @author Rod Johnson
  */
-// Essentially @Ignore-d since AnnotationBeanConfigurerAspect cannot be found
-@IfProfileValue(name="test-group", value="broken")
+@SuppressWarnings("deprecation")
 public class HibernateEntityManagerFactoryIntegrationTests extends
 		AbstractContainerEntityManagerFactoryIntegrationTests {
 
-	private SessionFactory sessionFactory;
-
-
-	public void setSessionFactory(SessionFactory sessionFactory) {
-		this.sessionFactory = sessionFactory;
-	}
-
 	@Override
-	protected String[] getConfigLocations() {
+	protected String[] getConfigPaths() {
 		return HIBERNATE_CONFIG_LOCATIONS;
 	}
-
 
 	public void testCanCastNativeEntityManagerFactoryToHibernateEntityManagerFactoryImpl() {
 		EntityManagerFactoryInfo emfi = (EntityManagerFactoryInfo) entityManagerFactory;
@@ -62,22 +52,14 @@ public class HibernateEntityManagerFactoryIntegrationTests extends
 		assertNotNull(hibernateEntityManager.getSession());
 	}
 
-	public void testWithHibernateSessionFactory() {
-		// Add with JDBC
-		String firstName = "Tony";
-		insertPerson(firstName);
-
-		Query q = this.sessionFactory.getCurrentSession().createQuery("select p from Person as p");
-		List<Person> people = q.list();
-
-		assertEquals(1, people.size());
-		assertEquals(firstName, people.get(0).getFirstName());
-	}
-
-	public void testConfigurablePerson() {
-		Query q = this.sessionFactory.getCurrentSession().createQuery("select p from ContextualPerson as p");
-		assertEquals(0, q.list().size());
-		//assertNotNull(new ContextualPerson().entityManager);  TODO
+	public void testCanUnwrapAopProxy() {
+		EntityManager em = entityManagerFactory.createEntityManager();
+		EntityManager proxy = ProxyFactory.getProxy(EntityManager.class, new SingletonTargetSource(em));
+		assertTrue(em instanceof HibernateEntityManager);
+		assertFalse(proxy instanceof HibernateEntityManager);
+		assertTrue(proxy.unwrap(HibernateEntityManager.class) instanceof HibernateEntityManager);
+		assertSame(em, proxy.unwrap(HibernateEntityManager.class));
+		assertSame(em.getDelegate(), proxy.getDelegate());
 	}
 
 }

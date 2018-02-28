@@ -59,6 +59,7 @@ public abstract class AbstractMBeanInfoAssembler implements MBeanInfoAssembler {
 	 * @see #getNotificationInfo(Object, String)
 	 * @see #populateMBeanDescriptor(javax.management.Descriptor, Object, String)
 	 */
+	@Override
 	public ModelMBeanInfo getMBeanInfo(Object managedBean, String beanKey) throws JMException {
 		checkManagedBean(managedBean);
 		ModelMBeanInfo info = new ModelMBeanInfoSupport(
@@ -90,7 +91,7 @@ public abstract class AbstractMBeanInfoAssembler implements MBeanInfoAssembler {
 	 * @return the bean class to expose
 	 * @see org.springframework.aop.support.AopUtils#getTargetClass(Object)
 	 */
-	protected Class getTargetClass(Object managedBean) {
+	protected Class<?> getTargetClass(Object managedBean) {
 		return AopUtils.getTargetClass(managedBean);
 	}
 

@@ -22,6 +22,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -33,6 +34,8 @@ import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.NotWritablePropertyException;
 import org.springframework.beans.PropertyAccessorFactory;
 import org.springframework.beans.TypeMismatchException;
+import org.springframework.core.convert.ConversionService;
+import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.dao.DataRetrievalFailureException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.jdbc.support.JdbcUtils;
@@ -84,6 +87,9 @@ public class BeanPropertyRowMapper<T> implements RowMapper<T> {
 	/** Whether we're defaulting primitives when mapping a null value */
 	private boolean primitivesDefaultedForNullValue = false;
 
+	/** ConversionService for binding JDBC values to bean properties */
+	private ConversionService conversionService = DefaultConversionService.getSharedInstance();
+
 	/** Map of the fields we provide mapping for */
 	private Map<String, PropertyDescriptor> mappedFields;
 
@@ -130,7 +136,7 @@ public class BeanPropertyRowMapper<T> implements RowMapper<T> {
 			initialize(mappedClass);
 		}
 		else {
-			if (!this.mappedClass.equals(mappedClass)) {
+			if (this.mappedClass != mappedClass) {
 				throw new InvalidDataAccessApiUsageException("The mapped class can not be reassigned to map to " +
 						mappedClass + " since it is already providing mapping for " + this.mappedClass);
 			}
@@ -178,6 +184,27 @@ public class BeanPropertyRowMapper<T> implements RowMapper<T> {
 		return this.primitivesDefaultedForNullValue;
 	}
 
+	/**
+	 * Set a {@link ConversionService} for binding JDBC values to bean properties,
+	 * or {@code null} for none.
+	 * <p>Default is a {@link DefaultConversionService}, as of Spring 4.3. This
+	 * provides support for {@code java.time} conversion and other special types.
+	 * @since 4.3
+	 * @see #initBeanWrapper(BeanWrapper)
+	 */
+	public void setConversionService(ConversionService conversionService) {
+		this.conversionService = conversionService;
+	}
+
+	/**
+	 * Return a {@link ConversionService} for binding JDBC values to bean properties,
+	 * or {@code null} if none.
+	 * @since 4.3
+	 */
+	public ConversionService getConversionService() {
+		return this.conversionService;
+	}
+
 
 	/**
 	 * Initialize the mapping metadata for the given class.
@@ -190,9 +217,9 @@ public class BeanPropertyRowMapper<T> implements RowMapper<T> {
 		PropertyDescriptor[] pds = BeanUtils.getPropertyDescriptors(mappedClass);
 		for (PropertyDescriptor pd : pds) {
 			if (pd.getWriteMethod() != null) {
-				this.mappedFields.put(pd.getName().toLowerCase(), pd);
+				this.mappedFields.put(lowerCaseName(pd.getName()), pd);
 				String underscoredName = underscoreName(pd.getName());
-				if (!pd.getName().toLowerCase().equals(underscoredName)) {
+				if (!lowerCaseName(pd.getName()).equals(underscoredName)) {
 					this.mappedFields.put(underscoredName, pd);
 				}
 				this.mappedProperties.add(pd.getName());
@@ -205,16 +232,18 @@ public class BeanPropertyRowMapper<T> implements RowMapper<T> {
 	 * Any upper case letters are converted to lower case with a preceding underscore.
 	 * @param name the original name
 	 * @return the converted name
+	 * @since 4.2
+	 * @see #lowerCaseName
 	 */
-	private String underscoreName(String name) {
+	protected String underscoreName(String name) {
 		if (!StringUtils.hasLength(name)) {
 			return "";
 		}
 		StringBuilder result = new StringBuilder();
-		result.append(name.substring(0, 1).toLowerCase());
+		result.append(lowerCaseName(name.substring(0, 1)));
 		for (int i = 1; i < name.length(); i++) {
 			String s = name.substring(i, i + 1);
-			String slc = s.toLowerCase();
+			String slc = lowerCaseName(s);
 			if (!s.equals(slc)) {
 				result.append("_").append(slc);
 			}
@@ -225,15 +254,27 @@ public class BeanPropertyRowMapper<T> implements RowMapper<T> {
 		return result.toString();
 	}
 
+	/**
+	 * Convert the given name to lower case.
+	 * By default, conversions will happen within the US locale.
+	 * @param name the original name
+	 * @return the converted name
+	 * @since 4.2
+	 */
+	protected String lowerCaseName(String name) {
+		return name.toLowerCase(Locale.US);
+	}
+
 
 	/**
 	 * Extract the values for all columns in the current row.
 	 * <p>Utilizes public setters and result set metadata.
 	 * @see java.sql.ResultSetMetaData
 	 */
+	@Override
 	public T mapRow(ResultSet rs, int rowNumber) throws SQLException {
 		Assert.state(this.mappedClass != null, "Mapped class was not specified");
-		T mappedObject = BeanUtils.instantiate(this.mappedClass);
+		T mappedObject = BeanUtils.instantiateClass(this.mappedClass);
 		BeanWrapper bw = PropertyAccessorFactory.forBeanPropertyAccess(mappedObject);
 		initBeanWrapper(bw);
 
@@ -243,14 +284,14 @@ public class BeanPropertyRowMapper<T> implements RowMapper<T> {
 
 		for (int index = 1; index <= columnCount; index++) {
 			String column = JdbcUtils.lookupColumnName(rsmd, index);
-			String field = column.replaceAll(" ", "").toLowerCase();
+			String field = lowerCaseName(column.replaceAll(" ", ""));
 			PropertyDescriptor pd = this.mappedFields.get(field);
 			if (pd != null) {
 				try {
 					Object value = getColumnValue(rs, index, pd);
 					if (rowNumber == 0 && logger.isDebugEnabled()) {
 						logger.debug("Mapping column '" + column + "' to property '" + pd.getName() +
-								"' of type [" + ClassUtils.getQualifiedName(pd.getPropertyType()) + "]");
+								"' of type '" + ClassUtils.getQualifiedName(pd.getPropertyType()) + "'");
 					}
 					try {
 						bw.setPropertyValue(pd.getName(), value);
@@ -260,9 +301,9 @@ public class BeanPropertyRowMapper<T> implements RowMapper<T> {
 							if (logger.isDebugEnabled()) {
 								logger.debug("Intercepted TypeMismatchException for row " + rowNumber +
 										" and column '" + column + "' with null value when setting property '" +
-										pd.getName() + "' of type [" +
+										pd.getName() + "' of type '" +
 										ClassUtils.getQualifiedName(pd.getPropertyType()) +
-										"] on object: " + mappedObject, ex);
+										"' on object: " + mappedObject, ex);
 							}
 						}
 						else {
@@ -298,10 +339,17 @@ public class BeanPropertyRowMapper<T> implements RowMapper<T> {
 	/**
 	 * Initialize the given BeanWrapper to be used for row mapping.
 	 * To be called for each row.
-	 * <p>The default implementation is empty. Can be overridden in subclasses.
+	 * <p>The default implementation applies the configured {@link ConversionService},
+	 * if any. Can be overridden in subclasses.
 	 * @param bw the BeanWrapper to initialize
+	 * @see #getConversionService()
+	 * @see BeanWrapper#setConversionService
 	 */
 	protected void initBeanWrapper(BeanWrapper bw) {
+		ConversionService cs = getConversionService();
+		if (cs != null) {
+			bw.setConversionService(cs);
+		}
 	}
 
 	/**
@@ -329,9 +377,7 @@ public class BeanPropertyRowMapper<T> implements RowMapper<T> {
 	 * @param mappedClass the class that each row should be mapped to
 	 */
 	public static <T> BeanPropertyRowMapper<T> newInstance(Class<T> mappedClass) {
-		BeanPropertyRowMapper<T> newInstance = new BeanPropertyRowMapper<T>();
-		newInstance.setMappedClass(mappedClass);
-		return newInstance;
+		return new BeanPropertyRowMapper<T>(mappedClass);
 	}
 
 }

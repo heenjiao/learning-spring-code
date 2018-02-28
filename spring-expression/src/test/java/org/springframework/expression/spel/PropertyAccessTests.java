@@ -16,16 +16,11 @@
 
 package org.springframework.expression.spel;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.Test;
+
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.expression.AccessException;
 import org.springframework.expression.EvaluationContext;
@@ -37,6 +32,8 @@ import org.springframework.expression.spel.standard.SpelExpression;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
+import static org.junit.Assert.*;
+
 ///CLOVER:OFF
 
 /**
@@ -44,7 +41,7 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
  *
  * @author Andy Clement
  */
-public class PropertyAccessTests extends ExpressionTestCase {
+public class PropertyAccessTests extends AbstractExpressionTests {
 
 	@Test
 	public void testSimpleAccess01() {
@@ -81,15 +78,17 @@ public class PropertyAccessTests extends ExpressionTestCase {
 		try {
 			expr.getValue(context);
 			fail("Should have failed - default property resolver cannot resolve on null");
-		} catch (Exception e) {
-			checkException(e,SpelMessage.PROPERTY_OR_FIELD_NOT_READABLE_ON_NULL);
+		}
+		catch (Exception ex) {
+			checkException(ex, SpelMessage.PROPERTY_OR_FIELD_NOT_READABLE_ON_NULL);
 		}
 		assertFalse(expr.isWritable(context));
 		try {
 			expr.setValue(context,"abc");
 			fail("Should have failed - default property resolver cannot resolve on null");
-		} catch (Exception e) {
-			checkException(e,SpelMessage.PROPERTY_OR_FIELD_NOT_WRITABLE_ON_NULL);
+		}
+		catch (Exception ex) {
+			checkException(ex, SpelMessage.PROPERTY_OR_FIELD_NOT_WRITABLE_ON_NULL);
 		}
 	}
 
@@ -97,7 +96,8 @@ public class PropertyAccessTests extends ExpressionTestCase {
 		if (e instanceof SpelEvaluationException) {
 			SpelMessage sm = ((SpelEvaluationException)e).getMessageCode();
 			assertEquals("Expected exception type did not occur",expectedMessage,sm);
-		} else {
+		}
+		else {
 			fail("Should be a SpelException "+e);
 		}
 	}
@@ -130,7 +130,8 @@ public class PropertyAccessTests extends ExpressionTestCase {
 		try {
 			expr.setValue(ctx, "not allowed");
 			fail("Should not have been allowed");
-		} catch (EvaluationException e) {
+		}
+		catch (EvaluationException ex) {
 			// success - message will be: EL1063E:(pos 20): A problem occurred whilst attempting to set the property
 			// 'flibbles': 'Cannot set flibbles to an object of type 'class java.lang.String''
 			// System.out.println(e.getMessage());
@@ -174,38 +175,42 @@ public class PropertyAccessTests extends ExpressionTestCase {
 
 		@Override
 		public Class<?>[] getSpecificTargetClasses() {
-			return new Class[] { String.class };
+			return new Class[] {String.class};
 		}
 
 		@Override
 		public boolean canRead(EvaluationContext context, Object target, String name) throws AccessException {
-			if (!(target instanceof String))
+			if (!(target instanceof String)) {
 				throw new RuntimeException("Assertion Failed! target should be String");
+			}
 			return (name.equals("flibbles"));
 		}
 
 		@Override
 		public boolean canWrite(EvaluationContext context, Object target, String name) throws AccessException {
-			if (!(target instanceof String))
+			if (!(target instanceof String)) {
 				throw new RuntimeException("Assertion Failed! target should be String");
+			}
 			return (name.equals("flibbles"));
 		}
 
 		@Override
 		public TypedValue read(EvaluationContext context, Object target, String name) throws AccessException {
-			if (!name.equals("flibbles"))
+			if (!name.equals("flibbles")) {
 				throw new RuntimeException("Assertion Failed! name should be flibbles");
+			}
 			return new TypedValue(flibbles);
 		}
 
 		@Override
-		public void write(EvaluationContext context, Object target, String name, Object newValue)
-				throws AccessException {
-			if (!name.equals("flibbles"))
+		public void write(EvaluationContext context, Object target, String name, Object newValue) throws AccessException {
+			if (!name.equals("flibbles")) {
 				throw new RuntimeException("Assertion Failed! name should be flibbles");
+			}
 			try {
 				flibbles = (Integer) context.getTypeConverter().convertValue(newValue, TypeDescriptor.forObject(newValue), TypeDescriptor.valueOf(Integer.class));
-			}catch (EvaluationException e) {
+			}
+			catch (EvaluationException ex) {
 				throw new AccessException("Cannot set flibbles to an object of type '" + newValue.getClass() + "'");
 			}
 		}

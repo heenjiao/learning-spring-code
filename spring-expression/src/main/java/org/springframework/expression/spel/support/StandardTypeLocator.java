@@ -94,6 +94,7 @@ public class StandardTypeLocator implements TypeLocator {
 	 * @return the class object for the type
 	 * @throws EvaluationException if the type cannot be found
 	 */
+	@Override
 	public Class<?> findType(String typeName) throws EvaluationException {
 		String nameToLookup = typeName;
 		try {
@@ -104,7 +105,7 @@ public class StandardTypeLocator implements TypeLocator {
 		}
 		for (String prefix : this.knownPackagePrefixes) {
 			try {
-				nameToLookup = prefix + "." + typeName;
+				nameToLookup = prefix + '.' + typeName;
 				return ClassUtils.forName(nameToLookup, this.classLoader);
 			}
 			catch (ClassNotFoundException ex) {

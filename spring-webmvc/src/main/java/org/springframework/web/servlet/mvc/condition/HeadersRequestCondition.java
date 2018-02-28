@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.cors.CorsUtils;
 
 /**
  * A logical conjunction (' && ') request condition that matches a request against
@@ -37,6 +38,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
  * @since 3.1
  */
 public final class HeadersRequestCondition extends AbstractRequestCondition<HeadersRequestCondition> {
+
+	private final static HeadersRequestCondition PRE_FLIGHT_MATCH = new HeadersRequestCondition();
+
 
 	private final Set<HeaderExpression> expressions;
 
@@ -92,6 +96,7 @@ public final class HeadersRequestCondition extends AbstractRequestCondition<Head
 	 * Returns a new instance with the union of the header expressions
 	 * from "this" and the "other" instance.
 	 */
+	@Override
 	public HeadersRequestCondition combine(HeadersRequestCondition other) {
 		Set<HeaderExpression> set = new LinkedHashSet<HeaderExpression>(this.expressions);
 		set.addAll(other.expressions);
@@ -102,7 +107,11 @@ public final class HeadersRequestCondition extends AbstractRequestCondition<Head
 	 * Returns "this" instance if the request matches all expressions;
 	 * or {@code null} otherwise.
 	 */
+	@Override
 	public HeadersRequestCondition getMatchingCondition(HttpServletRequest request) {
+		if (CorsUtils.isPreFlightRequest(request)) {
+			return PRE_FLIGHT_MATCH;
+		}
 		for (HeaderExpression expression : expressions) {
 			if (!expression.match(request)) {
 				return null;
@@ -122,6 +131,7 @@ public final class HeadersRequestCondition extends AbstractRequestCondition<Head
 	 * {@link #getMatchingCondition(HttpServletRequest)} and each instance
 	 * contains the matching header expression only or is otherwise empty.
 	 */
+	@Override
 	public int compareTo(HeadersRequestCondition other, HttpServletRequest request) {
 		return other.expressions.size() - this.expressions.size();
 	}
@@ -137,6 +147,11 @@ public final class HeadersRequestCondition extends AbstractRequestCondition<Head
 		}
 
 		@Override
+		protected boolean isCaseSensitiveName() {
+			return false;
+		}
+
+		@Override
 		protected String parseValue(String valueExpression) {
 			return valueExpression;
 		}
@@ -149,14 +164,6 @@ public final class HeadersRequestCondition extends AbstractRequestCondition<Head
 		@Override
 		protected boolean matchValue(HttpServletRequest request) {
 			return value.equals(request.getHeader(name));
-		}
-
-		@Override
-		public int hashCode() {
-			int result = name.toLowerCase().hashCode();
-			result = 31 * result + (value != null ? value.hashCode() : 0);
-			result = 31 * result + (isNegated ? 1 : 0);
-			return result;
 		}
 	}
 

@@ -235,6 +235,26 @@ public interface SqlRowSet extends Serializable {
 
 	/**
 	 * Retrieve the value of the indicated column in the current row
+	 * as a String (for NCHAR, NVARCHAR, LONGNVARCHAR columns).
+	 * @param columnIndex the column index
+	 * @return a String representing the column value
+	 * @see java.sql.ResultSet#getNString(int)
+	 * @since 4.1.3
+	 */
+	String getNString(int columnIndex) throws InvalidResultSetAccessException;
+
+	/**
+	 * Retrieve the value of the indicated column in the current row
+	 * as a String (for NCHAR, NVARCHAR, LONGNVARCHAR columns).
+	 * @param columnLabel the column label
+	 * @return a String representing the column value
+	 * @see java.sql.ResultSet#getNString(String)
+	 * @since 4.1.3
+	 */
+	String getNString(String columnLabel) throws InvalidResultSetAccessException;
+
+	/**
+	 * Retrieve the value of the indicated column in the current row
 	 * as an Object.
 	 * @param columnIndex the column index
 	 * @return a Object representing the column value
@@ -270,6 +290,28 @@ public interface SqlRowSet extends Serializable {
 	 * @see java.sql.ResultSet#getObject(String, Map)
 	 */
 	Object getObject(String columnLabel,  Map<String, Class<?>> map) throws InvalidResultSetAccessException;
+
+	/**
+	 * Retrieve the value of the indicated column in the current row
+	 * as an Object.
+	 * @param columnIndex the column index
+	 * @param type the Java type to convert the designated column to
+	 * @return a Object representing the column value
+	 * @see java.sql.ResultSet#getObject(int)
+	 * @since 4.1.3
+	 */
+	<T> T getObject(int columnIndex, Class<T> type) throws InvalidResultSetAccessException;
+
+	/**
+	 * Retrieve the value of the indicated column in the current row
+	 * as an Object.
+	 * @param columnLabel the column label
+	 * @param type the Java type to convert the designated column to
+	 * @return a Object representing the column value
+	 * @see java.sql.ResultSet#getObject(int)
+	 * @since 4.1.3
+	 */
+	<T> T getObject(String columnLabel, Class<T> type) throws InvalidResultSetAccessException;
 
 	/**
 	 * Retrieve the value of the indicated column in the current row

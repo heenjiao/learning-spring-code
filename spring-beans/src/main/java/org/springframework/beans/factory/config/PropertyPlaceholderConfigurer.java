@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2015 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -253,9 +253,13 @@ public class PropertyPlaceholderConfigurer extends PlaceholderConfigurerSupport 
 			this.resolver = new PropertyPlaceholderConfigurerResolver(props);
 		}
 
+		@Override
 		public String resolveStringValue(String strVal) throws BeansException {
-			String value = this.helper.replacePlaceholders(strVal, this.resolver);
-			return (value.equals(nullValue) ? null : value);
+			String resolved = this.helper.replacePlaceholders(strVal, this.resolver);
+			if (trimValues) {
+				resolved = resolved.trim();
+			}
+			return (resolved.equals(nullValue) ? null : resolved);
 		}
 	}
 
@@ -268,6 +272,7 @@ public class PropertyPlaceholderConfigurer extends PlaceholderConfigurerSupport 
 			this.props = props;
 		}
 
+		@Override
 		public String resolvePlaceholder(String placeholderName) {
 			return PropertyPlaceholderConfigurer.this.resolvePlaceholder(placeholderName, props, systemPropertiesMode);
 		}

@@ -49,14 +49,17 @@ final class MapToMapConverter implements ConditionalGenericConverter {
 	}
 
 
+	@Override
 	public Set<ConvertiblePair> getConvertibleTypes() {
 		return Collections.singleton(new ConvertiblePair(Map.class, Map.class));
 	}
 
+	@Override
 	public boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {
 		return canConvertKey(sourceType, targetType) && canConvertValue(sourceType, targetType);
 	}
 
+	@Override
 	@SuppressWarnings("unchecked")
 	public Object convert(Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
 		if (source == null) {
@@ -87,7 +90,9 @@ final class MapToMapConverter implements ConditionalGenericConverter {
 			return sourceMap;
 		}
 
-		Map<Object, Object> targetMap = CollectionFactory.createMap(targetType.getType(), sourceMap.size());
+		Map<Object, Object> targetMap = CollectionFactory.createMap(targetType.getType(),
+				(keyDesc != null ? keyDesc.getType() : null), sourceMap.size());
+
 		for (MapEntry entry : targetEntries) {
 			entry.addToMap(targetMap);
 		}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,8 +35,6 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.servlet.jsp.JspWriter;
 import javax.servlet.jsp.PageContext;
-import javax.servlet.jsp.el.ExpressionEvaluator;
-import javax.servlet.jsp.el.VariableResolver;
 
 import org.springframework.util.Assert;
 
@@ -47,13 +45,12 @@ import org.springframework.util.Assert;
  * applications when testing custom JSP tags.
  *
  * <p>Note: Expects initialization via the constructor rather than via the
- * {@code PageContext.initialize} method. Does not support writing to
- * a JspWriter, request dispatching, and {@code handlePageException} calls.
+ * {@code PageContext.initialize} method. Does not support writing to a
+ * JspWriter, request dispatching, or {@code handlePageException} calls.
  *
  * @author Juergen Hoeller
  * @since 1.0.2
  */
-@SuppressWarnings("deprecation")
 public class MockPageContext extends PageContext {
 
 	private final ServletContext servletContext;
@@ -127,6 +124,7 @@ public class MockPageContext extends PageContext {
 	}
 
 
+	@Override
 	public void initialize(
 			Servlet servlet, ServletRequest request, ServletResponse response,
 			String errorPageURL, boolean needsSession, int bufferSize, boolean autoFlush) {
@@ -134,9 +132,11 @@ public class MockPageContext extends PageContext {
 		throw new UnsupportedOperationException("Use appropriate constructor");
 	}
 
+	@Override
 	public void release() {
 	}
 
+	@Override
 	public void setAttribute(String name, Object value) {
 		Assert.notNull(name, "Attribute name must not be null");
 		if (value != null) {
@@ -147,6 +147,7 @@ public class MockPageContext extends PageContext {
 		}
 	}
 
+	@Override
 	public void setAttribute(String name, Object value, int scope) {
 		Assert.notNull(name, "Attribute name must not be null");
 		switch (scope) {
@@ -167,11 +168,13 @@ public class MockPageContext extends PageContext {
 		}
 	}
 
+	@Override
 	public Object getAttribute(String name) {
 		Assert.notNull(name, "Attribute name must not be null");
 		return this.attributes.get(name);
 	}
 
+	@Override
 	public Object getAttribute(String name, int scope) {
 		Assert.notNull(name, "Attribute name must not be null");
 		switch (scope) {
@@ -189,6 +192,7 @@ public class MockPageContext extends PageContext {
 		}
 	}
 
+	@Override
 	public Object findAttribute(String name) {
 		Object value = getAttribute(name);
 		if (value == null) {
@@ -203,6 +207,7 @@ public class MockPageContext extends PageContext {
 		return value;
 	}
 
+	@Override
 	public void removeAttribute(String name) {
 		Assert.notNull(name, "Attribute name must not be null");
 		this.removeAttribute(name, PageContext.PAGE_SCOPE);
@@ -211,6 +216,7 @@ public class MockPageContext extends PageContext {
 		this.removeAttribute(name, PageContext.APPLICATION_SCOPE);
 	}
 
+	@Override
 	public void removeAttribute(String name, int scope) {
 		Assert.notNull(name, "Attribute name must not be null");
 		switch (scope) {
@@ -231,6 +237,7 @@ public class MockPageContext extends PageContext {
 		}
 	}
 
+	@Override
 	public int getAttributesScope(String name) {
 		if (getAttribute(name) != null) {
 			return PAGE_SCOPE;
@@ -253,7 +260,7 @@ public class MockPageContext extends PageContext {
 		return Collections.enumeration(new LinkedHashSet<String>(this.attributes.keySet()));
 	}
 
-	@SuppressWarnings("unchecked")
+	@Override
 	public Enumeration<String> getAttributeNamesInScope(int scope) {
 		switch (scope) {
 			case PAGE_SCOPE:
@@ -270,6 +277,7 @@ public class MockPageContext extends PageContext {
 		}
 	}
 
+	@Override
 	public JspWriter getOut() {
 		if (this.out == null) {
 			this.out = new MockJspWriter(this.response);
@@ -277,54 +285,69 @@ public class MockPageContext extends PageContext {
 		return this.out;
 	}
 
-	public ExpressionEvaluator getExpressionEvaluator() {
+	@Override
+	@Deprecated
+	public javax.servlet.jsp.el.ExpressionEvaluator getExpressionEvaluator() {
 		return new MockExpressionEvaluator(this);
 	}
 
+	@Override
 	public ELContext getELContext() {
 		return null;
 	}
 
-	public VariableResolver getVariableResolver() {
+	@Override
+	@Deprecated
+	public javax.servlet.jsp.el.VariableResolver getVariableResolver() {
 		return null;
 	}
 
+	@Override
 	public HttpSession getSession() {
 		return this.request.getSession();
 	}
 
+	@Override
 	public Object getPage() {
 		return this;
 	}
 
+	@Override
 	public ServletRequest getRequest() {
 		return this.request;
 	}
 
+	@Override
 	public ServletResponse getResponse() {
 		return this.response;
 	}
 
+	@Override
 	public Exception getException() {
 		return null;
 	}
 
+	@Override
 	public ServletConfig getServletConfig() {
 		return this.servletConfig;
 	}
 
+	@Override
 	public ServletContext getServletContext() {
 		return this.servletContext;
 	}
 
+	@Override
 	public void forward(String path) throws ServletException, IOException {
 		this.request.getRequestDispatcher(path).forward(this.request, this.response);
 	}
 
+	@Override
 	public void include(String path) throws ServletException, IOException {
 		this.request.getRequestDispatcher(path).include(this.request, this.response);
 	}
 
+	@Override
 	public void include(String path, boolean flush) throws ServletException, IOException {
 		this.request.getRequestDispatcher(path).include(this.request, this.response);
 		if (flush) {
@@ -333,19 +356,21 @@ public class MockPageContext extends PageContext {
 	}
 
 	public byte[] getContentAsByteArray() {
-		Assert.isTrue(this.response instanceof MockHttpServletResponse);
+		Assert.state(this.response instanceof MockHttpServletResponse, "MockHttpServletResponse required");
 		return ((MockHttpServletResponse) this.response).getContentAsByteArray();
 	}
 
 	public String getContentAsString() throws UnsupportedEncodingException {
-		Assert.isTrue(this.response instanceof MockHttpServletResponse);
+		Assert.state(this.response instanceof MockHttpServletResponse, "MockHttpServletResponse required");
 		return ((MockHttpServletResponse) this.response).getContentAsString();
 	}
 
+	@Override
 	public void handlePageException(Exception ex) throws ServletException, IOException {
 		throw new ServletException("Page exception", ex);
 	}
 
+	@Override
 	public void handlePageException(Throwable ex) throws ServletException, IOException {
 		throw new ServletException("Page exception", ex);
 	}

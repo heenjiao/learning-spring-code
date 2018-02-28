@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,10 @@ package org.springframework.web.servlet.tags.form;
 import java.beans.PropertyEditor;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.jsp.tagext.BodyTag;
 import javax.servlet.jsp.tagext.Tag;
@@ -31,9 +31,12 @@ import org.dom4j.Document;
 import org.dom4j.Element;
 import org.dom4j.Node;
 import org.dom4j.io.SAXReader;
-import org.springframework.tests.sample.beans.TestBean;
+
+import org.junit.Test;
+
 import org.springframework.mock.web.test.MockHttpServletRequest;
 import org.springframework.mock.web.test.MockPageContext;
+import org.springframework.tests.sample.beans.TestBean;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.Errors;
@@ -41,12 +44,15 @@ import org.springframework.web.servlet.support.BindStatus;
 import org.springframework.web.servlet.support.RequestContext;
 import org.springframework.web.servlet.tags.RequestContextAwareTag;
 
+import static org.junit.Assert.*;
+
 /**
  * @author Rob Harrop
  * @author Juergen Hoeller
  * @author Scott Andrews
  * @author Jeremy Grelle
  */
+@SuppressWarnings({ "rawtypes", "unchecked" })
 public final class OptionsTagTests extends AbstractHtmlElementTagTests {
 
 	private static final String COMMAND_NAME = "testBean";
@@ -80,11 +86,12 @@ public final class OptionsTagTests extends AbstractHtmlElementTagTests {
 		this.tag.setPageContext(getPageContext());
 	}
 
-	public void testWithCollection() throws Exception {
+	@Test
+	public void withCollection() throws Exception {
 		getPageContext().setAttribute(
 				SelectTag.LIST_VALUE_PAGE_ATTRIBUTE, new BindStatus(getRequestContext(), "testBean.country", false));
 
-		this.tag.setItems("${countries}");
+		this.tag.setItems(Country.getCountries());
 		this.tag.setItemValue("isoCode");
 		this.tag.setItemLabel("name");
 		this.tag.setId("myOption");
@@ -109,14 +116,15 @@ public final class OptionsTagTests extends AbstractHtmlElementTagTests {
 		assertEquals("CLICK", element.attribute("onclick").getValue());
 	}
 
-	public void testWithCollectionAndDynamicAttributes() throws Exception {
+	@Test
+	public void withCollectionAndDynamicAttributes() throws Exception {
 		String dynamicAttribute1 = "attr1";
 		String dynamicAttribute2 = "attr2";
 
 		getPageContext().setAttribute(
 				SelectTag.LIST_VALUE_PAGE_ATTRIBUTE, new BindStatus(getRequestContext(), "testBean.country", false));
 
-		this.tag.setItems("${countries}");
+		this.tag.setItems(Country.getCountries());
 		this.tag.setItemValue("isoCode");
 		this.tag.setItemLabel("name");
 		this.tag.setId("myOption");
@@ -146,7 +154,8 @@ public final class OptionsTagTests extends AbstractHtmlElementTagTests {
 		assertEquals(dynamicAttribute2, element.attribute(dynamicAttribute2).getValue());
 	}
 
-	public void testWithCollectionAndCustomEditor() throws Exception {
+	@Test
+	public void withCollectionAndCustomEditor() throws Exception {
 		PropertyEditor propertyEditor = new SimpleFloatEditor();
 
 		TestBean target = new TestBean();
@@ -159,7 +168,15 @@ public final class OptionsTagTests extends AbstractHtmlElementTagTests {
 		getPageContext().setAttribute(
 				SelectTag.LIST_VALUE_PAGE_ATTRIBUTE, new BindStatus(getRequestContext(), "testBean.myFloat", false));
 
-		this.tag.setItems("${floats}");
+		List<Float> floats = new ArrayList<Float>();
+		floats.add(new Float("12.30"));
+		floats.add(new Float("12.31"));
+		floats.add(new Float("12.32"));
+		floats.add(new Float("12.33"));
+		floats.add(new Float("12.34"));
+		floats.add(new Float("12.35"));
+
+		this.tag.setItems(floats);
 		int result = this.tag.doStartTag();
 		assertEquals(Tag.SKIP_BODY, result);
 		String output = getOutput();
@@ -183,12 +200,12 @@ public final class OptionsTagTests extends AbstractHtmlElementTagTests {
 		assertNull("No id rendered", element.attribute("id"));
 	}
 
-	public void testWithItemsNullReference() throws Exception {
-		getPageContext().getRequest().removeAttribute("countries");
+	@Test
+	public void withItemsNullReference() throws Exception {
 		getPageContext().setAttribute(
 				SelectTag.LIST_VALUE_PAGE_ATTRIBUTE, new BindStatus(getRequestContext(), "testBean.country", false));
 
-		this.tag.setItems("${countries}");
+		this.tag.setItems(Collections.emptyList());
 		this.tag.setItemValue("isoCode");
 		this.tag.setItemLabel("name");
 		int result = this.tag.doStartTag();
@@ -204,7 +221,8 @@ public final class OptionsTagTests extends AbstractHtmlElementTagTests {
 		assertEquals("Incorrect number of children", 0, children.size());
 	}
 
-	public void testWithoutItems() throws Exception {
+	@Test
+	public void withoutItems() throws Exception {
 		this.tag.setItemValue("isoCode");
 		this.tag.setItemLabel("name");
 		this.selectTag.setPath("testBean");
@@ -224,7 +242,8 @@ public final class OptionsTagTests extends AbstractHtmlElementTagTests {
 		assertEquals("Incorrect number of children", 0, children.size());
 	}
 
-	public void testWithoutItemsEnumParent() throws Exception {
+	@Test
+	public void withoutItemsEnumParent() throws Exception {
 		BeanWithEnum testBean = new BeanWithEnum();
 		testBean.setTestEnum(TestEnum.VALUE_2);
 		getPageContext().getRequest().setAttribute("testBean", testBean);
@@ -251,7 +270,8 @@ public final class OptionsTagTests extends AbstractHtmlElementTagTests {
 		assertEquals(value2, rootElement.selectSingleNode("option[@selected]"));
 	}
 
-	public void testWithoutItemsEnumParentWithExplicitLabelsAndValues() throws Exception {
+	@Test
+	public void withoutItemsEnumParentWithExplicitLabelsAndValues() throws Exception {
 		BeanWithEnum testBean = new BeanWithEnum();
 		testBean.setTestEnum(TestEnum.VALUE_2);
 		getPageContext().getRequest().setAttribute("testBean", testBean);
@@ -287,7 +307,6 @@ public final class OptionsTagTests extends AbstractHtmlElementTagTests {
 		bean.setCountry("UK");
 		bean.setMyFloat(new Float("12.34"));
 		request.setAttribute(COMMAND_NAME, bean);
-		request.setAttribute("countries", Country.getCountries());
 
 		List floats = new ArrayList();
 		floats.add(new Float("12.30"));

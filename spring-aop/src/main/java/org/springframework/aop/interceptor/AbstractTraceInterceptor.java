@@ -105,6 +105,7 @@ public abstract class AbstractTraceInterceptor implements MethodInterceptor, Ser
 	 * to the {@code invokeUnderTrace} method for handling.
 	 * @see #invokeUnderTrace(org.aopalliance.intercept.MethodInvocation, org.apache.commons.logging.Log)
 	 */
+	@Override
 	public Object invoke(MethodInvocation invocation) throws Throwable {
 		Log logger = getLoggerForInvocation(invocation);
 		if (isInterceptorEnabled(invocation, logger)) {
@@ -141,7 +142,7 @@ public abstract class AbstractTraceInterceptor implements MethodInterceptor, Ser
 	 * @return the target class for the given object
 	 * @see #setHideProxyClassNames
 	 */
-	protected Class getClassForLogging(Object target) {
+	protected Class<?> getClassForLogging(Object target) {
 		return (this.hideProxyClassNames ? AopUtils.getTargetClass(target) : target.getClass());
 	}
 

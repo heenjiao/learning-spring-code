@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Set;
 
 import org.springframework.dao.InvalidDataAccessApiUsageException;
-import org.springframework.dao.InvalidDataAccessResourceUsageException;
 import org.springframework.jdbc.support.nativejdbc.NativeJdbcExtractor;
 import org.springframework.util.Assert;
 
@@ -224,21 +223,15 @@ public class PreparedStatementCreatorFactory {
 			}
 		}
 
+		@Override
 		public PreparedStatement createPreparedStatement(Connection con) throws SQLException {
 			PreparedStatement ps;
 			if (generatedKeysColumnNames != null || returnGeneratedKeys) {
-				try {
-					if (generatedKeysColumnNames != null) {
-						ps = con.prepareStatement(this.actualSql, generatedKeysColumnNames);
-					}
-					else {
-						ps = con.prepareStatement(this.actualSql, PreparedStatement.RETURN_GENERATED_KEYS);
-					}
+				if (generatedKeysColumnNames != null) {
+					ps = con.prepareStatement(this.actualSql, generatedKeysColumnNames);
 				}
-				catch (AbstractMethodError err) {
-					throw new InvalidDataAccessResourceUsageException(
-							"Your JDBC driver is not compliant with JDBC 3.0 - " +
-							"it does not support retrieval of auto-generated keys", err);
+				else {
+					ps = con.prepareStatement(this.actualSql, PreparedStatement.RETURN_GENERATED_KEYS);
 				}
 			}
 			else if (resultSetType == ResultSet.TYPE_FORWARD_ONLY && !updatableResults) {
@@ -252,6 +245,7 @@ public class PreparedStatementCreatorFactory {
 			return ps;
 		}
 
+		@Override
 		public void setValues(PreparedStatement ps) throws SQLException {
 			// Determine PreparedStatement to pass to custom types.
 			PreparedStatement psToUse = ps;
@@ -300,20 +294,19 @@ public class PreparedStatementCreatorFactory {
 			}
 		}
 
+		@Override
 		public String getSql() {
 			return sql;
 		}
 
+		@Override
 		public void cleanupParameters() {
 			StatementCreatorUtils.cleanupParameters(this.parameters);
 		}
 
 		@Override
 		public String toString() {
-			StringBuilder sb = new StringBuilder();
-			sb.append("PreparedStatementCreatorFactory.PreparedStatementCreatorImpl: sql=[");
-			sb.append(sql).append("]; parameters=").append(this.parameters);
-			return sb.toString();
+			return "PreparedStatementCreator: sql=[" + sql + "]; parameters=" + this.parameters;
 		}
 	}
 

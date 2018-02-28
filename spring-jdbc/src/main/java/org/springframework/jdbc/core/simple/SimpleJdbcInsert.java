@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import org.springframework.jdbc.support.nativejdbc.NativeJdbcExtractor;
  * name of the table and a Map containing the column names and the column values.
  *
  * <p>The meta data processing is based on the DatabaseMetaData provided by the
- * JDBC driver. As long as the JBDC driver can provide the names of the columns
+ * JDBC driver. As long as the JDBC driver can provide the names of the columns
  * for a specified table than we can rely on this auto-detection feature. If that
  * is not the case, then the column names must be specified explicitly.
  *
@@ -69,75 +69,92 @@ public class SimpleJdbcInsert extends AbstractJdbcInsert implements SimpleJdbcIn
 	}
 
 
+	@Override
 	public SimpleJdbcInsert withTableName(String tableName) {
 		setTableName(tableName);
 		return this;
 	}
 
+	@Override
 	public SimpleJdbcInsert withSchemaName(String schemaName) {
 		setSchemaName(schemaName);
 		return this;
 	}
 
+	@Override
 	public SimpleJdbcInsert withCatalogName(String catalogName) {
 		setCatalogName(catalogName);
 		return this;
 	}
 
+	@Override
 	public SimpleJdbcInsert usingColumns(String... columnNames) {
 		setColumnNames(Arrays.asList(columnNames));
 		return this;
 	}
 
+	@Override
 	public SimpleJdbcInsert usingGeneratedKeyColumns(String... columnNames) {
 		setGeneratedKeyNames(columnNames);
 		return this;
 	}
 
+	@Override
 	public SimpleJdbcInsertOperations withoutTableColumnMetaDataAccess() {
 		setAccessTableColumnMetaData(false);
 		return this;
 	}
 
+	@Override
 	public SimpleJdbcInsertOperations includeSynonymsForTableColumnMetaData() {
 		setOverrideIncludeSynonymsDefault(true);
 		return this;
 	}
 
+	@Override
 	public SimpleJdbcInsertOperations useNativeJdbcExtractorForMetaData(NativeJdbcExtractor nativeJdbcExtractor) {
 		setNativeJdbcExtractor(nativeJdbcExtractor);
 		return this;
 	}
 
-	public int execute(Map<String, Object> args) {
+	@Override
+	public int execute(Map<String, ?> args) {
 		return doExecute(args);
 	}
 
+	@Override
 	public int execute(SqlParameterSource parameterSource) {
 		return doExecute(parameterSource);
 	}
 
-	public Number executeAndReturnKey(Map<String, Object> args) {
+	@Override
+	public Number executeAndReturnKey(Map<String, ?> args) {
 		return doExecuteAndReturnKey(args);
 	}
 
+	@Override
 	public Number executeAndReturnKey(SqlParameterSource parameterSource) {
 		return doExecuteAndReturnKey(parameterSource);
 	}
 
-	public KeyHolder executeAndReturnKeyHolder(Map<String, Object> args) {
+	@Override
+	public KeyHolder executeAndReturnKeyHolder(Map<String, ?> args) {
 		return doExecuteAndReturnKeyHolder(args);
 	}
 
+	@Override
 	public KeyHolder executeAndReturnKeyHolder(SqlParameterSource parameterSource) {
 		return doExecuteAndReturnKeyHolder(parameterSource);
 	}
 
-	public int[] executeBatch(Map<String, Object>[] batch) {
+	@Override
+	@SuppressWarnings("unchecked")
+	public int[] executeBatch(Map<String, ?>... batch) {
 		return doExecuteBatch(batch);
 	}
 
-	public int[] executeBatch(SqlParameterSource[] batch) {
+	@Override
+	public int[] executeBatch(SqlParameterSource... batch) {
 		return doExecuteBatch(batch);
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -156,7 +156,7 @@ public class SimpleMappingExceptionResolver extends AbstractHandlerExceptionReso
 		String viewName = null;
 		String dominantMapping = null;
 		int deepest = Integer.MAX_VALUE;
-		for (Enumeration names = exceptionMappings.propertyNames(); names.hasMoreElements();) {
+		for (Enumeration<?> names = exceptionMappings.propertyNames(); names.hasMoreElements();) {
 			String exceptionMapping = (String) names.nextElement();
 			int depth = getDepth(exceptionMapping, ex);
 			if (depth >= 0 && (depth < deepest || (depth == deepest &&
@@ -184,13 +184,13 @@ public class SimpleMappingExceptionResolver extends AbstractHandlerExceptionReso
 		return getDepth(exceptionMapping, ex.getClass(), 0);
 	}
 
-	private int getDepth(String exceptionMapping, Class exceptionClass, int depth) {
+	private int getDepth(String exceptionMapping, Class<?> exceptionClass, int depth) {
 		if (exceptionClass.getName().contains(exceptionMapping)) {
 			// Found it!
 			return depth;
 		}
 		// If we've gone as far as we can go and haven't found it...
-		if (exceptionClass.equals(Throwable.class)) {
+		if (exceptionClass == Throwable.class) {
 			return -1;
 		}
 		return getDepth(exceptionMapping, exceptionClass.getSuperclass(), depth + 1);

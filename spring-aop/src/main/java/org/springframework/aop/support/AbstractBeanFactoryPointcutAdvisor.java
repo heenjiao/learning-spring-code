@@ -23,7 +23,7 @@ import org.aopalliance.aop.Advice;
 
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
-import org.springframework.beans.factory.support.AbstractBeanFactory;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.util.Assert;
 
 /**
@@ -70,14 +70,15 @@ public abstract class AbstractBeanFactoryPointcutAdvisor extends AbstractPointcu
 		return this.adviceBeanName;
 	}
 
+	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
 		this.beanFactory = beanFactory;
 		resetAdviceMonitor();
 	}
 
 	private void resetAdviceMonitor() {
-		if (this.beanFactory instanceof AbstractBeanFactory) {
-			this.adviceMonitor = ((AbstractBeanFactory) this.beanFactory).getSingletonMutex();
+		if (this.beanFactory instanceof ConfigurableBeanFactory) {
+			this.adviceMonitor = ((ConfigurableBeanFactory) this.beanFactory).getSingletonMutex();
 		}
 		else {
 			this.adviceMonitor = new Object();
@@ -95,6 +96,7 @@ public abstract class AbstractBeanFactoryPointcutAdvisor extends AbstractPointcu
 		}
 	}
 
+	@Override
 	public Advice getAdvice() {
 		Advice advice = this.advice;
 		if (advice != null || this.adviceBeanName == null) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Vector;
@@ -250,6 +251,16 @@ public class CollectionToCollectionConverterTests {
 		assertEquals(resources, conversionService.convert(resources, sourceType, new TypeDescriptor(getClass().getField("resources"))));
 	}
 
+	@Test
+	public void testStringToEnumSet() throws Exception {
+		conversionService.addConverterFactory(new StringToEnumConverterFactory());
+		List<String> list = new ArrayList<String>();
+		list.add("A");
+		list.add("C");
+		assertEquals(EnumSet.of(MyEnum.A, MyEnum.C),
+				conversionService.convert(list, TypeDescriptor.forObject(list), new TypeDescriptor(getClass().getField("enumSet"))));
+	}
+
 
 	public ArrayList<Integer> scalarListTarget;
 
@@ -266,6 +277,8 @@ public class CollectionToCollectionConverterTests {
 	public Collection<?> wildcardCollection = Collections.emptyList();
 
 	public List<Resource> resources;
+
+	public EnumSet<MyEnum> enumSet;
 
 
 	public static abstract class BaseResource implements Resource {
@@ -334,5 +347,8 @@ public class CollectionToCollectionConverterTests {
 
 	public static class TestResource extends BaseResource {
 	}
+
+
+	public enum MyEnum {A, B, C}
 
 }

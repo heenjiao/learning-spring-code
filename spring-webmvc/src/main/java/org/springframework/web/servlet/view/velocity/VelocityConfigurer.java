@@ -17,7 +17,6 @@
 package org.springframework.web.servlet.view.velocity;
 
 import java.io.IOException;
-
 import javax.servlet.ServletContext;
 
 import org.apache.velocity.app.VelocityEngine;
@@ -26,7 +25,6 @@ import org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader;
 
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ResourceLoaderAware;
-import org.springframework.ui.velocity.VelocityEngineFactory;
 import org.springframework.web.context.ServletContextAware;
 
 /**
@@ -70,8 +68,10 @@ import org.springframework.web.context.ServletContextAware;
  * @see #setResourceLoaderPath
  * @see #setVelocityEngine
  * @see VelocityView
+ * @deprecated as of Spring 4.3, in favor of FreeMarker
  */
-public class VelocityConfigurer extends VelocityEngineFactory
+@Deprecated
+public class VelocityConfigurer extends org.springframework.ui.velocity.VelocityEngineFactory
 		implements VelocityConfig, InitializingBean, ResourceLoaderAware, ServletContextAware {
 
 	/** the name of the resource loader for Spring's bind macros */
@@ -104,6 +104,7 @@ public class VelocityConfigurer extends VelocityEngineFactory
 		this.velocityEngine = velocityEngine;
 	}
 
+	@Override
 	public void setServletContext(ServletContext servletContext) {
 		this.servletContext = servletContext;
 	}
@@ -114,6 +115,7 @@ public class VelocityConfigurer extends VelocityEngineFactory
 	 * @see #createVelocityEngine
 	 * @see #setVelocityEngine
 	 */
+	@Override
 	public void afterPropertiesSet() throws IOException, VelocityException {
 		if (this.velocityEngine == null) {
 			this.velocityEngine = createVelocityEngine();
@@ -141,6 +143,7 @@ public class VelocityConfigurer extends VelocityEngineFactory
 		}
 	}
 
+	@Override
 	public VelocityEngine getVelocityEngine() {
 		return this.velocityEngine;
 	}

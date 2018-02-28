@@ -27,7 +27,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
-
 import javax.transaction.TransactionManager;
 
 import org.hibernate.HibernateException;
@@ -47,7 +46,9 @@ import org.springframework.jdbc.support.lob.LobHandler;
  * @author Juergen Hoeller
  * @since 1.2
  * @see org.springframework.orm.hibernate3.LocalSessionFactoryBean#setLobHandler
+ * @deprecated as of Spring 4.3, in favor of Hibernate 4.x/5.x
  */
+@Deprecated
 public class BlobSerializableType extends AbstractLobType {
 
 	/**
@@ -76,11 +77,13 @@ public class BlobSerializableType extends AbstractLobType {
 		super(lobHandler, jtaTransactionManager);
 	}
 
+	@Override
 	public int[] sqlTypes() {
 		return new int[] {Types.BLOB};
 	}
 
-	public Class returnedClass() {
+	@Override
+	public Class<?> returnedClass() {
 		return Serializable.class;
 	}
 

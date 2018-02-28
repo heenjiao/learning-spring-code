@@ -65,7 +65,16 @@ public abstract class ExecutorConfigurationSupport extends CustomizableThreadFac
 	/**
 	 * Set the ThreadFactory to use for the ExecutorService's thread pool.
 	 * Default is the underlying ExecutorService's default thread factory.
+	 * <p>In a Java EE 7 or other managed environment with JSR-236 support,
+	 * consider specifying a JNDI-located ManagedThreadFactory: by default,
+	 * to be found at "java:comp/DefaultManagedThreadFactory".
+	 * Use the "jee:jndi-lookup" namespace element in XML or the programmatic
+	 * {@link org.springframework.jndi.JndiLocatorDelegate} for convenient lookup.
+	 * Alternatively, consider using Spring's {@link DefaultManagedAwareThreadFactory}
+	 * with its fallback to local threads in case of no managed thread factory found.
 	 * @see java.util.concurrent.Executors#defaultThreadFactory()
+	 * @see javax.enterprise.concurrent.ManagedThreadFactory
+	 * @see DefaultManagedAwareThreadFactory
 	 */
 	public void setThreadFactory(ThreadFactory threadFactory) {
 		this.threadFactory = (threadFactory != null ? threadFactory : this);
@@ -133,6 +142,7 @@ public abstract class ExecutorConfigurationSupport extends CustomizableThreadFac
 		this.awaitTerminationSeconds = awaitTerminationSeconds;
 	}
 
+	@Override
 	public void setBeanName(String name) {
 		this.beanName = name;
 	}
@@ -142,6 +152,7 @@ public abstract class ExecutorConfigurationSupport extends CustomizableThreadFac
 	 * Calls {@code initialize()} after the container applied all property values.
 	 * @see #initialize()
 	 */
+	@Override
 	public void afterPropertiesSet() {
 		initialize();
 	}
@@ -176,6 +187,7 @@ public abstract class ExecutorConfigurationSupport extends CustomizableThreadFac
 	 * the task executor instance.
 	 * @see #shutdown()
 	 */
+	@Override
 	public void destroy() {
 		shutdown();
 	}

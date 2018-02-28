@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ import org.springframework.jca.endpoint.AbstractMessageEndpointFactory;
  * {@link javax.resource.spi.ResourceAdapter} instance.
  *
  * @author Juergen Hoeller
+ * @author Stephane Nicoll
  * @since 2.5
  * @see #setMessageListener
  * @see #setTransactionManager
@@ -57,8 +58,16 @@ public class JmsMessageEndpointFactory extends AbstractMessageEndpointFactory  {
 	}
 
 	/**
+	 * Return the JMS MessageListener for this endpoint.
+	 */
+	protected MessageListener getMessageListener() {
+		return this.messageListener;
+	}
+
+	/**
 	 * Creates a concrete JMS message endpoint, internal to this factory.
 	 */
+	@Override
 	protected AbstractMessageEndpoint createEndpointInternal() throws UnavailableException {
 		return new JmsMessageEndpoint();
 	}
@@ -69,6 +78,7 @@ public class JmsMessageEndpointFactory extends AbstractMessageEndpointFactory  {
 	 */
 	private class JmsMessageEndpoint extends AbstractMessageEndpoint implements MessageListener {
 
+		@Override
 		public void onMessage(Message message) {
 			boolean applyDeliveryCalls = !hasBeforeDeliveryBeenCalled();
 			if (applyDeliveryCalls) {
@@ -102,6 +112,7 @@ public class JmsMessageEndpointFactory extends AbstractMessageEndpointFactory  {
 			}
 		}
 
+		@Override
 		protected ClassLoader getEndpointClassLoader() {
 			return messageListener.getClass().getClassLoader();
 		}

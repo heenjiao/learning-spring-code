@@ -21,12 +21,15 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.sun.syndication.feed.atom.Entry;
-import com.sun.syndication.feed.atom.Feed;
+import com.rometools.rome.feed.atom.Entry;
+import com.rometools.rome.feed.atom.Feed;
 
 /**
- * Abstract superclass for Atom Feed views, using java.net's
- * <a href="https://rome.dev.java.net/">ROME</a> package.
+ * Abstract superclass for Atom Feed views, using the
+ * <a href="https://github.com/rometools/rome">ROME</a> package.
+ *
+ * <p>><b>NOTE: As of Spring 4.1, this is based on the {@code com.rometools}
+ * variant of ROME, version 1.5. Please upgrade your build dependency.</b>
  *
  * <p>Application-specific view classes will extend this class.
  * The view will be held in the subclass itself, not in a template.

@@ -16,9 +16,6 @@
 
 package org.springframework.expression.spel;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.Test;
+
 import org.springframework.expression.AccessException;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.EvaluationException;
@@ -36,6 +34,8 @@ import org.springframework.expression.PropertyAccessor;
 import org.springframework.expression.TypedValue;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
+
+import static org.junit.Assert.*;
 
 ///CLOVER:OFF
 
@@ -47,7 +47,7 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
  * <li>Some basic type converters are included
  * <li>properties/methods/constructors are discovered and invoked using reflection
  * </ul>
- * The scenarios after that then how how to plug in extensions:<br>
+ * The scenarios after that then how to plug in extensions:<br>
  * <ul>
  * <li>Adding entries to the classpath that will be used to load types and define well known 'imports'
  * <li>Defining variables that are then accessible in the expression
@@ -60,7 +60,7 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
  *
  * @author Andy Clement
  */
-public class ExpressionLanguageScenarioTests extends ExpressionTestCase {
+public class ExpressionLanguageScenarioTests extends AbstractExpressionTests {
 
 	/**
 	 * Scenario: using the standard infrastructure and running simple expression evaluation.
@@ -79,10 +79,12 @@ public class ExpressionLanguageScenarioTests extends ExpressionTestCase {
 
 			assertEquals("hello world", value);
 			assertEquals(String.class, value.getClass());
-		} catch (EvaluationException ee) {
+		}
+		catch (EvaluationException ee) {
 			ee.printStackTrace();
 			fail("Unexpected Exception: " + ee.getMessage());
-		} catch (ParseException pe) {
+		}
+		catch (ParseException pe) {
 			pe.printStackTrace();
 			fail("Unexpected Exception: " + pe.getMessage());
 		}
@@ -186,10 +188,12 @@ public class ExpressionLanguageScenarioTests extends ExpressionTestCase {
 			Object value = expr.getValue(ctx);
 			assertEquals("hellohello", value);
 
-		} catch (EvaluationException ee) {
+		}
+		catch (EvaluationException ee) {
 			ee.printStackTrace();
 			fail("Unexpected Exception: " + ee.getMessage());
-		} catch (ParseException pe) {
+		}
+		catch (ParseException pe) {
 			pe.printStackTrace();
 			fail("Unexpected Exception: " + pe.getMessage());
 		}
@@ -213,7 +217,8 @@ public class ExpressionLanguageScenarioTests extends ExpressionTestCase {
 		try {
 			expr.setValue(ctx, Color.blue);
 			fail("Should not be allowed to set oranges to be blue !");
-		} catch (SpelEvaluationException ee) {
+		}
+		catch (SpelEvaluationException ee) {
 			assertEquals(ee.getMessageCode(), SpelMessage.PROPERTY_OR_FIELD_NOT_WRITABLE_ON_NULL);
 		}
 	}

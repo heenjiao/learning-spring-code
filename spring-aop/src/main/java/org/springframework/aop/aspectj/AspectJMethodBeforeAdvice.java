@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2006 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.springframework.aop.aspectj;
 
+import java.io.Serializable;
 import java.lang.reflect.Method;
 
 import org.springframework.aop.MethodBeforeAdvice;
@@ -27,7 +28,8 @@ import org.springframework.aop.MethodBeforeAdvice;
  * @author Adrian Colyer
  * @since 2.0
  */
-public class AspectJMethodBeforeAdvice extends AbstractAspectJAdvice implements MethodBeforeAdvice {
+@SuppressWarnings("serial")
+public class AspectJMethodBeforeAdvice extends AbstractAspectJAdvice implements MethodBeforeAdvice, Serializable {
 
 	public AspectJMethodBeforeAdvice(
 			Method aspectJBeforeAdviceMethod, AspectJExpressionPointcut pointcut, AspectInstanceFactory aif) {
@@ -35,14 +37,18 @@ public class AspectJMethodBeforeAdvice extends AbstractAspectJAdvice implements 
 		super(aspectJBeforeAdviceMethod, pointcut, aif);
 	}
 
+
+	@Override
 	public void before(Method method, Object[] args, Object target) throws Throwable {
 		invokeAdviceMethod(getJoinPointMatch(), null, null);
 	}
 
+	@Override
 	public boolean isBeforeAdvice() {
 		return true;
 	}
 
+	@Override
 	public boolean isAfterAdvice() {
 		return false;
 	}

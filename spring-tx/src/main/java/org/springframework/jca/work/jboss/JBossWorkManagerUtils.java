@@ -31,7 +31,10 @@ import org.springframework.util.Assert;
  *
  * @author Juergen Hoeller
  * @since 2.5.2
+ * @deprecated as of Spring 4.0, since there are no fully supported versions
+ * of JBoss that this class works with anymore
  */
+@Deprecated
 public abstract class JBossWorkManagerUtils {
 
 	private static final String JBOSS_WORK_MANAGER_MBEAN_CLASS_NAME = "org.jboss.resource.work.JBossWorkManagerMBean";

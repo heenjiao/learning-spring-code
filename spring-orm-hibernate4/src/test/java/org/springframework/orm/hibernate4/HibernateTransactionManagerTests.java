@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,16 @@ package org.springframework.orm.hibernate4;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Savepoint;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import javax.sql.DataSource;
+import javax.transaction.TransactionManager;
+import javax.transaction.TransactionSynchronizationRegistry;
+import javax.transaction.UserTransaction;
 
 import org.hibernate.FlushMode;
 import org.hibernate.Interceptor;
@@ -32,8 +36,11 @@ import org.hibernate.Session;
 import org.hibernate.SessionBuilder;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
+import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.dialect.HSQLDialect;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SessionImplementor;
+import org.hibernate.engine.transaction.internal.jta.CMTTransactionFactory;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.After;
 import org.junit.Test;
@@ -49,6 +56,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.UnexpectedRollbackException;
+import org.springframework.transaction.jta.JtaTransactionManager;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -61,6 +69,7 @@ import static org.mockito.BDDMockito.*;
  * @author Juergen Hoeller
  * @since 3.2
  */
+@SuppressWarnings({"rawtypes", "unchecked"})
 public class HibernateTransactionManagerTests {
 
 	@After
@@ -486,6 +495,49 @@ public class HibernateTransactionManagerTests {
 	}
 
 	@Test
+	public void testTransactionWithPropagationSupportsAndCurrentSession() throws Exception {
+		final SessionFactoryImplementor sf = mock(SessionFactoryImplementor.class);
+		final Session session = mock(Session.class);
+
+		given(sf.openSession()).willReturn(session);
+		given(session.getSessionFactory()).willReturn(sf);
+		given(session.getFlushMode()).willReturn(FlushMode.MANUAL);
+
+		LocalSessionFactoryBean lsfb = new LocalSessionFactoryBean() {
+			@Override
+			protected SessionFactory buildSessionFactory(LocalSessionFactoryBuilder sfb) {
+				return sf;
+			}
+		};
+		lsfb.afterPropertiesSet();
+		final SessionFactory sfProxy = lsfb.getObject();
+
+		PlatformTransactionManager tm = new HibernateTransactionManager(sfProxy);
+		TransactionTemplate tt = new TransactionTemplate(tm);
+		tt.setPropagationBehavior(TransactionDefinition.PROPAGATION_SUPPORTS);
+		assertTrue("Hasn't thread session", !TransactionSynchronizationManager.hasResource(sfProxy));
+
+		tt.execute(new TransactionCallback() {
+			@Override
+			public Object doInTransaction(TransactionStatus status) {
+				assertTrue("Hasn't thread session", !TransactionSynchronizationManager.hasResource(sfProxy));
+				assertTrue("Is not new transaction", !status.isNewTransaction());
+				assertFalse(TransactionSynchronizationManager.isCurrentTransactionReadOnly());
+				assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
+				Session session = new SpringSessionContext(sf).currentSession();
+				assertTrue("Has thread session", TransactionSynchronizationManager.hasResource(sfProxy));
+				session.flush();
+				return null;
+			}
+		});
+
+		assertTrue("Hasn't thread session", !TransactionSynchronizationManager.hasResource(sfProxy));
+		InOrder ordered = inOrder(session);
+		ordered.verify(session).flush();
+		ordered.verify(session).close();
+	}
+
+	@Test
 	public void testTransactionWithPropagationSupportsAndInnerTransaction() throws Exception {
 		final SessionFactory sf = mock(SessionFactory.class);
 		final ImplementingSession session1 = mock(ImplementingSession.class);
@@ -573,12 +625,13 @@ public class HibernateTransactionManagerTests {
 
 		HibernateTransactionManager tm = new HibernateTransactionManager(sf);
 		tm.setEntityInterceptor(entityInterceptor);
+		tm.setAllowResultAccessAfterCompletion(true);
 		TransactionTemplate tt = new TransactionTemplate(tm);
 		tt.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
 		assertTrue("Hasn't thread session", !TransactionSynchronizationManager.hasResource(sf));
 		assertTrue("JTA synchronizations not active", !TransactionSynchronizationManager.isSynchronizationActive());
 
-		Object result = tt.execute(new TransactionCallbackWithoutResult() {
+		tt.execute(new TransactionCallbackWithoutResult() {
 			@Override
 			public void doInTransactionWithoutResult(TransactionStatus status) {
 				assertTrue("Has thread session", TransactionSynchronizationManager.hasResource(sf));
@@ -725,7 +778,7 @@ public class HibernateTransactionManagerTests {
 		catch (DataIntegrityViolationException ex) {
 			// expected
 			assertEquals(rootCause, ex.getCause());
-			assertTrue(ex.getMessage().indexOf("mymsg") != -1);
+			assertTrue(ex.getMessage().contains("mymsg"));
 		}
 
 		assertTrue("Hasn't thread session", !TransactionSynchronizationManager.hasResource(sf));
@@ -790,6 +843,66 @@ public class HibernateTransactionManagerTests {
 		ordered.verify(session).setFlushMode(FlushMode.MANUAL);
 		verify(tx).commit();
 		verify(session).disconnect();
+	}
+
+	@Test
+	public void testTransactionCommitWithPreBoundAndResultAccessAfterCommit() throws Exception {
+		final DataSource ds = mock(DataSource.class);
+		Connection con = mock(Connection.class);
+		final SessionFactory sf = mock(SessionFactory.class);
+		final ImplementingSession session = mock(ImplementingSession.class);
+		Transaction tx = mock(Transaction.class);
+
+		given(session.beginTransaction()).willReturn(tx);
+		given(session.isOpen()).willReturn(true);
+		given(session.getFlushMode()).willReturn(FlushMode.MANUAL);
+		given(session.connection()).willReturn(con);
+		given(con.getTransactionIsolation()).willReturn(Connection.TRANSACTION_READ_COMMITTED);
+		given(con.getHoldability()).willReturn(ResultSet.CLOSE_CURSORS_AT_COMMIT);
+		given(session.isConnected()).willReturn(true);
+
+		HibernateTransactionManager tm = new HibernateTransactionManager();
+		tm.setSessionFactory(sf);
+		tm.setDataSource(ds);
+		tm.setAllowResultAccessAfterCompletion(true);
+		TransactionTemplate tt = new TransactionTemplate(tm);
+		tt.setIsolationLevel(TransactionDefinition.ISOLATION_SERIALIZABLE);
+		final List l = new ArrayList();
+		l.add("test");
+		assertTrue("Hasn't thread connection", !TransactionSynchronizationManager.hasResource(ds));
+		assertTrue("JTA synchronizations not active", !TransactionSynchronizationManager.isSynchronizationActive());
+		TransactionSynchronizationManager.bindResource(sf, new SessionHolder(session));
+		assertTrue("Has thread session", TransactionSynchronizationManager.hasResource(sf));
+
+		Object result = tt.execute(new TransactionCallback() {
+			@Override
+			public Object doInTransaction(TransactionStatus status) {
+				assertTrue("Has thread session", TransactionSynchronizationManager.hasResource(sf));
+				assertTrue("Has thread connection", TransactionSynchronizationManager.hasResource(ds));
+				SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sf);
+				assertTrue("Has thread transaction", sessionHolder.getTransaction() != null);
+				Session sess = ((SessionHolder) TransactionSynchronizationManager.getResource(sf)).getSession();
+				assertEquals(session, sess);
+				return l;
+			}
+		});
+		assertTrue("Correct result list", result == l);
+
+		assertTrue("Has thread session", TransactionSynchronizationManager.hasResource(sf));
+		SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sf);
+		assertTrue("Hasn't thread transaction", sessionHolder.getTransaction() == null);
+		TransactionSynchronizationManager.unbindResource(sf);
+		assertTrue("Hasn't thread connection", !TransactionSynchronizationManager.hasResource(ds));
+		assertTrue("JTA synchronizations not active", !TransactionSynchronizationManager.isSynchronizationActive());
+
+		InOrder ordered = inOrder(session, con);
+		ordered.verify(con).setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+		ordered.verify(con).setHoldability(ResultSet.HOLD_CURSORS_OVER_COMMIT);
+		ordered.verify(session).setFlushMode(FlushMode.AUTO);
+		ordered.verify(con).setHoldability(ResultSet.CLOSE_CURSORS_AT_COMMIT);
+		ordered.verify(con).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+		ordered.verify(session).setFlushMode(FlushMode.MANUAL);
+		verify(tx).commit();
 	}
 
 	@Test
@@ -1178,6 +1291,37 @@ public class HibernateTransactionManagerTests {
 		verify(session).flush();
 		verify(tx).commit();
 		verify(session).close();
+	}
+
+	@Test
+	public void testSetJtaTransactionManager() throws Exception {
+		DataSource ds = mock(DataSource.class);
+		TransactionManager tm = mock(TransactionManager.class);
+		UserTransaction ut = mock(UserTransaction.class);
+		TransactionSynchronizationRegistry tsr = mock(TransactionSynchronizationRegistry.class);
+		JtaTransactionManager jtm = new JtaTransactionManager();
+		jtm.setTransactionManager(tm);
+		jtm.setUserTransaction(ut);
+		jtm.setTransactionSynchronizationRegistry(tsr);
+		LocalSessionFactoryBuilder lsfb = new LocalSessionFactoryBuilder(ds);
+		lsfb.setJtaTransactionManager(jtm);
+		Object jtaPlatform = lsfb.getProperties().get(AvailableSettings.JTA_PLATFORM);
+		assertNotNull(jtaPlatform);
+		assertSame(tm, jtaPlatform.getClass().getMethod("retrieveTransactionManager").invoke(jtaPlatform));
+		assertSame(ut, jtaPlatform.getClass().getMethod("retrieveUserTransaction").invoke(jtaPlatform));
+		assertTrue(lsfb.getProperties().get(AvailableSettings.TRANSACTION_STRATEGY) instanceof CMTTransactionFactory);
+	}
+
+	@Test
+	public void testSetTransactionManager() throws Exception {
+		DataSource ds = mock(DataSource.class);
+		TransactionManager tm = mock(TransactionManager.class);
+		LocalSessionFactoryBuilder lsfb = new LocalSessionFactoryBuilder(ds);
+		lsfb.setJtaTransactionManager(tm);
+		Object jtaPlatform = lsfb.getProperties().get(AvailableSettings.JTA_PLATFORM);
+		assertNotNull(jtaPlatform);
+		assertSame(tm, jtaPlatform.getClass().getMethod("retrieveTransactionManager").invoke(jtaPlatform));
+		assertTrue(lsfb.getProperties().get(AvailableSettings.TRANSACTION_STRATEGY) instanceof CMTTransactionFactory);
 	}
 
 

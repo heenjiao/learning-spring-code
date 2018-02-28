@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -49,16 +49,16 @@ public class Spr10744Tests {
 		Foo bean2 = context.getBean("foo", Foo.class);
 		assertThat(bean1, sameInstance(bean2));
 
-		// Should have created a single instance for the proxy
-		assertThat(createCount, equalTo(1));
+		// Should not have invoked constructor for the proxy instance
+		assertThat(createCount, equalTo(0));
 		assertThat(scopeCount, equalTo(0));
 
 		// Proxy mode should create new scoped object on each method call
 		bean1.getMessage();
-		assertThat(createCount, equalTo(2));
+		assertThat(createCount, equalTo(1));
 		assertThat(scopeCount, equalTo(1));
 		bean1.getMessage();
-		assertThat(createCount, equalTo(3));
+		assertThat(createCount, equalTo(2));
 		assertThat(scopeCount, equalTo(2));
 
 		context.close();

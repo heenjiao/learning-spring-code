@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ import org.springframework.aop.TargetSource;
 public abstract class AbstractRefreshableTargetSource implements TargetSource, Refreshable {
 
 	/** Logger available to subclasses */
-	protected Log logger = LogFactory.getLog(getClass());
+	protected final Log logger = LogFactory.getLog(getClass());
 
 	protected Object targetObject;
 
@@ -63,6 +63,7 @@ public abstract class AbstractRefreshableTargetSource implements TargetSource, R
 	}
 
 
+	@Override
 	public synchronized Class<?> getTargetClass() {
 		if (this.targetObject == null) {
 			refresh();
@@ -73,10 +74,12 @@ public abstract class AbstractRefreshableTargetSource implements TargetSource, R
 	/**
 	 * Not static.
 	 */
+	@Override
 	public boolean isStatic() {
 		return false;
 	}
 
+	@Override
 	public final synchronized Object getTarget() {
 		if ((refreshCheckDelayElapsed() && requiresRefresh()) || this.targetObject == null) {
 			refresh();
@@ -87,10 +90,12 @@ public abstract class AbstractRefreshableTargetSource implements TargetSource, R
 	/**
 	 * No need to release target.
 	 */
+	@Override
 	public void releaseTarget(Object object) {
 	}
 
 
+	@Override
 	public final synchronized void refresh() {
 		logger.debug("Attempting to refresh target");
 
@@ -101,10 +106,12 @@ public abstract class AbstractRefreshableTargetSource implements TargetSource, R
 		logger.debug("Target refreshed successfully");
 	}
 
+	@Override
 	public synchronized long getRefreshCount() {
 		return this.refreshCount;
 	}
 
+	@Override
 	public synchronized long getLastRefreshTime() {
 		return this.lastRefreshTime;
 	}

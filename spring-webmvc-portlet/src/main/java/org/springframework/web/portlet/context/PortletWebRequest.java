@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,9 +39,6 @@ import org.springframework.web.portlet.util.PortletUtils;
  */
 public class PortletWebRequest extends PortletRequestAttributes implements NativeWebRequest {
 
-	private PortletResponse response;
-
-
 	/**
 	 * Create a new PortletWebRequest instance for the given request.
 	 * @param request current portlet request
@@ -56,86 +53,93 @@ public class PortletWebRequest extends PortletRequestAttributes implements Nativ
 	 * @param response current portlet response
 	 */
 	public PortletWebRequest(PortletRequest request, PortletResponse response) {
-		this(request);
-		this.response = response;
+		super(request, response);
 	}
 
 
-	/**
-	 * Exposes the native {@link PortletResponse} that we're wrapping (if any).
-	 */
-	public final PortletResponse getResponse() {
-		return this.response;
-	}
-
+	@Override
 	public Object getNativeRequest() {
 		return getRequest();
 	}
 
+	@Override
 	public Object getNativeResponse() {
 		return getResponse();
 	}
 
-	@SuppressWarnings("unchecked")
+	@Override
 	public <T> T getNativeRequest(Class<T> requiredType) {
 		return PortletUtils.getNativeRequest(getRequest(), requiredType);
 	}
 
-	@SuppressWarnings("unchecked")
+	@Override
 	public <T> T getNativeResponse(Class<T> requiredType) {
 		return PortletUtils.getNativeResponse(getResponse(), requiredType);
 	}
 
 
+	@Override
 	public String getHeader(String headerName) {
 		return getRequest().getProperty(headerName);
 	}
 
+	@Override
 	public String[] getHeaderValues(String headerName) {
 		String[] headerValues = StringUtils.toStringArray(getRequest().getProperties(headerName));
 		return (!ObjectUtils.isEmpty(headerValues) ? headerValues : null);
 	}
 
+	@Override
 	public Iterator<String> getHeaderNames() {
 		return CollectionUtils.toIterator(getRequest().getPropertyNames());
 	}
 
+	@Override
 	public String getParameter(String paramName) {
 		return getRequest().getParameter(paramName);
 	}
 
+	@Override
 	public String[] getParameterValues(String paramName) {
 		return getRequest().getParameterValues(paramName);
 	}
 
+	@Override
 	public Iterator<String> getParameterNames() {
 		return CollectionUtils.toIterator(getRequest().getParameterNames());
 	}
 
+	@Override
 	public Map<String, String[]> getParameterMap() {
 		return getRequest().getParameterMap();
 	}
 
+	@Override
 	public Locale getLocale() {
 		return getRequest().getLocale();
 	}
 
+	@Override
 	public String getContextPath() {
 		return getRequest().getContextPath();
 	}
 
+	@Override
 	public String getRemoteUser() {
 		return getRequest().getRemoteUser();
 	}
 
+	@Override
 	public Principal getUserPrincipal() {
 		return getRequest().getUserPrincipal();
 	}
 
+	@Override
 	public boolean isUserInRole(String role) {
 		return getRequest().isUserInRole(role);
 	}
 
+	@Override
 	public boolean isSecure() {
 		return getRequest().isSecure();
 	}
@@ -144,6 +148,7 @@ public class PortletWebRequest extends PortletRequestAttributes implements Nativ
 	 * Last-modified handling not supported for portlet requests:
 	 * As a consequence, this method always returns {@code false}.
 	 */
+	@Override
 	public boolean checkNotModified(long lastModifiedTimestamp) {
 		return false;
 	}
@@ -152,10 +157,22 @@ public class PortletWebRequest extends PortletRequestAttributes implements Nativ
 	 * Last-modified handling not supported for portlet requests:
 	 * As a consequence, this method always returns {@code false}.
 	 */
+	@Override
 	public boolean checkNotModified(String eTag) {
 		return false;
 	}
 
+	/**
+	 * Last-modified handling not supported for portlet requests:
+	 * As a consequence, this method always returns {@code false}.
+	 * @since 4.2
+	 */
+	@Override
+	public boolean checkNotModified(String etag, long lastModifiedTimestamp) {
+		return false;
+	}
+
+	@Override
 	public String getDescription(boolean includeClientInfo) {
 		PortletRequest request = getRequest();
 		StringBuilder result = new StringBuilder();

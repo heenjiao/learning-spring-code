@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ import org.springframework.util.StreamUtils;
  * by setting the {@link #setSupportedMediaTypes supportedMediaTypes} property.
  *
  * @author Arjen Poutsma
+ * @author Juergen Hoeller
  * @since 3.0
  */
 public class StringHttpMessageConverter extends AbstractHttpMessageConverter<String> {
@@ -42,9 +43,7 @@ public class StringHttpMessageConverter extends AbstractHttpMessageConverter<Str
 	public static final Charset DEFAULT_CHARSET = Charset.forName("ISO-8859-1");
 
 
-	private final Charset defaultCharset;
-
-	private final List<Charset> availableCharsets;
+	private volatile List<Charset> availableCharsets;
 
 	private boolean writeAcceptCharset = true;
 
@@ -62,9 +61,7 @@ public class StringHttpMessageConverter extends AbstractHttpMessageConverter<Str
 	 * type does not specify one.
 	 */
 	public StringHttpMessageConverter(Charset defaultCharset) {
-		super(new MediaType("text", "plain", defaultCharset), MediaType.ALL);
-		this.defaultCharset = defaultCharset;
-		this.availableCharsets = new ArrayList<Charset>(Charset.availableCharsets().values());
+		super(defaultCharset, MediaType.TEXT_PLAIN, MediaType.ALL);
 	}
 
 
@@ -79,7 +76,7 @@ public class StringHttpMessageConverter extends AbstractHttpMessageConverter<Str
 
 	@Override
 	public boolean supports(Class<?> clazz) {
-		return String.class.equals(clazz);
+		return String.class == clazz;
 	}
 
 	@Override
@@ -117,15 +114,19 @@ public class StringHttpMessageConverter extends AbstractHttpMessageConverter<Str
 	 * @return the list of accepted charsets
 	 */
 	protected List<Charset> getAcceptedCharsets() {
+		if (this.availableCharsets == null) {
+			this.availableCharsets = new ArrayList<Charset>(
+					Charset.availableCharsets().values());
+		}
 		return this.availableCharsets;
 	}
 
 	private Charset getContentTypeCharset(MediaType contentType) {
-		if (contentType != null && contentType.getCharSet() != null) {
-			return contentType.getCharSet();
+		if (contentType != null && contentType.getCharset() != null) {
+			return contentType.getCharset();
 		}
 		else {
-			return this.defaultCharset;
+			return getDefaultCharset();
 		}
 	}
 

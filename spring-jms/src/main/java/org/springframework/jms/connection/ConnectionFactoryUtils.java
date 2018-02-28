@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,23 +131,28 @@ public abstract class ConnectionFactoryUtils {
 	 * @return the transactional Session, or {@code null} if none found
 	 * @throws JMSException in case of JMS failure
 	 */
-	public static Session getTransactionalSession(
-			final ConnectionFactory cf, final Connection existingCon, final boolean synchedLocalTransactionAllowed)
+	public static Session getTransactionalSession(final ConnectionFactory cf,
+			final Connection existingCon, final boolean synchedLocalTransactionAllowed)
 			throws JMSException {
 
 		return doGetTransactionalSession(cf, new ResourceFactory() {
+			@Override
 			public Session getSession(JmsResourceHolder holder) {
 				return holder.getSession(Session.class, existingCon);
 			}
+			@Override
 			public Connection getConnection(JmsResourceHolder holder) {
 				return (existingCon != null ? existingCon : holder.getConnection());
 			}
+			@Override
 			public Connection createConnection() throws JMSException {
 				return cf.createConnection();
 			}
+			@Override
 			public Session createSession(Connection con) throws JMSException {
 				return con.createSession(synchedLocalTransactionAllowed, Session.AUTO_ACKNOWLEDGE);
 			}
+			@Override
 			public boolean isSynchedLocalTransactionAllowed() {
 				return synchedLocalTransactionAllowed;
 			}
@@ -168,23 +173,28 @@ public abstract class ConnectionFactoryUtils {
 	 * @return the transactional Session, or {@code null} if none found
 	 * @throws JMSException in case of JMS failure
 	 */
-	public static QueueSession getTransactionalQueueSession(
-			final QueueConnectionFactory cf, final QueueConnection existingCon, final boolean synchedLocalTransactionAllowed)
+	public static QueueSession getTransactionalQueueSession(final QueueConnectionFactory cf,
+			final QueueConnection existingCon, final boolean synchedLocalTransactionAllowed)
 			throws JMSException {
 
 		return (QueueSession) doGetTransactionalSession(cf, new ResourceFactory() {
+			@Override
 			public Session getSession(JmsResourceHolder holder) {
 				return holder.getSession(QueueSession.class, existingCon);
 			}
+			@Override
 			public Connection getConnection(JmsResourceHolder holder) {
 				return (existingCon != null ? existingCon : holder.getConnection(QueueConnection.class));
 			}
+			@Override
 			public Connection createConnection() throws JMSException {
 				return cf.createQueueConnection();
 			}
+			@Override
 			public Session createSession(Connection con) throws JMSException {
 				return ((QueueConnection) con).createQueueSession(synchedLocalTransactionAllowed, Session.AUTO_ACKNOWLEDGE);
 			}
+			@Override
 			public boolean isSynchedLocalTransactionAllowed() {
 				return synchedLocalTransactionAllowed;
 			}
@@ -205,23 +215,29 @@ public abstract class ConnectionFactoryUtils {
 	 * @return the transactional Session, or {@code null} if none found
 	 * @throws JMSException in case of JMS failure
 	 */
-	public static TopicSession getTransactionalTopicSession(
-			final TopicConnectionFactory cf, final TopicConnection existingCon, final boolean synchedLocalTransactionAllowed)
+	public static TopicSession getTransactionalTopicSession(final TopicConnectionFactory cf,
+			final TopicConnection existingCon, final boolean synchedLocalTransactionAllowed)
 			throws JMSException {
 
 		return (TopicSession) doGetTransactionalSession(cf, new ResourceFactory() {
+			@Override
 			public Session getSession(JmsResourceHolder holder) {
 				return holder.getSession(TopicSession.class, existingCon);
 			}
+			@Override
 			public Connection getConnection(JmsResourceHolder holder) {
 				return (existingCon != null ? existingCon : holder.getConnection(TopicConnection.class));
 			}
+			@Override
 			public Connection createConnection() throws JMSException {
 				return cf.createTopicConnection();
 			}
+			@Override
 			public Session createSession(Connection con) throws JMSException {
-				return ((TopicConnection) con).createTopicSession(synchedLocalTransactionAllowed, Session.AUTO_ACKNOWLEDGE);
+				return ((TopicConnection) con).createTopicSession(
+						synchedLocalTransactionAllowed, Session.AUTO_ACKNOWLEDGE);
 			}
+			@Override
 			public boolean isSynchedLocalTransactionAllowed() {
 				return synchedLocalTransactionAllowed;
 			}
@@ -324,8 +340,8 @@ public abstract class ConnectionFactoryUtils {
 		}
 		if (resourceHolderToUse != resourceHolder) {
 			TransactionSynchronizationManager.registerSynchronization(
-					new JmsResourceSynchronization(
-							resourceHolderToUse, connectionFactory, resourceFactory.isSynchedLocalTransactionAllowed()));
+					new JmsResourceSynchronization(resourceHolderToUse, connectionFactory,
+							resourceFactory.isSynchedLocalTransactionAllowed()));
 			resourceHolderToUse.setSynchronizedWithTransaction(true);
 			TransactionSynchronizationManager.bindResource(connectionFactory, resourceHolderToUse);
 		}
@@ -395,10 +411,12 @@ public abstract class ConnectionFactoryUtils {
 			this.transacted = transacted;
 		}
 
+		@Override
 		protected boolean shouldReleaseBeforeCompletion() {
 			return !this.transacted;
 		}
 
+		@Override
 		protected void processResourceAfterCommit(JmsResourceHolder resourceHolder) {
 			try {
 				resourceHolder.commitAll();
@@ -408,6 +426,7 @@ public abstract class ConnectionFactoryUtils {
 			}
 		}
 
+		@Override
 		protected void releaseResource(JmsResourceHolder resourceHolder, Object resourceKey) {
 			resourceHolder.closeAll();
 		}

@@ -50,6 +50,7 @@ public class CompositeIterator<E> implements Iterator<E> {
 		this.iterators.add(iterator);
 	}
 
+	@Override
 	public boolean hasNext() {
 		this.inUse = true;
 		for (Iterator<E> iterator : this.iterators) {
@@ -60,6 +61,7 @@ public class CompositeIterator<E> implements Iterator<E> {
 		return false;
 	}
 
+	@Override
 	public E next() {
 		this.inUse = true;
 		for (Iterator<E> iterator : this.iterators) {
@@ -70,6 +72,7 @@ public class CompositeIterator<E> implements Iterator<E> {
 		throw new NoSuchElementException("All iterators exhausted");
 	}
 
+	@Override
 	public void remove() {
 		throw new UnsupportedOperationException("CompositeIterator does not support remove()");
 	}

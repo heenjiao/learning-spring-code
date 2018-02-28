@@ -94,8 +94,7 @@ public abstract class BshScriptUtils {
 				return clazz.newInstance();
 			}
 			catch (Throwable ex) {
-				throw new IllegalStateException("Could not instantiate script class [" +
-						clazz.getName() + "]. Root cause is " + ex);
+				throw new IllegalStateException("Could not instantiate script class: " + clazz.getName(), ex);
 			}
 		}
 		else {
@@ -110,12 +109,14 @@ public abstract class BshScriptUtils {
 	 * the scripted object (in which case the Class of the object will be returned).
 	 * In any other case, the returned Class will be {@code null}.
 	 * @param scriptSource the script source text
+	 * @param classLoader the ClassLoader to use for evaluating the script
 	 * @return the scripted Java class, or {@code null} if none could be determined
 	 * @throws EvalError in case of BeanShell parsing failure
 	 */
-	static Class<?> determineBshObjectType(String scriptSource) throws EvalError {
+	static Class<?> determineBshObjectType(String scriptSource, ClassLoader classLoader) throws EvalError {
 		Assert.hasText(scriptSource, "Script source must not be empty");
 		Interpreter interpreter = new Interpreter();
+		interpreter.setClassLoader(classLoader);
 		Object result = interpreter.eval(scriptSource);
 		if (result instanceof Class) {
 			return (Class<?>) result;
@@ -148,6 +149,7 @@ public abstract class BshScriptUtils {
 
 		Assert.hasText(scriptSource, "Script source must not be empty");
 		Interpreter interpreter = new Interpreter();
+		interpreter.setClassLoader(classLoader);
 		Object result = interpreter.eval(scriptSource);
 		if (result != null) {
 			return result;
@@ -173,6 +175,7 @@ public abstract class BshScriptUtils {
 			this.xt = xt;
 		}
 
+		@Override
 		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 			if (ReflectionUtils.isEqualsMethod(method)) {
 				return (isProxyForSameBshObject(args[0]));

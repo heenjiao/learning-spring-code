@@ -58,6 +58,7 @@ public class ManagedMap<K, V> extends LinkedHashMap<K, V> implements Mergeable, 
 		this.source = source;
 	}
 
+	@Override
 	public Object getSource() {
 		return this.source;
 	}
@@ -98,10 +99,12 @@ public class ManagedMap<K, V> extends LinkedHashMap<K, V> implements Mergeable, 
 		this.mergeEnabled = mergeEnabled;
 	}
 
+	@Override
 	public boolean isMergeEnabled() {
 		return this.mergeEnabled;
 	}
 
+	@Override
 	@SuppressWarnings("unchecked")
 	public Object merge(Object parent) {
 		if (!this.mergeEnabled) {
@@ -114,7 +117,7 @@ public class ManagedMap<K, V> extends LinkedHashMap<K, V> implements Mergeable, 
 			throw new IllegalArgumentException("Cannot merge with object of type [" + parent.getClass() + "]");
 		}
 		Map<K, V> merged = new ManagedMap<K, V>();
-		merged.putAll((Map) parent);
+		merged.putAll((Map<K, V>) parent);
 		merged.putAll(this);
 		return merged;
 	}

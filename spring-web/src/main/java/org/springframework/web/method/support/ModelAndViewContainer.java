@@ -16,8 +16,11 @@
 
 package org.springframework.web.method.support;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.ui.Model;
 import org.springframework.ui.ModelMap;
 import org.springframework.validation.support.BindingAwareModelMap;
@@ -53,6 +56,11 @@ public class ModelAndViewContainer {
 	private ModelMap redirectModel;
 
 	private boolean redirectModelScenario = false;
+
+	/* Names of attributes with binding disabled */
+	private final Set<String> bindingDisabledAttributes = new HashSet<String>(4);
+
+	private HttpStatus status;
 
 	private final SessionStatus sessionStatus = new SimpleSessionStatus();
 
@@ -116,7 +124,7 @@ public class ModelAndViewContainer {
 	}
 
 	/**
-	 * Return the model to use: either the "default" or the "redirect" model.
+	 * Return the model to use -- either the "default" or the "redirect" model.
 	 * The default model is used if {@code redirectModelScenario=false} or
 	 * there is no redirect model (i.e. RedirectAttributes was not declared as
 	 * a method argument) and {@code ignoreDefaultModelOnRedirect=false}.
@@ -134,6 +142,24 @@ public class ModelAndViewContainer {
 	}
 
 	/**
+	 * Register an attribute for which data binding should not occur, for example
+	 * corresponding to an {@code @ModelAttribute(binding=false)} declaration.
+	 * @param attributeName the name of the attribute
+	 * @since 4.3
+	 */
+	public void setBindingDisabled(String attributeName) {
+		this.bindingDisabledAttributes.add(attributeName);
+	}
+
+	/**
+	 * Whether binding is disabled for the given model attribute.
+	 * @since 4.3
+	 */
+	public boolean isBindingDisabled(String name) {
+		return this.bindingDisabledAttributes.contains(name);
+	}
+
+	/**
 	 * Whether to use the default model or the redirect model.
 	 */
 	private boolean useDefaultModel() {
@@ -141,8 +167,22 @@ public class ModelAndViewContainer {
 	}
 
 	/**
+	 * Return the "default" model created at instantiation.
+	 * <p>In general it is recommended to use {@link #getModel()} instead which
+	 * returns either the "default" model (template rendering) or the "redirect"
+	 * model (redirect URL preparation). Use of this method may be needed for
+	 * advanced cases when access to the "default" model is needed regardless,
+	 * e.g. to save model attributes specified via {@code @SessionAttributes}.
+	 * @return the default model (never {@code null})
+	 * @since 4.1.4
+	 */
+	public ModelMap getDefaultModel() {
+		return this.defaultModel;
+	}
+
+	/**
 	 * Provide a separate model instance to use in a redirect scenario.
-	 * The provided additional model however is not used used unless
+	 * The provided additional model however is not used unless
 	 * {@link #setRedirectModelScenario(boolean)} gets set to {@code true} to signal
 	 * a redirect scenario.
 	 */
@@ -164,6 +204,23 @@ public class ModelAndViewContainer {
 	 */
 	public SessionStatus getSessionStatus() {
 		return this.sessionStatus;
+	}
+
+	/**
+	 * Provide a HTTP status that will be passed on to with the
+	 * {@code ModelAndView} used for view rendering purposes.
+	 * @since 4.3
+	 */
+	public void setStatus(HttpStatus status) {
+		this.status = status;
+	}
+
+	/**
+	 * Return the configured HTTP status, if any.
+	 * @since 4.3
+	 */
+	public HttpStatus getStatus() {
+		return this.status;
 	}
 
 	/**

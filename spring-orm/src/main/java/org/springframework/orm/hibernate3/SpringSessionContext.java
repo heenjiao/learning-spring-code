@@ -37,7 +37,9 @@ import org.hibernate.engine.SessionFactoryImplementor;
  * @since 2.0
  * @see SessionFactoryUtils#doGetSession
  * @see LocalSessionFactoryBean#setExposeTransactionAwareSessionFactory
+ * @deprecated as of Spring 4.3, in favor of Hibernate 4.x/5.x
  */
+@Deprecated
 @SuppressWarnings("serial")
 public class SpringSessionContext implements CurrentSessionContext {
 
@@ -56,6 +58,7 @@ public class SpringSessionContext implements CurrentSessionContext {
 	/**
 	 * Retrieve the Spring-managed Session for the current thread, if any.
 	 */
+	@Override
 	public Session currentSession() throws HibernateException {
 		try {
 			return (org.hibernate.classic.Session) SessionFactoryUtils.doGetSession(this.sessionFactory, false);

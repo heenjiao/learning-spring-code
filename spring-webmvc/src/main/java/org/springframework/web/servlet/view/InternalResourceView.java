@@ -16,18 +16,13 @@
 
 package org.springframework.web.servlet.view;
 
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.util.StringUtils;
-import org.springframework.web.context.support.ContextExposingHttpServletRequest;
 import org.springframework.web.util.WebUtils;
 
 /**
@@ -68,12 +63,6 @@ import org.springframework.web.util.WebUtils;
 public class InternalResourceView extends AbstractUrlBasedView {
 
 	private boolean alwaysInclude = false;
-
-	private volatile Boolean exposeForwardAttributes;
-
-	private boolean exposeContextBeansAsAttributes = false;
-
-	private Set<String> exposedContextBeanNames;
 
 	private boolean preventDispatchLoop = false;
 
@@ -119,48 +108,6 @@ public class InternalResourceView extends AbstractUrlBasedView {
 	}
 
 	/**
-	 * Set whether to explictly expose the Servlet 2.4 forward request attributes
-	 * when forwarding to the underlying view resource.
-	 * <p>Default is "true" on Servlet containers up until 2.4, and "false" for
-	 * Servlet 2.5 and above. Note that Servlet containers at 2.4 level and above
-	 * should expose those attributes automatically! This InternalResourceView
-	 * feature exists for Servlet 2.3 containers and misbehaving 2.4 containers.
-	 */
-	public void setExposeForwardAttributes(boolean exposeForwardAttributes) {
-		this.exposeForwardAttributes = exposeForwardAttributes;
-	}
-
-	/**
-	 * Set whether to make all Spring beans in the application context accessible
-	 * as request attributes, through lazy checking once an attribute gets accessed.
-	 * <p>This will make all such beans accessible in plain {@code ${...}}
-	 * expressions in a JSP 2.0 page, as well as in JSTL's {@code c:out}
-	 * value expressions.
-	 * <p>Default is "false". Switch this flag on to transparently expose all
-	 * Spring beans in the request attribute namespace.
-	 * <p><b>NOTE:</b> Context beans will override any custom request or session
-	 * attributes of the same name that have been manually added. However, model
-	 * attributes (as explicitly exposed to this view) of the same name will
-	 * always override context beans.
-	 * @see #getRequestToExpose
-	 */
-	public void setExposeContextBeansAsAttributes(boolean exposeContextBeansAsAttributes) {
-		this.exposeContextBeansAsAttributes = exposeContextBeansAsAttributes;
-	}
-
-	/**
-	 * Specify the names of beans in the context which are supposed to be exposed.
-	 * If this is non-null, only the specified beans are eligible for exposure as
-	 * attributes.
-	 * <p>If you'd like to expose all Spring beans in the application context, switch
-	 * the {@link #setExposeContextBeansAsAttributes "exposeContextBeansAsAttributes"}
-	 * flag on but do not list specific bean names for this property.
-	 */
-	public void setExposedContextBeanNames(String... exposedContextBeanNames) {
-		this.exposedContextBeanNames = new HashSet<String>(Arrays.asList(exposedContextBeanNames));
-	}
-
-	/**
 	 * Set whether to explicitly prevent dispatching back to the
 	 * current handler path.
 	 * <p>Default is "false". Switch this to "true" for convention-based
@@ -179,19 +126,6 @@ public class InternalResourceView extends AbstractUrlBasedView {
 		return false;
 	}
 
-	/**
-	 * Checks whether we need to explicitly expose the Servlet 2.4 request attributes
-	 * by default.
-	 * @see #setExposeForwardAttributes
-	 * @see #exposeForwardRequestAttributes(javax.servlet.http.HttpServletRequest)
-	 */
-	@Override
-	protected void initServletContext(ServletContext sc) {
-		if (this.exposeForwardAttributes == null && sc.getMajorVersion() == 2 && sc.getMinorVersion() < 5) {
-			this.exposeForwardAttributes = Boolean.TRUE;
-		}
-	}
-
 
 	/**
 	 * Render the internal resource given the specified model.
@@ -201,59 +135,38 @@ public class InternalResourceView extends AbstractUrlBasedView {
 	protected void renderMergedOutputModel(
 			Map<String, Object> model, HttpServletRequest request, HttpServletResponse response) throws Exception {
 
-		// Determine which request handle to expose to the RequestDispatcher.
-		HttpServletRequest requestToExpose = getRequestToExpose(request);
-
 		// Expose the model object as request attributes.
-		exposeModelAsRequestAttributes(model, requestToExpose);
+		exposeModelAsRequestAttributes(model, request);
 
 		// Expose helpers as request attributes, if any.
-		exposeHelpers(requestToExpose);
+		exposeHelpers(request);
 
 		// Determine the path for the request dispatcher.
-		String dispatcherPath = prepareForRendering(requestToExpose, response);
+		String dispatcherPath = prepareForRendering(request, response);
 
 		// Obtain a RequestDispatcher for the target resource (typically a JSP).
-		RequestDispatcher rd = getRequestDispatcher(requestToExpose, dispatcherPath);
+		RequestDispatcher rd = getRequestDispatcher(request, dispatcherPath);
 		if (rd == null) {
 			throw new ServletException("Could not get RequestDispatcher for [" + getUrl() +
 					"]: Check that the corresponding file exists within your web application archive!");
 		}
 
 		// If already included or response already committed, perform include, else forward.
-		if (useInclude(requestToExpose, response)) {
+		if (useInclude(request, response)) {
 			response.setContentType(getContentType());
 			if (logger.isDebugEnabled()) {
 				logger.debug("Including resource [" + getUrl() + "] in InternalResourceView '" + getBeanName() + "'");
 			}
-			rd.include(requestToExpose, response);
+			rd.include(request, response);
 		}
 
 		else {
 			// Note: The forwarded resource is supposed to determine the content type itself.
-			exposeForwardRequestAttributes(requestToExpose);
 			if (logger.isDebugEnabled()) {
 				logger.debug("Forwarding to resource [" + getUrl() + "] in InternalResourceView '" + getBeanName() + "'");
 			}
-			rd.forward(requestToExpose, response);
+			rd.forward(request, response);
 		}
-	}
-
-	/**
-	 * Get the request handle to expose to the RequestDispatcher, i.e. to the view.
-	 * <p>The default implementation wraps the original request for exposure of
-	 * Spring beans as request attributes (if demanded).
-	 * @param originalRequest the original servlet request as provided by the engine
-	 * @return the wrapped request, or the original request if no wrapping is necessary
-	 * @see #setExposeContextBeansAsAttributes
-	 * @see org.springframework.web.context.support.ContextExposingHttpServletRequest
-	 */
-	protected HttpServletRequest getRequestToExpose(HttpServletRequest originalRequest) {
-		if (this.exposeContextBeansAsAttributes || this.exposedContextBeanNames != null) {
-			return new ContextExposingHttpServletRequest(
-					originalRequest, getWebApplicationContext(), this.exposedContextBeanNames);
-		}
-		return originalRequest;
 	}
 
 	/**
@@ -326,30 +239,6 @@ public class InternalResourceView extends AbstractUrlBasedView {
 	 */
 	protected boolean useInclude(HttpServletRequest request, HttpServletResponse response) {
 		return (this.alwaysInclude || WebUtils.isIncludeRequest(request) || response.isCommitted());
-	}
-
-	/**
-	 * Expose the current request URI and paths as {@link HttpServletRequest}
-	 * attributes under the keys defined in the Servlet 2.4 specification,
-	 * for Servlet 2.3 containers as well as misbehaving Servlet 2.4 containers
-	 * (such as OC4J).
-	 * <p>Does not expose the attributes on Servlet 2.5 or above, mainly for
-	 * GlassFish compatibility (GlassFish gets confused by pre-exposed attributes).
-	 * In any case, Servlet 2.5 containers should finally properly support
-	 * Servlet 2.4 features, shouldn't they...
-	 * @param request current HTTP request
-	 * @see org.springframework.web.util.WebUtils#exposeForwardRequestAttributes
-	 */
-	protected void exposeForwardRequestAttributes(HttpServletRequest request) {
-		if (this.exposeForwardAttributes != null && this.exposeForwardAttributes) {
-			try {
-				WebUtils.exposeForwardRequestAttributes(request);
-			}
-			catch (Exception ex) {
-				// Servlet container rejected to set internal attributes, e.g. on TriFork.
-				this.exposeForwardAttributes = Boolean.FALSE;
-			}
-		}
 	}
 
 }

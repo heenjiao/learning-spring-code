@@ -21,6 +21,7 @@ import java.util.List;
 import org.w3c.dom.Element;
 
 import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.parsing.BeanComponentDefinition;
 import org.springframework.beans.factory.parsing.CompositeComponentDefinition;
 import org.springframework.beans.factory.support.ManagedList;
@@ -39,9 +40,15 @@ import org.springframework.web.servlet.handler.MappedInterceptor;
  */
 class InterceptorsBeanDefinitionParser implements BeanDefinitionParser {
 
+	@Override
 	public BeanDefinition parse(Element element, ParserContext parserContext) {
 		CompositeComponentDefinition compDefinition = new CompositeComponentDefinition(element.getTagName(), parserContext.extractSource(element));
 		parserContext.pushContainingComponent(compDefinition);
+
+		RuntimeBeanReference pathMatcherRef = null;
+		if (element.hasAttribute("path-matcher")) {
+			pathMatcherRef = new RuntimeBeanReference(element.getAttribute("path-matcher"));
+		}
 
 		List<Element> interceptors = DomUtils.getChildElementsByTagName(element, "bean", "ref", "interceptor");
 		for (Element interceptor : interceptors) {
@@ -64,6 +71,10 @@ class InterceptorsBeanDefinitionParser implements BeanDefinitionParser {
 			mappedInterceptorDef.getConstructorArgumentValues().addIndexedArgumentValue(0, includePatterns);
 			mappedInterceptorDef.getConstructorArgumentValues().addIndexedArgumentValue(1, excludePatterns);
 			mappedInterceptorDef.getConstructorArgumentValues().addIndexedArgumentValue(2, interceptorBean);
+
+			if (pathMatcherRef != null) {
+				mappedInterceptorDef.getPropertyValues().add("pathMatcher", pathMatcherRef);
+			}
 
 			String beanName = parserContext.getReaderContext().registerWithGeneratedName(mappedInterceptorDef);
 			parserContext.registerComponent(new BeanComponentDefinition(mappedInterceptorDef, beanName));

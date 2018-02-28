@@ -31,6 +31,10 @@ import org.springframework.util.ReflectionUtils;
  * {@link org.springframework.scheduling.commonj.WorkManagerTaskExecutor}
  * adapter for WebLogic and WebSphere.
  *
+ * <p>Note: On GlassFish 4 and higher, a
+ * {@link org.springframework.scheduling.concurrent.DefaultManagedTaskExecutor}
+ * should be preferred, following JSR-236 support in Java EE 7.
+ *
  * @author Juergen Hoeller
  * @since 2.5.2
  */

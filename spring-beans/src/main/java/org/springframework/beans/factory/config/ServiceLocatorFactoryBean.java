@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,17 +65,17 @@ import org.springframework.util.StringUtils;
  * int or a custom enumeration type, for example, stringified via
  * {@code toString}. The resulting String can be used as bean name as-is,
  * provided that corresponding beans are defined in the bean factory.
- * Alternatively, {@link #setServiceMappings(java.util.Properties) a custom mapping}
- * between service ids and bean names can be defined.
+ * Alternatively, {@linkplain #setServiceMappings(java.util.Properties) a custom
+ * mapping} between service IDs and bean names can be defined.
  *
  * <p>By way of an example, consider the following service locator interface.
- * Note that this interface is not dependant on any Spring APIs.
+ * Note that this interface is not dependent on any Spring APIs.
  *
  * <pre class="code">package a.b.c;
  *
  *public interface ServiceFactory {
  *
- *    public MyService getService ();
+ *    public MyService getService();
  *}</pre>
  *
  * <p>A sample config in an XML-based
@@ -121,7 +121,7 @@ import org.springframework.util.StringUtils;
  *
  * <p>By way of an example that looks up a bean <b>by name</b>, consider
  * the following service locator interface. Again, note that this
- * interface is not dependant on any Spring APIs.
+ * interface is not dependent on any Spring APIs.
  *
  * <pre class="code">package a.b.c;
  *
@@ -188,9 +188,9 @@ import org.springframework.util.StringUtils;
  */
 public class ServiceLocatorFactoryBean implements FactoryBean<Object>, BeanFactoryAware, InitializingBean {
 
-	private Class serviceLocatorInterface;
+	private Class<?> serviceLocatorInterface;
 
-	private Constructor serviceLocatorExceptionConstructor;
+	private Constructor<Exception> serviceLocatorExceptionConstructor;
 
 	private Properties serviceMappings;
 
@@ -206,7 +206,7 @@ public class ServiceLocatorFactoryBean implements FactoryBean<Object>, BeanFacto
 	 * See the {@link ServiceLocatorFactoryBean class-level Javadoc} for
 	 * information on the semantics of such methods.
 	 */
-	public void setServiceLocatorInterface(Class interfaceType) {
+	public void setServiceLocatorInterface(Class<?> interfaceType) {
 		this.serviceLocatorInterface = interfaceType;
 	}
 
@@ -222,7 +222,7 @@ public class ServiceLocatorFactoryBean implements FactoryBean<Object>, BeanFacto
 	 * @see #determineServiceLocatorExceptionConstructor
 	 * @see #createServiceLocatorException
 	 */
-	public void setServiceLocatorExceptionClass(Class serviceLocatorExceptionClass) {
+	public void setServiceLocatorExceptionClass(Class<? extends Exception> serviceLocatorExceptionClass) {
 		if (serviceLocatorExceptionClass != null && !Exception.class.isAssignableFrom(serviceLocatorExceptionClass)) {
 			throw new IllegalArgumentException(
 					"serviceLocatorException [" + serviceLocatorExceptionClass.getName() + "] is not a subclass of Exception");
@@ -245,6 +245,7 @@ public class ServiceLocatorFactoryBean implements FactoryBean<Object>, BeanFacto
 		this.serviceMappings = serviceMappings;
 	}
 
+	@Override
 	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
 		if (!(beanFactory instanceof ListableBeanFactory)) {
 			throw new FatalBeanException(
@@ -253,6 +254,7 @@ public class ServiceLocatorFactoryBean implements FactoryBean<Object>, BeanFacto
 		this.beanFactory = (ListableBeanFactory) beanFactory;
 	}
 
+	@Override
 	public void afterPropertiesSet() {
 		if (this.serviceLocatorInterface == null) {
 			throw new IllegalArgumentException("Property 'serviceLocatorInterface' is required");
@@ -261,7 +263,7 @@ public class ServiceLocatorFactoryBean implements FactoryBean<Object>, BeanFacto
 		// Create service locator proxy.
 		this.proxy = Proxy.newProxyInstance(
 				this.serviceLocatorInterface.getClassLoader(),
-				new Class[] {this.serviceLocatorInterface},
+				new Class<?>[] {this.serviceLocatorInterface},
 				new ServiceLocatorInvocationHandler());
 	}
 
@@ -276,17 +278,18 @@ public class ServiceLocatorFactoryBean implements FactoryBean<Object>, BeanFacto
 	 * @return the constructor to use
 	 * @see #setServiceLocatorExceptionClass
 	 */
-	protected Constructor determineServiceLocatorExceptionConstructor(Class exceptionClass) {
+	@SuppressWarnings("unchecked")
+	protected Constructor<Exception> determineServiceLocatorExceptionConstructor(Class<? extends Exception> exceptionClass) {
 		try {
-			return exceptionClass.getConstructor(new Class[] {String.class, Throwable.class});
+			return (Constructor<Exception>) exceptionClass.getConstructor(new Class<?>[] {String.class, Throwable.class});
 		}
 		catch (NoSuchMethodException ex) {
 			try {
-				return exceptionClass.getConstructor(new Class[] {Throwable.class});
+				return (Constructor<Exception>) exceptionClass.getConstructor(new Class<?>[] {Throwable.class});
 			}
 			catch (NoSuchMethodException ex2) {
 				try {
-					return exceptionClass.getConstructor(new Class[] {String.class});
+					return (Constructor<Exception>) exceptionClass.getConstructor(new Class<?>[] {String.class});
 				}
 				catch (NoSuchMethodException ex3) {
 					throw new IllegalArgumentException(
@@ -307,29 +310,32 @@ public class ServiceLocatorFactoryBean implements FactoryBean<Object>, BeanFacto
 	 * @return the service locator exception to throw
 	 * @see #setServiceLocatorExceptionClass
 	 */
-	protected Exception createServiceLocatorException(Constructor exceptionConstructor, BeansException cause) {
-		Class[] paramTypes = exceptionConstructor.getParameterTypes();
+	protected Exception createServiceLocatorException(Constructor<Exception> exceptionConstructor, BeansException cause) {
+		Class<?>[] paramTypes = exceptionConstructor.getParameterTypes();
 		Object[] args = new Object[paramTypes.length];
 		for (int i = 0; i < paramTypes.length; i++) {
-			if (paramTypes[i].equals(String.class)) {
+			if (String.class == paramTypes[i]) {
 				args[i] = cause.getMessage();
 			}
 			else if (paramTypes[i].isInstance(cause)) {
 				args[i] = cause;
 			}
 		}
-		return (Exception) BeanUtils.instantiateClass(exceptionConstructor, args);
+		return BeanUtils.instantiateClass(exceptionConstructor, args);
 	}
 
 
+	@Override
 	public Object getObject() {
 		return this.proxy;
 	}
 
+	@Override
 	public Class<?> getObjectType() {
 		return this.serviceLocatorInterface;
 	}
 
+	@Override
 	public boolean isSingleton() {
 		return true;
 	}
@@ -340,6 +346,7 @@ public class ServiceLocatorFactoryBean implements FactoryBean<Object>, BeanFacto
 	 */
 	private class ServiceLocatorInvocationHandler implements InvocationHandler {
 
+		@Override
 		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 			if (ReflectionUtils.isEqualsMethod(method)) {
 				// Only consider equal when proxies are identical.
@@ -357,9 +364,8 @@ public class ServiceLocatorFactoryBean implements FactoryBean<Object>, BeanFacto
 			}
 		}
 
-		@SuppressWarnings("unchecked")
 		private Object invokeServiceLocatorMethod(Method method, Object[] args) throws Exception {
-			Class serviceLocatorMethodReturnType = getServiceLocatorMethodReturnType(method);
+			Class<?> serviceLocatorMethodReturnType = getServiceLocatorMethodReturnType(method);
 			try {
 				String beanName = tryGetBeanName(args);
 				if (StringUtils.hasLength(beanName)) {
@@ -397,13 +403,13 @@ public class ServiceLocatorFactoryBean implements FactoryBean<Object>, BeanFacto
 			return beanName;
 		}
 
-		private Class getServiceLocatorMethodReturnType(Method method) throws NoSuchMethodException {
-			Class[] paramTypes = method.getParameterTypes();
+		private Class<?> getServiceLocatorMethodReturnType(Method method) throws NoSuchMethodException {
+			Class<?>[] paramTypes = method.getParameterTypes();
 			Method interfaceMethod = serviceLocatorInterface.getMethod(method.getName(), paramTypes);
-			Class serviceLocatorReturnType = interfaceMethod.getReturnType();
+			Class<?> serviceLocatorReturnType = interfaceMethod.getReturnType();
 
 			// Check whether the method is a valid service locator.
-			if (paramTypes.length > 1 || void.class.equals(serviceLocatorReturnType)) {
+			if (paramTypes.length > 1 || void.class == serviceLocatorReturnType) {
 				throw new UnsupportedOperationException(
 						"May only call methods with signature '<type> xxx()' or '<type> xxx(<idtype> id)' " +
 						"on factory interface, but tried to call: " + interfaceMethod);

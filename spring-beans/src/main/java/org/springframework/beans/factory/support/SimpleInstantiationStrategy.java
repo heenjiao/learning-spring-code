@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@ import java.security.PrivilegedExceptionAction;
 
 import org.springframework.beans.BeanInstantiationException;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.BeanDefinitionStoreException;
 import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 
@@ -55,20 +55,28 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 	}
 
 
-	public Object instantiate(RootBeanDefinition beanDefinition, String beanName, BeanFactory owner) {
+	@Override
+	//使用初始化策略实例化bean对象
+	public Object instantiate(RootBeanDefinition bd, String beanName, BeanFactory owner) {
 		// Don't override the class with CGLIB if no overrides.
-		if (beanDefinition.getMethodOverrides().isEmpty()) {
+		//如果Bean定义中没有方法覆盖 这就不需要cglib父类的方法
+		if (bd.getMethodOverrides().isEmpty()) {
 			Constructor<?> constructorToUse;
-			synchronized (beanDefinition.constructorArgumentLock) {
-				constructorToUse = (Constructor<?>) beanDefinition.resolvedConstructorOrFactoryMethod;
+			synchronized (bd.constructorArgumentLock) {
+				//获取对象的构造方法或工厂方法
+				constructorToUse = (Constructor<?>) bd.resolvedConstructorOrFactoryMethod;
+				//如果没有构造方法和工厂方法
 				if (constructorToUse == null) {
-					final Class<?> clazz = beanDefinition.getBeanClass();
+					//使用jdk的反射机制 判断要实例化的bean是否是接口
+					final Class<?> clazz = bd.getBeanClass();
 					if (clazz.isInterface()) {
 						throw new BeanInstantiationException(clazz, "Specified class is an interface");
 					}
 					try {
 						if (System.getSecurityManager() != null) {
-							constructorToUse = AccessController.doPrivileged(new PrivilegedExceptionAction<Constructor>() {
+							//这是一个匿名内部类  使用反射机制获取 bean 的构造方法
+							constructorToUse = AccessController.doPrivileged(new PrivilegedExceptionAction<Constructor<?>>() {
+								@Override
 								public Constructor<?> run() throws Exception {
 									return clazz.getDeclaredConstructor((Class[]) null);
 								}
@@ -77,18 +85,20 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 						else {
 							constructorToUse =	clazz.getDeclaredConstructor((Class[]) null);
 						}
-						beanDefinition.resolvedConstructorOrFactoryMethod = constructorToUse;
+						bd.resolvedConstructorOrFactoryMethod = constructorToUse;
 					}
-					catch (Exception ex) {
+					catch (Throwable ex) {
 						throw new BeanInstantiationException(clazz, "No default constructor found", ex);
 					}
 				}
 			}
+			//使用beanUtils 实例化，通过反射机制调用 构造方法.newInstance(arg) 来进行实例化
 			return BeanUtils.instantiateClass(constructorToUse);
 		}
 		else {
 			// Must generate CGLIB subclass.
-			return instantiateWithMethodInjection(beanDefinition, beanName, owner);
+			//使用cglib实例化对象
+			return instantiateWithMethodInjection(bd, beanName, owner);
 		}
 	}
 
@@ -98,20 +108,19 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 	 * the Method Injection specified in the given RootBeanDefinition.
 	 * Instantiation should use a no-arg constructor.
 	 */
-	protected Object instantiateWithMethodInjection(
-			RootBeanDefinition beanDefinition, String beanName, BeanFactory owner) {
-
-		throw new UnsupportedOperationException(
-				"Method Injection not supported in SimpleInstantiationStrategy");
+	protected Object instantiateWithMethodInjection(RootBeanDefinition bd, String beanName, BeanFactory owner) {
+		throw new UnsupportedOperationException("Method Injection not supported in SimpleInstantiationStrategy");
 	}
 
-	public Object instantiate(RootBeanDefinition beanDefinition, String beanName, BeanFactory owner,
-			final Constructor<?> ctor, Object[] args) {
+	@Override
+	public Object instantiate(RootBeanDefinition bd, String beanName, BeanFactory owner,
+			final Constructor<?> ctor, Object... args) {
 
-		if (beanDefinition.getMethodOverrides().isEmpty()) {
+		if (bd.getMethodOverrides().isEmpty()) {
 			if (System.getSecurityManager() != null) {
 				// use own privileged to change accessibility (when security is on)
 				AccessController.doPrivileged(new PrivilegedAction<Object>() {
+					@Override
 					public Object run() {
 						ReflectionUtils.makeAccessible(ctor);
 						return null;
@@ -121,7 +130,7 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 			return BeanUtils.instantiateClass(ctor, args);
 		}
 		else {
-			return instantiateWithMethodInjection(beanDefinition, beanName, owner, ctor, args);
+			return instantiateWithMethodInjection(bd, beanName, owner, ctor, args);
 		}
 	}
 
@@ -131,19 +140,20 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 	 * the Method Injection specified in the given RootBeanDefinition.
 	 * Instantiation should use the given constructor and parameters.
 	 */
-	protected Object instantiateWithMethodInjection(RootBeanDefinition beanDefinition,
-			String beanName, BeanFactory owner, Constructor<?> ctor, Object[] args) {
+	protected Object instantiateWithMethodInjection(RootBeanDefinition bd, String beanName, BeanFactory owner,
+			Constructor<?> ctor, Object... args) {
 
-		throw new UnsupportedOperationException(
-				"Method Injection not supported in SimpleInstantiationStrategy");
+		throw new UnsupportedOperationException("Method Injection not supported in SimpleInstantiationStrategy");
 	}
 
-	public Object instantiate(RootBeanDefinition beanDefinition, String beanName, BeanFactory owner,
-			Object factoryBean, final Method factoryMethod, Object[] args) {
+	@Override
+	public Object instantiate(RootBeanDefinition bd, String beanName, BeanFactory owner,
+			Object factoryBean, final Method factoryMethod, Object... args) {
 
 		try {
 			if (System.getSecurityManager() != null) {
 				AccessController.doPrivileged(new PrivilegedAction<Object>() {
+					@Override
 					public Object run() {
 						ReflectionUtils.makeAccessible(factoryMethod);
 						return null;
@@ -169,17 +179,22 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 			}
 		}
 		catch (IllegalArgumentException ex) {
-			throw new BeanDefinitionStoreException(
-					"Illegal arguments to factory method [" + factoryMethod + "]; " +
-					"args: " + StringUtils.arrayToCommaDelimitedString(args));
+			throw new BeanInstantiationException(factoryMethod,
+					"Illegal arguments to factory method '" + factoryMethod.getName() + "'; " +
+					"args: " + StringUtils.arrayToCommaDelimitedString(args), ex);
 		}
 		catch (IllegalAccessException ex) {
-			throw new BeanDefinitionStoreException(
-					"Cannot access factory method [" + factoryMethod + "]; is it public?");
+			throw new BeanInstantiationException(factoryMethod,
+					"Cannot access factory method '" + factoryMethod.getName() + "'; is it public?", ex);
 		}
 		catch (InvocationTargetException ex) {
-			throw new BeanDefinitionStoreException(
-					"Factory method [" + factoryMethod + "] threw exception", ex.getTargetException());
+			String msg = "Factory method '" + factoryMethod.getName() + "' threw exception";
+			if (bd.getFactoryBeanName() != null && owner instanceof ConfigurableBeanFactory &&
+					((ConfigurableBeanFactory) owner).isCurrentlyInCreation(bd.getFactoryBeanName())) {
+				msg = "Circular reference involving containing bean '" + bd.getFactoryBeanName() + "' - consider " +
+						"declaring the factory method as static for independence from its containing instance. " + msg;
+			}
+			throw new BeanInstantiationException(factoryMethod, msg, ex.getTargetException());
 		}
 	}
 

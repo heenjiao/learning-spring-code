@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,12 @@ import java.sql.SQLException;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceException;
 
+import org.apache.commons.logging.LogFactory;
+import org.apache.openjpa.persistence.FetchPlan;
 import org.apache.openjpa.persistence.OpenJPAEntityManager;
 import org.apache.openjpa.persistence.OpenJPAPersistence;
+import org.apache.openjpa.persistence.jdbc.IsolationLevel;
+import org.apache.openjpa.persistence.jdbc.JDBCFetchPlan;
 
 import org.springframework.jdbc.datasource.ConnectionHandle;
 import org.springframework.jdbc.datasource.ConnectionHolder;
@@ -34,10 +38,10 @@ import org.springframework.transaction.TransactionException;
 
 /**
  * {@link org.springframework.orm.jpa.JpaDialect} implementation for Apache OpenJPA.
- * Developed and tested against OpenJPA 1.1 as well as 2.0/2.1.
+ * Developed and tested against OpenJPA 2.2.
  *
- * @author Costin Leau
  * @author Juergen Hoeller
+ * @author Costin Leau
  * @since 2.0
  */
 @SuppressWarnings("serial")
@@ -47,14 +51,27 @@ public class OpenJpaDialect extends DefaultJpaDialect {
 	public Object beginTransaction(EntityManager entityManager, TransactionDefinition definition)
 			throws PersistenceException, SQLException, TransactionException {
 
-		super.beginTransaction(entityManager, definition);
-		OpenJPAEntityManager em = getOpenJPAEntityManager(entityManager);
-		if (!definition.isReadOnly()) {
-			// Like with TopLink, make sure to start the logic transaction early so that other
-			// participants using the connection (such as JdbcTemplate) run in a transaction.
-			em.beginStore();
+		OpenJPAEntityManager openJpaEntityManager = getOpenJPAEntityManager(entityManager);
+
+		if (definition.getIsolationLevel() != TransactionDefinition.ISOLATION_DEFAULT) {
+			// Pass custom isolation level on to OpenJPA's JDBCFetchPlan configuration
+			FetchPlan fetchPlan = openJpaEntityManager.getFetchPlan();
+			if (fetchPlan instanceof JDBCFetchPlan) {
+				IsolationLevel isolation = IsolationLevel.fromConnectionConstant(definition.getIsolationLevel());
+				((JDBCFetchPlan) fetchPlan).setIsolation(isolation);
+			}
 		}
-		return new OpenJpaTransactionData(em);
+
+		entityManager.getTransaction().begin();
+
+		if (!definition.isReadOnly()) {
+			// Like with EclipseLink, make sure to start the logic transaction early so that other
+			// participants using the connection (such as JdbcTemplate) run in a transaction.
+			openJpaEntityManager.beginStore();
+		}
+
+		// Custom implementation for OpenJPA savepoint handling
+		return new OpenJpaTransactionData(openJpaEntityManager);
 	}
 
 	@Override
@@ -65,9 +82,9 @@ public class OpenJpaDialect extends DefaultJpaDialect {
 	}
 
 	/**
-	 * Return the OpenJPA-specific interface of {@code EntityManager}.
+	 * Return the OpenJPA-specific variant of {@code EntityManager}.
 	 * @param em the generic {@code EntityManager} instance
-	 * @return the OpenJPA-specific interface of {@code EntityManager}
+	 * @return the OpenJPA-specific variant of {@code EntityManager}
 	 */
 	protected OpenJPAEntityManager getOpenJPAEntityManager(EntityManager em) {
 		return OpenJPAPersistence.cast(em);
@@ -76,7 +93,7 @@ public class OpenJpaDialect extends DefaultJpaDialect {
 
 	/**
 	 * Transaction data Object exposed from {@code beginTransaction},
-	 * implementing the SavepointManager interface.
+	 * implementing the {@link SavepointManager} interface.
 	 */
 	private static class OpenJpaTransactionData implements SavepointManager {
 
@@ -88,6 +105,7 @@ public class OpenJpaDialect extends DefaultJpaDialect {
 			this.entityManager = entityManager;
 		}
 
+		@Override
 		public Object createSavepoint() throws TransactionException {
 			this.savepointCounter++;
 			String savepointName = ConnectionHolder.SAVEPOINT_NAME_PREFIX + this.savepointCounter;
@@ -95,19 +113,27 @@ public class OpenJpaDialect extends DefaultJpaDialect {
 			return savepointName;
 		}
 
+		@Override
 		public void rollbackToSavepoint(Object savepoint) throws TransactionException {
 			this.entityManager.rollbackToSavepoint((String) savepoint);
 		}
 
+		@Override
 		public void releaseSavepoint(Object savepoint) throws TransactionException {
-			this.entityManager.releaseSavepoint((String) savepoint);
+			try {
+				this.entityManager.releaseSavepoint((String) savepoint);
+			}
+			catch (Throwable ex) {
+				LogFactory.getLog(OpenJpaTransactionData.class).debug(
+						"Could not explicitly release OpenJPA savepoint", ex);
+			}
 		}
 	}
 
 
 	/**
-	 * ConnectionHandle implementation that fetches a new OpenJPA-provided Connection
-	 * for every {@code getConnection} call and closes the Connection on
+	 * {@link ConnectionHandle} implementation that fetches a new OpenJPA-provided
+	 * Connection for every {@code getConnection} call and closes the Connection on
 	 * {@code releaseConnection}. This is necessary because OpenJPA requires the
 	 * fetched Connection to be closed before continuing EntityManager work.
 	 * @see org.apache.openjpa.persistence.OpenJPAEntityManager#getConnection()
@@ -120,10 +146,12 @@ public class OpenJpaDialect extends DefaultJpaDialect {
 			this.entityManager = entityManager;
 		}
 
+		@Override
 		public Connection getConnection() {
 			return (Connection) this.entityManager.getConnection();
 		}
 
+		@Override
 		public void releaseConnection(Connection con) {
 			JdbcUtils.closeConnection(con);
 		}

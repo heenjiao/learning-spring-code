@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,44 +16,63 @@
 
 package org.springframework.expression;
 
-
 /**
- * Super class for exceptions that can occur whilst processing expressions
+ * Super class for exceptions that can occur whilst processing expressions.
  *
  * @author Andy Clement
+ * @author Phil Webb
  * @since 3.0
  */
 @SuppressWarnings("serial")
 public class ExpressionException extends RuntimeException {
 
 	protected String expressionString;
-	protected int position; // -1 if not known - but should be known in all reasonable cases
+
+	protected int position;  // -1 if not known; should be known in all reasonable cases
+
 
 	/**
-	 * Creates a new expression exception.
+	 * Construct a new expression exception.
+	 * @param message a descriptive message
+	 */
+	public ExpressionException(String message) {
+		super(message);
+	}
+
+	/**
+	 * Construct a new expression exception.
+	 * @param message a descriptive message
+	 * @param cause the underlying cause of this exception
+	 */
+	public ExpressionException(String message, Throwable cause) {
+		super(message, cause);
+	}
+
+	/**
+	 * Construct a new expression exception.
 	 * @param expressionString the expression string
 	 * @param message a descriptive message
 	 */
 	public ExpressionException(String expressionString, String message) {
 		super(message);
-		this.position = -1;
 		this.expressionString = expressionString;
+		this.position = -1;
 	}
 
 	/**
-	 * Creates a new expression exception.
+	 * Construct a new expression exception.
 	 * @param expressionString the expression string
 	 * @param position the position in the expression string where the problem occurred
 	 * @param message a descriptive message
 	 */
 	public ExpressionException(String expressionString, int position, String message) {
 		super(message);
-		this.position = position;
 		this.expressionString = expressionString;
+		this.position = position;
 	}
 
 	/**
-	 * Creates a new expression exception.
+	 * Construct a new expression exception.
 	 * @param position the position in the expression string where the problem occurred
 	 * @param message a descriptive message
 	 */
@@ -63,50 +82,72 @@ public class ExpressionException extends RuntimeException {
 	}
 
 	/**
-	 * Creates a new expression exception.
+	 * Construct a new expression exception.
 	 * @param position the position in the expression string where the problem occurred
 	 * @param message a descriptive message
 	 * @param cause the underlying cause of this exception
 	 */
 	public ExpressionException(int position, String message, Throwable cause) {
-		super(message,cause);
+		super(message, cause);
 		this.position = position;
 	}
 
+
 	/**
-	 * Creates a new expression exception.
-	 * @param message a descriptive message
+	 * Return the expression string.
 	 */
-	public ExpressionException(String message) {
-		super(message);
-	}
-
-	public ExpressionException(String message, Throwable cause) {
-		super(message,cause);
-	}
-
-	public String toDetailedString() {
-		StringBuilder output = new StringBuilder();
-		if (expressionString!=null) {
-			output.append("Expression '");
-			output.append(expressionString);
-			output.append("'");
-			if (position!=-1) {
-				output.append(" @ ");
-				output.append(position);
-			}
-			output.append(": ");
-		}
-		output.append(getMessage());
-		return output.toString();
-	}
-
 	public final String getExpressionString() {
 		return this.expressionString;
 	}
 
+	/**
+	 * Return the position in the expression string where the problem occurred.
+	 */
 	public final int getPosition() {
-		return position;
+		return this.position;
+	}
+
+	/**
+	 * Return the exception message.
+	 * As of Spring 4.0, this method returns the same result as {@link #toDetailedString()}.
+	 * @see #getSimpleMessage()
+	 * @see java.lang.Throwable#getMessage()
+	 */
+	@Override
+	public String getMessage() {
+		return toDetailedString();
+	}
+
+	/**
+	 * Return a detailed description of this exception, including the expression
+	 * String and position (if available) as well as the actual exception message.
+	 */
+	public String toDetailedString() {
+		if (this.expressionString != null) {
+			StringBuilder output = new StringBuilder();
+			output.append("Expression [");
+			output.append(this.expressionString);
+			output.append("]");
+			if (this.position >= 0) {
+				output.append(" @");
+				output.append(this.position);
+			}
+			output.append(": ");
+			output.append(getSimpleMessage());
+			return output.toString();
+		}
+		else {
+			return getSimpleMessage();
+		}
+	}
+
+	/**
+	 * Return the exception simple message without including the expression
+	 * that caused the failure.
+	 * @since 4.0
+	 */
+	public String getSimpleMessage() {
+		return super.getMessage();
 	}
 
 }

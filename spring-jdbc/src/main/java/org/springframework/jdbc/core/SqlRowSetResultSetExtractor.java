@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,10 @@ import javax.sql.rowset.CachedRowSet;
 import javax.sql.rowset.RowSetFactory;
 import javax.sql.rowset.RowSetProvider;
 
-import org.springframework.core.JdkVersion;
 import org.springframework.jdbc.support.rowset.ResultSetWrappingSqlRowSet;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
+import org.springframework.lang.UsesJava7;
+import org.springframework.util.ClassUtils;
 
 /**
  * {@link ResultSetExtractor} implementation that returns a Spring {@link SqlRowSet}
@@ -32,8 +33,8 @@ import org.springframework.jdbc.support.rowset.SqlRowSet;
  *
  * <p>The default implementation uses a standard JDBC CachedRowSet underneath.
  * This means that JDBC RowSet support needs to be available at runtime:
- * by default, Sun's {@code com.sun.rowset.CachedRowSetImpl} class on Java 5 and 6,
- * or the {@code javax.sql.rowset.RowSetProvider} mechanism on Java 7 / JDBC 4.1.
+ * by default, Sun's {@code com.sun.rowset.CachedRowSetImpl} class on Java 6,
+ * or the {@code javax.sql.rowset.RowSetProvider} mechanism on Java 7+ / JDBC 4.1+.
  *
  * @author Juergen Hoeller
  * @since 1.2
@@ -47,17 +48,19 @@ public class SqlRowSetResultSetExtractor implements ResultSetExtractor<SqlRowSet
 	private static final CachedRowSetFactory cachedRowSetFactory;
 
 	static {
-		if (JdkVersion.getMajorJavaVersion() >= JdkVersion.JAVA_17) {
-			// using JDBC 4.1 RowSetProvider
+		if (ClassUtils.isPresent("javax.sql.rowset.RowSetProvider",
+				SqlRowSetResultSetExtractor.class.getClassLoader())) {
+			// using JDBC 4.1 RowSetProvider, available on JDK 7+
 			cachedRowSetFactory = new StandardCachedRowSetFactory();
 		}
 		else {
-			// JDBC 4.1 API not available - fall back to Sun CachedRowSetImpl
+			// JDBC 4.1 API not available - fall back to Sun CachedRowSetImpl on JDK 6
 			cachedRowSetFactory = new SunCachedRowSetFactory();
 		}
 	}
 
 
+	@Override
 	public SqlRowSet extractData(ResultSet rs) throws SQLException {
 		return createSqlRowSet(rs);
 	}
@@ -107,6 +110,7 @@ public class SqlRowSetResultSetExtractor implements ResultSetExtractor<SqlRowSet
 	/**
 	 * Inner class to avoid a hard dependency on JDBC 4.1 RowSetProvider class.
 	 */
+	@UsesJava7
 	private static class StandardCachedRowSetFactory implements CachedRowSetFactory {
 
 		private final RowSetFactory rowSetFactory;
@@ -120,6 +124,7 @@ public class SqlRowSetResultSetExtractor implements ResultSetExtractor<SqlRowSet
 			}
 		}
 
+		@Override
 		public CachedRowSet createCachedRowSet() throws SQLException {
 			return this.rowSetFactory.createCachedRowSet();
 		}
@@ -131,8 +136,26 @@ public class SqlRowSetResultSetExtractor implements ResultSetExtractor<SqlRowSet
 	 */
 	private static class SunCachedRowSetFactory implements CachedRowSetFactory {
 
+		private static final Class<?> implementationClass;
+
+		static {
+			try {
+				implementationClass = ClassUtils.forName("com.sun.rowset.CachedRowSetImpl",
+						SqlRowSetResultSetExtractor.class.getClassLoader());
+			}
+			catch (Throwable ex) {
+				throw new IllegalStateException(ex);
+			}
+		}
+
+		@Override
 		public CachedRowSet createCachedRowSet() throws SQLException {
-			return new com.sun.rowset.CachedRowSetImpl();
+			try {
+				return (CachedRowSet) implementationClass.newInstance();
+			}
+			catch (Throwable ex) {
+				throw new IllegalStateException(ex);
+			}
 		}
 	}
 

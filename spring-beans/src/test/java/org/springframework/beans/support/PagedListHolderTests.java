@@ -23,7 +23,6 @@ import org.junit.Test;
 
 import org.springframework.tests.Assume;
 import org.springframework.tests.TestGroup;
-
 import org.springframework.tests.sample.beans.TestBean;
 
 import static org.junit.Assert.*;
@@ -197,6 +196,7 @@ public class PagedListHolderTests {
 			this.extendedInfo = extendedInfo;
 		}
 
+		@Override
 		public boolean equals(Object o) {
 			if (this == o) return true;
 			if (!(o instanceof MockFilter)) return false;
@@ -210,6 +210,7 @@ public class PagedListHolderTests {
 			return true;
 		}
 
+		@Override
 		public int hashCode() {
 			int result;
 			result = name.hashCode();

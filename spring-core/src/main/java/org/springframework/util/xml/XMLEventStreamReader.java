@@ -51,6 +51,7 @@ class XMLEventStreamReader extends AbstractXMLStreamReader {
 	}
 
 
+	@Override
 	public QName getName() {
 		if (this.event.isStartElement()) {
 			return this.event.asStartElement().getName();
@@ -63,14 +64,17 @@ class XMLEventStreamReader extends AbstractXMLStreamReader {
 		}
 	}
 
+	@Override
 	public Location getLocation() {
 		return this.event.getLocation();
 	}
 
+	@Override
 	public int getEventType() {
 		return this.event.getEventType();
 	}
 
+	@Override
 	public String getVersion() {
 		if (this.event.isStartDocument()) {
 			return ((StartDocument) this.event).getVersion();
@@ -80,10 +84,12 @@ class XMLEventStreamReader extends AbstractXMLStreamReader {
 		}
 	}
 
+	@Override
 	public Object getProperty(String name) throws IllegalArgumentException {
 		return this.eventReader.getProperty(name);
 	}
 
+	@Override
 	public boolean isStandalone() {
 		if (this.event.isStartDocument()) {
 			return ((StartDocument) event).isStandalone();
@@ -93,6 +99,7 @@ class XMLEventStreamReader extends AbstractXMLStreamReader {
 		}
 	}
 
+	@Override
 	public boolean standaloneSet() {
 		if (this.event.isStartDocument()) {
 			return ((StartDocument) this.event).standaloneSet();
@@ -102,14 +109,17 @@ class XMLEventStreamReader extends AbstractXMLStreamReader {
 		}
 	}
 
+	@Override
 	public String getEncoding() {
 		return null;
 	}
 
+	@Override
 	public String getCharacterEncodingScheme() {
 		return null;
 	}
 
+	@Override
 	public String getPITarget() {
 		if (this.event.isProcessingInstruction()) {
 			return ((ProcessingInstruction) this.event).getTarget();
@@ -119,6 +129,7 @@ class XMLEventStreamReader extends AbstractXMLStreamReader {
 		}
 	}
 
+	@Override
 	public String getPIData() {
 		if (this.event.isProcessingInstruction()) {
 			return ((ProcessingInstruction) this.event).getData();
@@ -128,10 +139,12 @@ class XMLEventStreamReader extends AbstractXMLStreamReader {
 		}
 	}
 
+	@Override
 	public int getTextStart() {
 		return 0;
 	}
 
+	@Override
 	public String getText() {
 		if (this.event.isCharacters()) {
 			return event.asCharacters().getData();
@@ -144,6 +157,7 @@ class XMLEventStreamReader extends AbstractXMLStreamReader {
 		}
 	}
 
+	@Override
 	@SuppressWarnings("rawtypes")
 	public int getAttributeCount() {
 		if (!this.event.isStartElement()) {
@@ -153,18 +167,22 @@ class XMLEventStreamReader extends AbstractXMLStreamReader {
 		return countIterator(attributes);
 	}
 
+	@Override
 	public boolean isAttributeSpecified(int index) {
 		return getAttribute(index).isSpecified();
 	}
 
+	@Override
 	public QName getAttributeName(int index) {
 		return getAttribute(index).getName();
 	}
 
+	@Override
 	public String getAttributeType(int index) {
 		return getAttribute(index).getDTDType();
 	}
 
+	@Override
 	public String getAttributeValue(int index) {
 		return getAttribute(index).getValue();
 	}
@@ -188,6 +206,7 @@ class XMLEventStreamReader extends AbstractXMLStreamReader {
 		throw new IllegalArgumentException();
 	}
 
+	@Override
 	public NamespaceContext getNamespaceContext() {
 		if (this.event.isStartElement()) {
 			return this.event.asStartElement().getNamespaceContext();
@@ -197,6 +216,7 @@ class XMLEventStreamReader extends AbstractXMLStreamReader {
 		}
 	}
 
+	@Override
 	@SuppressWarnings("rawtypes")
 	public int getNamespaceCount() {
 		Iterator namespaces;
@@ -212,10 +232,12 @@ class XMLEventStreamReader extends AbstractXMLStreamReader {
 		return countIterator(namespaces);
 	}
 
+	@Override
 	public String getNamespacePrefix(int index) {
 		return getNamespace(index).getPrefix();
 	}
 
+	@Override
 	public String getNamespaceURI(int index) {
 		return getNamespace(index).getNamespaceURI();
 	}
@@ -245,11 +267,13 @@ class XMLEventStreamReader extends AbstractXMLStreamReader {
 		throw new IllegalArgumentException();
 	}
 
+	@Override
 	public int next() throws XMLStreamException {
 		this.event = this.eventReader.nextEvent();
 		return this.event.getEventType();
 	}
 
+	@Override
 	public void close() throws XMLStreamException {
 		this.eventReader.close();
 	}

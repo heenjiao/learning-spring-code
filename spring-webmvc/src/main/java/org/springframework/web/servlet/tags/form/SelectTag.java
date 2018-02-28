@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.web.servlet.tags.form;
 
 import java.util.Collection;
 import java.util.Map;
-
 import javax.servlet.jsp.JspException;
 
 import org.springframework.util.ObjectUtils;
@@ -85,7 +84,7 @@ public class SelectTag extends AbstractHtmlInputElementTag {
 	 * Indicates whether or not the '{@code select}' tag allows
 	 * multiple-selections.
 	 */
-	private Object multiple = Boolean.FALSE;
+	private Object multiple;
 
 	/**
 	 * The {@link TagWriter} instance that the output is being written.
@@ -153,8 +152,6 @@ public class SelectTag extends AbstractHtmlInputElementTag {
 	/**
 	 * Set the value of the HTML '{@code size}' attribute rendered
 	 * on the final '{@code select}' element.
-	 * <p>May be a runtime expression.
-	 * @param size the desired value of the '{@code size}' attribute
 	 */
 	public void setSize(String size) {
 		this.size = size;
@@ -162,7 +159,6 @@ public class SelectTag extends AbstractHtmlInputElementTag {
 
 	/**
 	 * Get the value of the '{@code size}' attribute.
-	 * <p>May be a runtime expression.
 	 */
 	protected String getSize() {
 		return this.size;
@@ -171,7 +167,6 @@ public class SelectTag extends AbstractHtmlInputElementTag {
 	/**
 	 * Set the value of the HTML '{@code multiple}' attribute rendered
 	 * on the final '{@code select}' element.
-	 * <p>May be a runtime expression.
 	 */
 	public void setMultiple(Object multiple) {
 		this.multiple = multiple;
@@ -180,7 +175,6 @@ public class SelectTag extends AbstractHtmlInputElementTag {
 	/**
 	 * Get the value of the HTML '{@code multiple}' attribute rendered
 	 * on the final '{@code select}' element.
-	 * <p>May be a runtime expression.
 	 */
 	protected Object getMultiple() {
 		return this.multiple;
@@ -216,6 +210,7 @@ public class SelectTag extends AbstractHtmlInputElementTag {
 							ObjectUtils.getDisplayString(evaluate("itemLabel", getItemLabel())) : null);
 					OptionWriter optionWriter =
 							new OptionWriter(itemsObject, getBindStatus(), valueProperty, labelProperty, isHtmlEscape()) {
+								@Override
 								protected String processOptionValue(String resolvedValue) {
 									return processFieldValue(selectName, resolvedValue, "option");
 								}
@@ -254,11 +249,9 @@ public class SelectTag extends AbstractHtmlInputElementTag {
 
 	private boolean isMultiple() throws JspException {
 		Object multiple = getMultiple();
-		if (Boolean.TRUE.equals(multiple) || "multiple".equals(multiple)) {
-			return true;
-		}
-		else if (this.multiple instanceof String) {
-			return evaluateBoolean("multiple", (String) multiple);
+		if (multiple != null) {
+			String stringValue = multiple.toString();
+			return ("multiple".equalsIgnoreCase(stringValue) || Boolean.parseBoolean(stringValue));
 		}
 		return forceMultiple();
 	}
@@ -269,7 +262,7 @@ public class SelectTag extends AbstractHtmlInputElementTag {
 	 */
 	private boolean forceMultiple() throws JspException {
 		BindStatus bindStatus = getBindStatus();
-		Class valueType = bindStatus.getValueType();
+		Class<?> valueType = bindStatus.getValueType();
 		if (valueType != null && typeRequiresMultiple(valueType)) {
 			return true;
 		}
@@ -286,7 +279,7 @@ public class SelectTag extends AbstractHtmlInputElementTag {
 	 * Returns '{@code true}' for arrays, {@link Collection Collections}
 	 * and {@link Map Maps}.
 	 */
-	private static boolean typeRequiresMultiple(Class type) {
+	private static boolean typeRequiresMultiple(Class<?> type) {
 		return (type.isArray() || Collection.class.isAssignableFrom(type) || Map.class.isAssignableFrom(type));
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.springframework.web.method.annotation;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.springframework.core.MethodParameter;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
@@ -47,9 +48,10 @@ import org.springframework.web.method.support.ModelAndViewContainer;
  */
 public abstract class AbstractWebArgumentResolverAdapter implements HandlerMethodArgumentResolver {
 
-	private final Log logger = LogFactory.getLog(this.getClass());
+	private final Log logger = LogFactory.getLog(getClass());
 
 	private final WebArgumentResolver adaptee;
+
 
 	/**
 	 * Create a new instance.
@@ -59,10 +61,12 @@ public abstract class AbstractWebArgumentResolverAdapter implements HandlerMetho
 		this.adaptee = adaptee;
 	}
 
+
 	/**
 	 * Actually resolve the value and check the resolved value is not
 	 * {@link WebArgumentResolver#UNRESOLVED} absorbing _any_ exceptions.
 	 */
+	@Override
 	public boolean supportsParameter(MethodParameter parameter) {
 		try {
 			NativeWebRequest webRequest = getWebRequest();
@@ -82,19 +86,13 @@ public abstract class AbstractWebArgumentResolverAdapter implements HandlerMetho
 	}
 
 	/**
-	 * Required for access to NativeWebRequest in {@link #supportsParameter}.
-	 */
-	protected abstract NativeWebRequest getWebRequest();
-
-	/**
 	 * Delegate to the {@link WebArgumentResolver} instance.
 	 * @exception IllegalStateException if the resolved value is not assignable
 	 * to the method parameter.
 	 */
-	public Object resolveArgument(
-			MethodParameter parameter, ModelAndViewContainer mavContainer,
-			NativeWebRequest webRequest, WebDataBinderFactory binderFactory)
-			throws Exception {
+	@Override
+	public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
+			NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
 
 		Class<?> paramType = parameter.getParameterType();
 		Object result = this.adaptee.resolveArgument(parameter, webRequest);
@@ -106,4 +104,11 @@ public abstract class AbstractWebArgumentResolverAdapter implements HandlerMetho
 		}
 		return result;
 	}
+
+
+	/**
+	 * Required for access to NativeWebRequest in {@link #supportsParameter}.
+	 */
+	protected abstract NativeWebRequest getWebRequest();
+
 }

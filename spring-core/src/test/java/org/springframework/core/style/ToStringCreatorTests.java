@@ -75,7 +75,7 @@ public class ToStringCreatorTests {
 	}
 
 	private Map<String, String> getMap() {
-		Map<String, String> map = new LinkedHashMap<String, String>();
+		Map<String, String> map = new LinkedHashMap<>();
 		map.put("Keri", "Softball");
 		map.put("Scot", "Fishing");
 		map.put("Keith", "Flag Football");
@@ -99,7 +99,7 @@ public class ToStringCreatorTests {
 
 	@Test
 	public void appendList() {
-		List<SomeObject> list = new ArrayList<SomeObject>();
+		List<SomeObject> list = new ArrayList<>();
 		list.add(s1);
 		list.add(s2);
 		list.add(s3);
@@ -110,7 +110,7 @@ public class ToStringCreatorTests {
 
 	@Test
 	public void appendSet() {
-		Set<SomeObject> set = new LinkedHashSet<SomeObject>();
+		Set<SomeObject> set = new LinkedHashSet<>();
 		set.add(s1);
 		set.add(s2);
 		set.add(s3);

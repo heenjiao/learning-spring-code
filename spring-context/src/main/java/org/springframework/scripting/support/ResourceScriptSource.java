@@ -17,14 +17,13 @@
 package org.springframework.scripting.support;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.Reader;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.EncodedResource;
 import org.springframework.scripting.ScriptSource;
 import org.springframework.util.Assert;
 import org.springframework.util.FileCopyUtils;
@@ -50,9 +49,7 @@ public class ResourceScriptSource implements ScriptSource {
 	/** Logger available to subclasses */
 	protected final Log logger = LogFactory.getLog(getClass());
 
-	private final Resource resource;
-
-	private String encoding = "UTF-8";
+	private EncodedResource resource;
 
 	private long lastModified = -1;
 
@@ -61,19 +58,29 @@ public class ResourceScriptSource implements ScriptSource {
 
 	/**
 	 * Create a new ResourceScriptSource for the given resource.
-	 * @param resource the Resource to load the script from
+	 * @param resource the EncodedResource to load the script from
 	 */
-	public ResourceScriptSource(Resource resource) {
+	public ResourceScriptSource(EncodedResource resource) {
 		Assert.notNull(resource, "Resource must not be null");
 		this.resource = resource;
 	}
+
+	/**
+	 * Create a new ResourceScriptSource for the given resource.
+	 * @param resource the Resource to load the script from (using UTF-8 encoding)
+	 */
+	public ResourceScriptSource(Resource resource) {
+		Assert.notNull(resource, "Resource must not be null");
+		this.resource = new EncodedResource(resource, "UTF-8");
+	}
+
 
 	/**
 	 * Return the {@link org.springframework.core.io.Resource} to load the
 	 * script from.
 	 */
 	public final Resource getResource() {
-		return this.resource;
+		return this.resource.getResource();
 	}
 
 	/**
@@ -82,20 +89,20 @@ public class ResourceScriptSource implements ScriptSource {
 	 * A {@code null} value implies the platform default.
 	 */
 	public void setEncoding(String encoding) {
-		this.encoding = encoding;
+		this.resource = new EncodedResource(this.resource.getResource(), encoding);
 	}
 
 
+	@Override
 	public String getScriptAsString() throws IOException {
 		synchronized (this.lastModifiedMonitor) {
 			this.lastModified = retrieveLastModifiedTime();
 		}
-		InputStream stream = this.resource.getInputStream();
-		Reader reader = (StringUtils.hasText(this.encoding) ? new InputStreamReader(stream, this.encoding) :
-				new InputStreamReader(stream));
+		Reader reader = this.resource.getReader();
 		return FileCopyUtils.copyToString(reader);
 	}
 
+	@Override
 	public boolean isModified() {
 		synchronized (this.lastModifiedMonitor) {
 			return (this.lastModified < 0 || retrieveLastModifiedTime() > this.lastModified);
@@ -119,6 +126,7 @@ public class ResourceScriptSource implements ScriptSource {
 		}
 	}
 
+	@Override
 	public String suggestedClassName() {
 		return StringUtils.stripFilenameExtension(getResource().getFilename());
 	}

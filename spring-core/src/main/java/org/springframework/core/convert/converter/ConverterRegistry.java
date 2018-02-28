@@ -39,7 +39,7 @@ public interface ConverterRegistry {
 	 * having to create a Converter class for each pair.
 	 * @since 3.1
 	 */
-	void addConverter(Class<?> sourceType, Class<?> targetType, Converter<?, ?> converter);
+	<S, T> void addConverter(Class<S> sourceType, Class<T> targetType, Converter<? super S, ? extends T> converter);
 
 	/**
 	 * Add a generic converter to this registry.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,6 @@
 
 package org.springframework.web.servlet.mvc.method.annotation;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.text.SimpleDateFormat;
@@ -29,11 +26,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.junit.Test;
+
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.beans.propertyeditors.CustomDateEditor;
 import org.springframework.context.ApplicationContextInitializer;
@@ -54,6 +51,8 @@ import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.ViewResolver;
 import org.springframework.web.servlet.mvc.annotation.UriTemplateServletAnnotationControllerTests;
 import org.springframework.web.servlet.view.AbstractView;
+
+import static org.junit.Assert.*;
 
 /**
  * The origin of this test class is {@link UriTemplateServletAnnotationControllerTests}.
@@ -398,8 +397,8 @@ public class UriTemplateServletAnnotationControllerHandlerMethodTests extends Ab
 		public void handle(@PathVariable("hotel") String hotel,
 				@PathVariable int booking,
 				@PathVariable String other,
-				@MatrixVariable(value="q", pathVar="hotel") int qHotel,
-				@MatrixVariable(value="q", pathVar="other") int qOther,
+				@MatrixVariable(name = "q", pathVar = "hotel") int qHotel,
+				@MatrixVariable(name = "q", pathVar = "other") int qOther,
 				Writer writer) throws IOException {
 			assertEquals("Invalid path variable value", "42", hotel);
 			assertEquals("Invalid path variable value", 21, booking);

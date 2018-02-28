@@ -34,7 +34,7 @@ import static org.junit.Assert.*;
  * @author Andy Clement
  * @author Juergen Hoeller
  */
-public class TemplateExpressionParsingTests extends ExpressionTestCase {
+public class TemplateExpressionParsingTests extends AbstractExpressionTests {
 
 	public static final ParserContext DEFAULT_TEMPLATE_PARSER_CONTEXT = new ParserContext() {
 		@Override
@@ -195,7 +195,7 @@ public class TemplateExpressionParsingTests extends ExpressionTestCase {
 			fail("Should have failed");
 		}
 		catch (ParseException pe) {
-			assertEquals("No ending suffix '}' for expression starting at character 41: ${listOfNumbersUpToTen.$[#this>5] world", pe.getMessage());
+			assertEquals("No ending suffix '}' for expression starting at character 41: ${listOfNumbersUpToTen.$[#this>5] world", pe.getSimpleMessage());
 		}
 
 		try {
@@ -203,7 +203,7 @@ public class TemplateExpressionParsingTests extends ExpressionTestCase {
 			fail("Should have failed");
 		}
 		catch (ParseException pe) {
-			assertEquals("Found closing '}' at position 74 but most recent opening is '[' at position 30", pe.getMessage());
+			assertEquals("Found closing '}' at position 74 but most recent opening is '[' at position 30", pe.getSimpleMessage());
 		}
 	}
 
@@ -239,22 +239,22 @@ public class TemplateExpressionParsingTests extends ExpressionTestCase {
 			fail("Should have failed");
 		}
 		catch (ParseException pe) {
-			assertEquals("No ending suffix '}' for expression starting at character 6: ${'world'", pe.getMessage());
-			assertEquals("hello ${'world'",pe.getExpressionString());
+			assertEquals("No ending suffix '}' for expression starting at character 6: ${'world'", pe.getSimpleMessage());
+			assertEquals("hello ${'world'", pe.getExpressionString());
 		}
 		try {
 			parser.parseExpression("hello ${'wibble'${'world'}", DEFAULT_TEMPLATE_PARSER_CONTEXT);
 			fail("Should have failed");
 		}
 		catch (ParseException pe) {
-			assertEquals("No ending suffix '}' for expression starting at character 6: ${'wibble'${'world'}", pe.getMessage());
+			assertEquals("No ending suffix '}' for expression starting at character 6: ${'wibble'${'world'}", pe.getSimpleMessage());
 		}
 		try {
 			parser.parseExpression("hello ${} world", DEFAULT_TEMPLATE_PARSER_CONTEXT);
 			fail("Should have failed");
 		}
 		catch (ParseException pe) {
-			assertEquals("No expression defined within delimiter '${}' at character 6", pe.getMessage());
+			assertEquals("No expression defined within delimiter '${}' at character 6", pe.getSimpleMessage());
 		}
 	}
 

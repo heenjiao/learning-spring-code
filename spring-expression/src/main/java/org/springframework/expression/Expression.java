@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,9 @@ package org.springframework.expression;
 import org.springframework.core.convert.TypeDescriptor;
 
 /**
- * An expression capable of evaluating itself against context objects.
- * Encapsulates the details of a previously parsed expression string.
- * Provides a common abstraction for expression evaluation independent
- * of any language like OGNL or the Unified EL.
+ * An expression capable of evaluating itself against context objects. Encapsulates the
+ * details of a previously parsed expression string. Provides a common abstraction for
+ * expression evaluation independent of any language like OGNL or the Unified EL.
  *
  * @author Keith Donald
  * @author Andy Clement
@@ -113,7 +112,7 @@ public interface Expression {
 	 * @return the most general type of value that can be set on this context
 	 * @throws EvaluationException if there is a problem determining the type
 	 */
-	Class getValueType() throws EvaluationException;
+	Class<?> getValueType() throws EvaluationException;
 
 	/**
 	 * Returns the most general type that can be passed to the {@link #setValue(EvaluationContext, Object)}
@@ -122,7 +121,7 @@ public interface Expression {
 	 * @return the most general type of value that can be set on this context
 	 * @throws EvaluationException if there is a problem determining the type
 	 */
-	Class getValueType(Object rootObject) throws EvaluationException;
+	Class<?> getValueType(Object rootObject) throws EvaluationException;
 
 	/**
 	 * Returns the most general type that can be passed to the {@link #setValue(EvaluationContext, Object)}
@@ -131,7 +130,7 @@ public interface Expression {
 	 * @return the most general type of value that can be set on this context
 	 * @throws EvaluationException if there is a problem determining the type
 	 */
-	Class getValueType(EvaluationContext context) throws EvaluationException;
+	Class<?> getValueType(EvaluationContext context) throws EvaluationException;
 
 	/**
 	 * Returns the most general type that can be passed to the {@link #setValue(EvaluationContext, Object)}
@@ -141,7 +140,7 @@ public interface Expression {
 	 * @return the most general type of value that can be set on this context
 	 * @throws EvaluationException if there is a problem determining the type
 	 */
-	Class getValueType(EvaluationContext context, Object rootObject) throws EvaluationException;
+	Class<?> getValueType(EvaluationContext context, Object rootObject) throws EvaluationException;
 
 	/**
 	 * Returns the most general type that can be passed to the {@link #setValue(EvaluationContext, Object)}

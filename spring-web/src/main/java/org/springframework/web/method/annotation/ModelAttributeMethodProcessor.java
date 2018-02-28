@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2016 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.validation.BindException;
 import org.springframework.validation.Errors;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.support.WebDataBinderFactory;
@@ -53,8 +54,7 @@ import org.springframework.web.method.support.ModelAndViewContainer;
  * @author Rossen Stoyanchev
  * @since 3.1
  */
-public class ModelAttributeMethodProcessor
-		implements HandlerMethodArgumentResolver, HandlerMethodReturnValueHandler {
+public class ModelAttributeMethodProcessor implements HandlerMethodArgumentResolver, HandlerMethodReturnValueHandler {
 
 	protected final Log logger = LogFactory.getLog(getClass());
 
@@ -79,15 +79,8 @@ public class ModelAttributeMethodProcessor
 	 */
 	@Override
 	public boolean supportsParameter(MethodParameter parameter) {
-		if (parameter.hasParameterAnnotation(ModelAttribute.class)) {
-			return true;
-		}
-		else if (this.annotationNotRequired) {
-			return !BeanUtils.isSimpleProperty(parameter.getParameterType());
-		}
-		else {
-			return false;
-		}
+		return (parameter.hasParameterAnnotation(ModelAttribute.class) ||
+				(this.annotationNotRequired && !BeanUtils.isSimpleProperty(parameter.getParameterType())));
 	}
 
 	/**
@@ -99,6 +92,7 @@ public class ModelAttributeMethodProcessor
 	 * and the next method parameter is not of type {@link Errors}.
 	 * @throws Exception if WebDataBinder initialization fails.
 	 */
+	@Override
 	public final Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
 			NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
 
@@ -106,9 +100,18 @@ public class ModelAttributeMethodProcessor
 		Object attribute = (mavContainer.containsAttribute(name) ? mavContainer.getModel().get(name) :
 				createAttribute(name, parameter, binderFactory, webRequest));
 
+		if (!mavContainer.isBindingDisabled(name)) {
+			ModelAttribute ann = parameter.getParameterAnnotation(ModelAttribute.class);
+			if (ann != null && !ann.binding()) {
+				mavContainer.setBindingDisabled(name);
+			}
+		}
+
 		WebDataBinder binder = binderFactory.createBinder(webRequest, attribute, name);
 		if (binder.getTarget() != null) {
-			bindRequestParameters(binder, webRequest);
+			if (!mavContainer.isBindingDisabled(name)) {
+				bindRequestParameters(binder, webRequest);
+			}
 			validateIfApplicable(binder, parameter);
 			if (binder.getBindingResult().hasErrors() && isBindExceptionRequired(binder, parameter)) {
 				throw new BindException(binder.getBindingResult());
@@ -120,7 +123,7 @@ public class ModelAttributeMethodProcessor
 		mavContainer.removeAttributes(bindingResultModel);
 		mavContainer.addAllAttributes(bindingResultModel);
 
-		return binder.getTarget();
+		return binder.convertIfNecessary(binder.getTarget(), parameter.getParameterType(), parameter);
 	}
 
 	/**
@@ -158,9 +161,11 @@ public class ModelAttributeMethodProcessor
 	protected void validateIfApplicable(WebDataBinder binder, MethodParameter methodParam) {
 		Annotation[] annotations = methodParam.getParameterAnnotations();
 		for (Annotation ann : annotations) {
-			if (ann.annotationType().getSimpleName().startsWith("Valid")) {
-				Object hints = AnnotationUtils.getValue(ann);
-				binder.validate(hints instanceof Object[] ? (Object[]) hints : new Object[] {hints});
+			Validated validatedAnn = AnnotationUtils.getAnnotation(ann, Validated.class);
+			if (validatedAnn != null || ann.annotationType().getSimpleName().startsWith("Valid")) {
+				Object hints = (validatedAnn != null ? validatedAnn.value() : AnnotationUtils.getValue(ann));
+				Object[] validationHints = (hints instanceof Object[] ? (Object[]) hints : new Object[] {hints});
+				binder.validate(validationHints);
 				break;
 			}
 		}
@@ -184,21 +189,16 @@ public class ModelAttributeMethodProcessor
 	 * or, in default resolution mode, for any return value type that is not
 	 * a simple type.
 	 */
+	@Override
 	public boolean supportsReturnType(MethodParameter returnType) {
-		if (returnType.getMethodAnnotation(ModelAttribute.class) != null) {
-			return true;
-		}
-		else if (this.annotationNotRequired) {
-			return !BeanUtils.isSimpleProperty(returnType.getParameterType());
-		}
-		else {
-			return false;
-		}
+		return (returnType.hasMethodAnnotation(ModelAttribute.class) ||
+				(this.annotationNotRequired && !BeanUtils.isSimpleProperty(returnType.getParameterType())));
 	}
 
 	/**
 	 * Add non-null return values to the {@link ModelAndViewContainer}.
 	 */
+	@Override
 	public void handleReturnValue(Object returnValue, MethodParameter returnType,
 			ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
 

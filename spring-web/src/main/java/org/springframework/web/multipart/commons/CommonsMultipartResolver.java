@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2015 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -111,6 +111,7 @@ public class CommonsMultipartResolver extends CommonsFileUploadSupport
 		return new ServletFileUpload(fileItemFactory);
 	}
 
+	@Override
 	public void setServletContext(ServletContext servletContext) {
 		if (!isUploadTempDirSpecified()) {
 			getFileItemFactory().setRepository(WebUtils.getTempDir(servletContext));
@@ -118,10 +119,12 @@ public class CommonsMultipartResolver extends CommonsFileUploadSupport
 	}
 
 
+	@Override
 	public boolean isMultipart(HttpServletRequest request) {
 		return (request != null && ServletFileUpload.isMultipartContent(request));
 	}
 
+	@Override
 	public MultipartHttpServletRequest resolveMultipart(final HttpServletRequest request) throws MultipartException {
 		Assert.notNull(request, "Request must not be null");
 		if (this.resolveLazily) {
@@ -148,7 +151,6 @@ public class CommonsMultipartResolver extends CommonsFileUploadSupport
 	 * @return the parsing result
 	 * @throws MultipartException if multipart resolution failed.
 	 */
-	@SuppressWarnings("unchecked")
 	protected MultipartParsingResult parseRequest(HttpServletRequest request) throws MultipartException {
 		String encoding = determineEncoding(request);
 		FileUpload fileUpload = prepareFileUpload(encoding);
@@ -159,8 +161,11 @@ public class CommonsMultipartResolver extends CommonsFileUploadSupport
 		catch (FileUploadBase.SizeLimitExceededException ex) {
 			throw new MaxUploadSizeExceededException(fileUpload.getSizeMax(), ex);
 		}
+		catch (FileUploadBase.FileSizeLimitExceededException ex) {
+			throw new MaxUploadSizeExceededException(fileUpload.getFileSizeMax(), ex);
+		}
 		catch (FileUploadException ex) {
-			throw new MultipartException("Could not parse multipart servlet request", ex);
+			throw new MultipartException("Failed to parse multipart servlet request", ex);
 		}
 	}
 
@@ -182,6 +187,7 @@ public class CommonsMultipartResolver extends CommonsFileUploadSupport
 		return encoding;
 	}
 
+	@Override
 	public void cleanupMultipart(MultipartHttpServletRequest request) {
 		if (request != null) {
 			try {

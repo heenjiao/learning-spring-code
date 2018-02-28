@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,10 @@ package org.springframework.orm.jpa;
 
 import java.util.Map;
 import java.util.Properties;
-
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.spi.PersistenceProvider;
 import javax.persistence.spi.PersistenceUnitInfo;
+import javax.persistence.spi.ProviderUtil;
 
 import org.junit.After;
 import org.junit.Test;
@@ -33,6 +33,7 @@ import static org.mockito.BDDMockito.*;
  * @author Rod Johnson
  * @author Phillip Webb
  */
+@SuppressWarnings("rawtypes")
 public class LocalEntityManagerFactoryBeanTests extends AbstractEntityManagerFactoryBeanTests {
 
 	// Static fields set by inner class DummyPersistenceProvider
@@ -93,6 +94,21 @@ public class LocalEntityManagerFactoryBeanTests extends AbstractEntityManagerFac
 			actualName = emfName;
 			actualProps = properties;
 			return mockEmf;
+		}
+
+		@Override
+		public ProviderUtil getProviderUtil() {
+			throw new UnsupportedOperationException();
+		}
+
+		// JPA 2.1 method
+		public void generateSchema(PersistenceUnitInfo persistenceUnitInfo, Map map) {
+			throw new UnsupportedOperationException();
+		}
+
+		// JPA 2.1 method
+		public boolean generateSchema(String persistenceUnitName, Map map) {
+			throw new UnsupportedOperationException();
 		}
 	}
 

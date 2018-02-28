@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,11 +30,10 @@ import org.springframework.instrument.classloading.WeavingTransformer;
  * to loaded classes without the need to use a VM-wide agent.
  *
  * <p>To be registered using a
- * {@code <a href="http://tomcat.apache.org/tomcat-5.5-doc/config/loader.html">Loader</a>} tag
- * in Tomcat's {@code <a href="http://tomcat.apache.org/tomcat-5.5-doc/config/context.html">Context</a>}
+ * <a href="http://tomcat.apache.org/tomcat-6.0-doc/config/loader.html">{@code Loader}</a> tag
+ * in Tomcat's <a href="http://tomcat.apache.org/tomcat-6.0-doc/config/context.html">{@code Context}</a>
  * definition in the {@code server.xml} file, with the Spring-provided "spring-instrument-tomcat.jar"
- * file deployed into Tomcat's "server/lib" (for Tomcat 5.x) or "lib" (for Tomcat 6.x) directory.
- * The required configuration tag looks as follows:
+ * file deployed into Tomcat's "lib" directory. The required configuration tag looks as follows:
  *
  * <pre class="code">&lt;Loader loaderClass="org.springframework.instrument.classloading.tomcat.TomcatInstrumentableClassLoader"/&gt;</pre>
  *
@@ -44,10 +43,10 @@ import org.springframework.instrument.classloading.WeavingTransformer;
  * {@code getThrowawayClassLoader} methods mirror the corresponding methods
  * in the LoadTimeWeaver interface, as expected by ReflectiveLoadTimeWeaver.
  *
- * <p>See the PetClinic sample application for a full example of this
- * ClassLoader in action.
- *
- * <p><b>NOTE:</b> Requires Apache Tomcat version 5.0 or higher.
+ * <p><b>NOTE:</b> Requires Apache Tomcat version 6.0 or higher, as of Spring 4.0.
+ * This class is not intended to work on Tomcat 8.0+; please rely on Tomcat's own
+ * {@code InstrumentableClassLoader} facility instead, as autodetected by Spring's
+ * {@link org.springframework.instrument.classloading.tomcat.TomcatLoadTimeWeaver}.
  *
  * @author Costin Leau
  * @author Juergen Hoeller
@@ -55,6 +54,7 @@ import org.springframework.instrument.classloading.WeavingTransformer;
  * @see #addTransformer
  * @see #getThrowawayClassLoader
  * @see org.springframework.instrument.classloading.ReflectiveLoadTimeWeaver
+ * @see org.springframework.instrument.classloading.tomcat.TomcatLoadTimeWeaver
  */
 public class TomcatInstrumentableClassLoader extends WebappClassLoader {
 
@@ -103,13 +103,13 @@ public class TomcatInstrumentableClassLoader extends WebappClassLoader {
 	 */
 	public ClassLoader getThrowawayClassLoader() {
 		WebappClassLoader tempLoader = new WebappClassLoader();
-		// Use reflection to copy all the fields since most of them are private on pre-5.5 Tomcat.
+		// Use reflection to copy all the fields since they are not exposed any other way.
 		shallowCopyFieldState(this, tempLoader);
 		return tempLoader;
 	}
 
 
-	@Override
+	@Override  // overriding the pre-7.0.63 variant of findResourceInternal
 	protected ResourceEntry findResourceInternal(String name, String path) {
 		ResourceEntry entry = super.findResourceInternal(name, path);
 		if (entry != null && entry.binaryContent != null && path.endsWith(CLASS_SUFFIX)) {
@@ -119,11 +119,19 @@ public class TomcatInstrumentableClassLoader extends WebappClassLoader {
 		return entry;
 	}
 
+	@Override  // overriding the 7.0.63+ variant of findResourceInternal
+	protected ResourceEntry findResourceInternal(String name, String path, boolean manifestRequired) {
+		ResourceEntry entry = super.findResourceInternal(name, path, manifestRequired);
+		if (entry != null && entry.binaryContent != null && path.endsWith(CLASS_SUFFIX)) {
+			String className = (name.endsWith(CLASS_SUFFIX) ? name.substring(0, name.length() - CLASS_SUFFIX.length()) : name);
+			entry.binaryContent = this.weavingTransformer.transformIfNecessary(className, entry.binaryContent);
+		}
+		return entry;
+	}
+
 	@Override
 	public String toString() {
-		StringBuilder sb = new StringBuilder(getClass().getName());
-		sb.append("\r\n").append(super.toString());
-		return sb.toString();
+		return getClass().getName() + "\r\n" + super.toString();
 	}
 
 

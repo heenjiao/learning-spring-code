@@ -112,8 +112,7 @@ public class ReplaceOverride extends MethodOverride {
 
 	@Override
 	public String toString() {
-		return "Replace override for method '" + getMethodName() + "; will call bean '" +
-				this.methodReplacerBeanName + "'";
+		return "Replace override for method '" + getMethodName() + "'";
 	}
 
 }

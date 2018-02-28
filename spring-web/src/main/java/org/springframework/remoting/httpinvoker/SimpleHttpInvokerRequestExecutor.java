@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2011 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Locale;
 import java.util.zip.GZIPInputStream;
 
 import org.springframework.context.i18n.LocaleContext;
@@ -35,12 +36,12 @@ import org.springframework.util.StringUtils;
  * advanced configuration options.
  *
  * <p>Designed for easy subclassing, customizing specific template methods.
- * However, consider CommonsHttpInvokerRequestExecutor for more sophisticated
- * needs: The J2SE HttpURLConnection is rather limited in its capabilities.
+ * However, consider {@code HttpComponentsHttpInvokerRequestExecutor} for
+ * more sophisticated needs: The J2SE HttpURLConnection is rather limited
+ * in its capabilities.
  *
  * @author Juergen Hoeller
  * @since 1.1
- * @see CommonsHttpInvokerRequestExecutor
  * @see java.net.HttpURLConnection
  */
 public class SimpleHttpInvokerRequestExecutor extends AbstractHttpInvokerRequestExecutor {
@@ -133,9 +134,13 @@ public class SimpleHttpInvokerRequestExecutor extends AbstractHttpInvokerRequest
 		connection.setRequestMethod(HTTP_METHOD_POST);
 		connection.setRequestProperty(HTTP_HEADER_CONTENT_TYPE, getContentType());
 		connection.setRequestProperty(HTTP_HEADER_CONTENT_LENGTH, Integer.toString(contentLength));
-		LocaleContext locale = LocaleContextHolder.getLocaleContext();
-		if (locale != null) {
-			connection.setRequestProperty(HTTP_HEADER_ACCEPT_LANGUAGE, StringUtils.toLanguageTag(locale.getLocale()));
+
+		LocaleContext localeContext = LocaleContextHolder.getLocaleContext();
+		if (localeContext != null) {
+			Locale locale = localeContext.getLocale();
+			if (locale != null) {
+				connection.setRequestProperty(HTTP_HEADER_ACCEPT_LANGUAGE, StringUtils.toLanguageTag(locale));
+			}
 		}
 		if (isAcceptGzipEncoding()) {
 			connection.setRequestProperty(HTTP_HEADER_ACCEPT_ENCODING, ENCODING_GZIP);

@@ -15,13 +15,14 @@
  */
 package org.springframework.aop.aspectj;
 
-import static org.junit.Assert.*;
+import java.lang.reflect.Method;
 
 import org.aspectj.lang.JoinPoint;
 import org.junit.Test;
+
 import org.springframework.aop.aspectj.AspectJAdviceParameterNameDiscoverer.AmbiguousBindingException;
 
-import java.lang.reflect.Method;
+import static org.junit.Assert.*;
 
 /**
  * Unit tests for the {@link AspectJAdviceParameterNameDiscoverer} class.
@@ -306,7 +307,8 @@ public class AspectJAdviceParameterNameDiscovererTests {
 		try {
 			discoverer.getParameterNames(m);
 			fail("Expecting " + exceptionType.getName() + " with message '" + message + "'");
-		} catch (RuntimeException expected) {
+		}
+		catch (RuntimeException expected) {
 			assertEquals("Expecting exception of type " + exceptionType.getName(),
 					exceptionType, expected.getClass());
 			assertEquals("Exception message does not match expected", message, expected.getMessage());

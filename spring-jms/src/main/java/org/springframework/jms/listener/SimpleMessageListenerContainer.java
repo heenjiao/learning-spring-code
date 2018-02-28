@@ -27,7 +27,6 @@ import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.MessageListener;
 import javax.jms.Session;
-import javax.jms.Topic;
 
 import org.springframework.jms.support.JmsUtils;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -64,8 +63,6 @@ import org.springframework.util.Assert;
  */
 public class SimpleMessageListenerContainer extends AbstractMessageListenerContainer implements ExceptionListener {
 
-	private boolean pubSubNoLocal = false;
-
 	private boolean connectLazily = false;
 
 	private int concurrentConsumers = 1;
@@ -78,22 +75,6 @@ public class SimpleMessageListenerContainer extends AbstractMessageListenerConta
 
 	private final Object consumersMonitor = new Object();
 
-
-	/**
-	 * Set whether to inhibit the delivery of messages published by its own connection.
-	 * Default is "false".
-	 * @see javax.jms.TopicSession#createSubscriber(javax.jms.Topic, String, boolean)
-	 */
-	public void setPubSubNoLocal(boolean pubSubNoLocal) {
-		this.pubSubNoLocal = pubSubNoLocal;
-	}
-
-	/**
-	 * Return whether to inhibit the delivery of messages published by its own connection.
-	 */
-	protected boolean isPubSubNoLocal() {
-		return this.pubSubNoLocal;
-	}
 
 	/**
 	 * Specify whether to connect lazily, i.e. whether to establish the JMS Connection
@@ -118,6 +99,7 @@ public class SimpleMessageListenerContainer extends AbstractMessageListenerConta
 	 * {@link DefaultMessageListenerContainer}. For this local listener container,
 	 * generally use {@link #setConcurrentConsumers} instead.
 	 */
+	@Override
 	public void setConcurrency(String concurrency) {
 		try {
 			int separatorIndex = concurrency.indexOf('-');
@@ -244,6 +226,7 @@ public class SimpleMessageListenerContainer extends AbstractMessageListenerConta
 	 * shared connection and its sessions and consumers.
 	 * @param ex the reported connection exception
 	 */
+	@Override
 	public void onException(JMSException ex) {
 		// First invoke the user-specific ExceptionListener, if any.
 		invokeExceptionListener(ex);
@@ -305,8 +288,10 @@ public class SimpleMessageListenerContainer extends AbstractMessageListenerConta
 
 		if (this.taskExecutor != null) {
 			consumer.setMessageListener(new MessageListener() {
+				@Override
 				public void onMessage(final Message message) {
 					taskExecutor.execute(new Runnable() {
+						@Override
 						public void run() {
 							processMessage(message, session);
 						}
@@ -316,6 +301,7 @@ public class SimpleMessageListenerContainer extends AbstractMessageListenerConta
 		}
 		else {
 			consumer.setMessageListener(new MessageListener() {
+				@Override
 				public void onMessage(Message message) {
 					processMessage(message, session);
 				}
@@ -366,37 +352,6 @@ public class SimpleMessageListenerContainer extends AbstractMessageListenerConta
 					JmsUtils.closeSession(session);
 				}
 			}
-		}
-	}
-
-
-	//-------------------------------------------------------------------------
-	// JMS 1.1 factory methods, potentially overridden for JMS 1.0.2
-	//-------------------------------------------------------------------------
-
-	/**
-	 * Create a JMS MessageConsumer for the given Session and Destination.
-	 * <p>This implementation uses JMS 1.1 API.
-	 * @param session the JMS Session to create a MessageConsumer for
-	 * @param destination the JMS Destination to create a MessageConsumer for
-	 * @return the new JMS MessageConsumer
-	 * @throws JMSException if thrown by JMS API methods
-	 */
-	protected MessageConsumer createConsumer(Session session, Destination destination) throws JMSException {
-		// Only pass in the NoLocal flag in case of a Topic:
-		// Some JMS providers, such as WebSphere MQ 6.0, throw IllegalStateException
-		// in case of the NoLocal flag being specified for a Queue.
-		if (isPubSubDomain()) {
-			if (isSubscriptionDurable() && destination instanceof Topic) {
-				return session.createDurableSubscriber(
-						(Topic) destination, getDurableSubscriptionName(), getMessageSelector(), isPubSubNoLocal());
-			}
-			else {
-				return session.createConsumer(destination, getMessageSelector(), isPubSubNoLocal());
-			}
-		}
-		else {
-			return session.createConsumer(destination, getMessageSelector());
 		}
 	}
 

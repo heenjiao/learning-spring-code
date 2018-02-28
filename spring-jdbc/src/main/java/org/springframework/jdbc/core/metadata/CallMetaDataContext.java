@@ -46,6 +46,7 @@ import org.springframework.util.StringUtils;
  *
  * @author Thomas Risberg
  * @author Juergen Hoeller
+ * @author Kiril Nugmanov
  * @since 2.5
  */
 public class CallMetaDataContext {
@@ -82,6 +83,9 @@ public class CallMetaDataContext {
 
 	/** Should we access call parameter meta data info or not */
 	private boolean accessCallParameterMetaData = true;
+
+	/** Should we bind parameter by name **/
+	private boolean namedBinding;
 
 	/** The provider of call meta data */
 	private CallMetaDataProvider metaDataProvider;
@@ -211,6 +215,22 @@ public class CallMetaDataContext {
 	 */
 	public boolean isAccessCallParameterMetaData() {
 		return this.accessCallParameterMetaData;
+	}
+
+	/**
+	 * Specify whether parameters should be bound by name.
+	 * @since 4.2
+	 */
+	public void setNamedBinding(boolean namedBinding) {
+		this.namedBinding = namedBinding;
+	}
+
+	/**
+	 * Check whether parameters should be bound by name.
+	 * @since 4.2
+	 */
+	public boolean isNamedBinding() {
+		return this.namedBinding;
 	}
 
 
@@ -601,7 +621,7 @@ public class CallMetaDataContext {
 					callString += ", ";
 				}
 				if (parameterCount >= 0) {
-					callString += "?";
+					callString += createParameterBinding(parameter);
 				}
 				parameterCount++;
 			}
@@ -609,6 +629,21 @@ public class CallMetaDataContext {
 		callString += ")}";
 
 		return callString;
+	}
+
+	/**
+	 * Build the parameter binding fragment.
+	 * @param parameter call parameter
+	 * @return parameter binding fragment
+	 * @since 4.2
+	 */
+	protected String createParameterBinding(SqlParameter parameter) {
+		if (isNamedBinding()) {
+			return parameter.getName() + " => ?";
+		}
+		else {
+			return "?";
+		}
 	}
 
 }

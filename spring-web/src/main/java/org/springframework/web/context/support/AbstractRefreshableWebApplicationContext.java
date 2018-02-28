@@ -97,14 +97,17 @@ public abstract class AbstractRefreshableWebApplicationContext extends AbstractR
 	}
 
 
+	@Override
 	public void setServletContext(ServletContext servletContext) {
 		this.servletContext = servletContext;
 	}
 
+	@Override
 	public ServletContext getServletContext() {
 		return this.servletContext;
 	}
 
+	@Override
 	public void setServletConfig(ServletConfig servletConfig) {
 		this.servletConfig = servletConfig;
 		if (servletConfig != null && this.servletContext == null) {
@@ -112,10 +115,12 @@ public abstract class AbstractRefreshableWebApplicationContext extends AbstractR
 		}
 	}
 
+	@Override
 	public ServletConfig getServletConfig() {
 		return this.servletConfig;
 	}
 
+	@Override
 	public void setNamespace(String namespace) {
 		this.namespace = namespace;
 		if (namespace != null) {
@@ -123,6 +128,7 @@ public abstract class AbstractRefreshableWebApplicationContext extends AbstractR
 		}
 	}
 
+	@Override
 	public String getNamespace() {
 		return this.namespace;
 	}
@@ -134,17 +140,7 @@ public abstract class AbstractRefreshableWebApplicationContext extends AbstractR
 
 	@Override
 	public String getApplicationName() {
-		if (this.servletContext == null) {
-			return "";
-		}
-		if (this.servletContext.getMajorVersion() == 2 && this.servletContext.getMinorVersion() < 5) {
-			String name = this.servletContext.getServletContextName();
-			return (name != null ? name : "");
-		}
-		else {
-			// Servlet 2.5 available
-			return this.servletContext.getContextPath();
-		}
+		return (this.servletContext != null ? this.servletContext.getContextPath() : "");
 	}
 
 	/**
@@ -207,6 +203,7 @@ public abstract class AbstractRefreshableWebApplicationContext extends AbstractR
 		}
 	}
 
+	@Override
 	public Theme getTheme(String themeName) {
 		return this.themeSource.getTheme(themeName);
 	}

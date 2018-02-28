@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,9 @@ import java.io.Externalizable;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -43,18 +45,15 @@ public abstract class Conventions {
 	 */
 	private static final String PLURAL_SUFFIX = "List";
 
-
 	/**
 	 * Set of interfaces that are supposed to be ignored
 	 * when searching for the 'primary' interface of a proxy.
 	 */
-	private static final Set<Class> ignoredInterfaces = new HashSet<Class>();
+	private static final Set<Class<?>> IGNORED_INTERFACES;
 
 	static {
-		ignoredInterfaces.add(Serializable.class);
-		ignoredInterfaces.add(Externalizable.class);
-		ignoredInterfaces.add(Cloneable.class);
-		ignoredInterfaces.add(Comparable.class);
+		IGNORED_INTERFACES = Collections.unmodifiableSet(new HashSet<Class<?>>(
+				Arrays.<Class<?>>asList(Serializable.class, Externalizable.class, Cloneable.class, Comparable.class)));
 	}
 
 
@@ -75,7 +74,7 @@ public abstract class Conventions {
 	 */
 	public static String getVariableName(Object value) {
 		Assert.notNull(value, "Value must not be null");
-		Class valueClass;
+		Class<?> valueClass;
 		boolean pluralize = false;
 
 		if (value.getClass().isArray()) {
@@ -83,7 +82,7 @@ public abstract class Conventions {
 			pluralize = true;
 		}
 		else if (value instanceof Collection) {
-			Collection collection = (Collection) value;
+			Collection<?> collection = (Collection<?>) value;
 			if (collection.isEmpty()) {
 				throw new IllegalArgumentException("Cannot generate variable name for an empty Collection");
 			}
@@ -107,7 +106,7 @@ public abstract class Conventions {
 	 */
 	public static String getVariableNameForParameter(MethodParameter parameter) {
 		Assert.notNull(parameter, "MethodParameter must not be null");
-		Class valueClass;
+		Class<?> valueClass;
 		boolean pluralize = false;
 
 		if (parameter.getParameterType().isArray()) {
@@ -115,7 +114,7 @@ public abstract class Conventions {
 			pluralize = true;
 		}
 		else if (Collection.class.isAssignableFrom(parameter.getParameterType())) {
-			valueClass = GenericCollectionTypeResolver.getCollectionParameterType(parameter);
+			valueClass = ResolvableType.forMethodParameter(parameter).asCollection().resolveGeneric();
 			if (valueClass == null) {
 				throw new IllegalArgumentException(
 						"Cannot generate variable name for non-typed Collection parameter type");
@@ -163,17 +162,17 @@ public abstract class Conventions {
 	 * @param value the return value (may be {@code null} if not available)
 	 * @return the generated variable name
 	 */
-	public static String getVariableNameForReturnType(Method method, Class resolvedType, Object value) {
+	public static String getVariableNameForReturnType(Method method, Class<?> resolvedType, Object value) {
 		Assert.notNull(method, "Method must not be null");
 
-		if (Object.class.equals(resolvedType)) {
+		if (Object.class == resolvedType) {
 			if (value == null) {
 				throw new IllegalArgumentException("Cannot generate variable name for an Object return type with null value");
 			}
 			return getVariableName(value);
 		}
 
-		Class valueClass;
+		Class<?> valueClass;
 		boolean pluralize = false;
 
 		if (resolvedType.isArray()) {
@@ -181,13 +180,13 @@ public abstract class Conventions {
 			pluralize = true;
 		}
 		else if (Collection.class.isAssignableFrom(resolvedType)) {
-			valueClass = GenericCollectionTypeResolver.getCollectionReturnType(method);
+			valueClass = ResolvableType.forMethodReturnType(method).asCollection().resolveGeneric();
 			if (valueClass == null) {
 				if (!(value instanceof Collection)) {
 					throw new IllegalArgumentException(
 							"Cannot generate variable name for non-typed Collection return type and a non-Collection value");
 				}
-				Collection collection = (Collection) value;
+				Collection<?> collection = (Collection<?>) value;
 				if (collection.isEmpty()) {
 					throw new IllegalArgumentException(
 							"Cannot generate variable name for non-typed Collection return type and an empty Collection value");
@@ -239,10 +238,10 @@ public abstract class Conventions {
 	 * the attribute name '{@code foo}' qualified by {@link Class} '{@code com.myapp.SomeClass}'
 	 * would be '{@code com.myapp.SomeClass.foo}'
 	 */
-	public static String getQualifiedAttributeName(Class enclosingClass, String attributeName) {
+	public static String getQualifiedAttributeName(Class<?> enclosingClass, String attributeName) {
 		Assert.notNull(enclosingClass, "'enclosingClass' must not be null");
 		Assert.notNull(attributeName, "'attributeName' must not be null");
-		return enclosingClass.getName() + "." + attributeName;
+		return enclosingClass.getName() + '.' + attributeName;
 	}
 
 
@@ -255,12 +254,12 @@ public abstract class Conventions {
 	 * @param value the value to check
 	 * @return the class to use for naming a variable
 	 */
-	private static Class getClassForValue(Object value) {
-		Class valueClass = value.getClass();
+	private static Class<?> getClassForValue(Object value) {
+		Class<?> valueClass = value.getClass();
 		if (Proxy.isProxyClass(valueClass)) {
-			Class[] ifcs = valueClass.getInterfaces();
-			for (Class ifc : ifcs) {
-				if (!ignoredInterfaces.contains(ifc)) {
+			Class<?>[] ifcs = valueClass.getInterfaces();
+			for (Class<?> ifc : ifcs) {
+				if (!IGNORED_INTERFACES.contains(ifc)) {
 					return ifc;
 				}
 			}
@@ -282,16 +281,16 @@ public abstract class Conventions {
 
 	/**
 	 * Retrieves the {@code Class} of an element in the {@code Collection}.
-	 * The exact element for which the {@code Class} is retreived will depend
+	 * The exact element for which the {@code Class} is retrieved will depend
 	 * on the concrete {@code Collection} implementation.
 	 */
-	private static Object peekAhead(Collection collection) {
-		Iterator it = collection.iterator();
+	private static <E> E peekAhead(Collection<E> collection) {
+		Iterator<E> it = collection.iterator();
 		if (!it.hasNext()) {
 			throw new IllegalStateException(
 					"Unable to peek ahead in non-empty collection - no element found");
 		}
-		Object value = it.next();
+		E value = it.next();
 		if (value == null) {
 			throw new IllegalStateException(
 					"Unable to peek ahead in non-empty collection - only null element found");

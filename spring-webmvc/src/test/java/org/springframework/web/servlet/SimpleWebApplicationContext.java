@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.web.servlet;
 
 import java.io.IOException;
 import java.util.Locale;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -31,15 +30,14 @@ import org.springframework.ui.context.ThemeSource;
 import org.springframework.ui.context.support.SimpleTheme;
 import org.springframework.ui.context.support.UiApplicationContextUtils;
 import org.springframework.web.context.support.StaticWebApplicationContext;
+import org.springframework.web.servlet.handler.BeanNameUrlHandlerMapping;
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 import org.springframework.web.servlet.mvc.Controller;
 import org.springframework.web.servlet.mvc.LastModified;
-import org.springframework.web.servlet.mvc.SimpleFormController;
 import org.springframework.web.servlet.support.RequestContextUtils;
 import org.springframework.web.servlet.theme.AbstractThemeResolver;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 import org.springframework.web.servlet.view.XmlViewResolver;
-import org.springframework.web.servlet.handler.BeanNameUrlHandlerMapping;
 
 /**
  * @author Juergen Hoeller
@@ -52,7 +50,6 @@ public class SimpleWebApplicationContext extends StaticWebApplicationContext {
 		MutablePropertyValues pvs = new MutablePropertyValues();
 		pvs.add("commandClass", "org.springframework.tests.sample.beans.TestBean");
 		pvs.add("formView", "form");
-		registerSingleton("/form.do", SimpleFormController.class, pvs);
 
 		registerSingleton("/locale.do", LocaleChecker.class);
 
@@ -77,6 +74,7 @@ public class SimpleWebApplicationContext extends StaticWebApplicationContext {
 	public static class LocaleChecker implements Controller, LastModified {
 
 		@Override
+		@SuppressWarnings("deprecation")
 		public ModelAndView handleRequest(HttpServletRequest request, HttpServletResponse response)
 				throws ServletException, IOException {
 			if (!(RequestContextUtils.getWebApplicationContext(request) instanceof SimpleWebApplicationContext)) {
@@ -93,7 +91,7 @@ public class SimpleWebApplicationContext extends StaticWebApplicationContext {
 
 		@Override
 		public long getLastModified(HttpServletRequest request) {
-			return 98;
+			return 1427846400000L;
 		}
 	}
 

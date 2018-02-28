@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.test.context.SmartContextLoader;
 import org.springframework.util.Assert;
 
@@ -40,32 +41,8 @@ public abstract class AnnotationConfigContextLoaderUtils {
 
 
 	/**
-	 * Determine if the supplied {@link Class} meets the criteria for being
-	 * considered a <em>default configuration class</em> candidate.
-	 * <p>Specifically, such candidates:
-	 * <ul>
-	 * <li>must not be {@code null}</li>
-	 * <li>must not be {@code private}</li>
-	 * <li>must not be {@code final}</li>
-	 * <li>must be {@code static}</li>
-	 * <li>must be annotated with {@code @Configuration}</li>
-	 * </ul>
-	 * @param clazz the class to check
-	 * @return {@code true} if the supplied class meets the candidate criteria
-	 */
-	private static boolean isDefaultConfigurationClassCandidate(Class<?> clazz) {
-		return clazz != null && isStaticNonPrivateAndNonFinal(clazz) && clazz.isAnnotationPresent(Configuration.class);
-	}
-
-	private static boolean isStaticNonPrivateAndNonFinal(Class<?> clazz) {
-		Assert.notNull(clazz, "Class must not be null");
-		int modifiers = clazz.getModifiers();
-		return (Modifier.isStatic(modifiers) && !Modifier.isPrivate(modifiers) && !Modifier.isFinal(modifiers));
-	}
-
-	/**
 	 * Detect the default configuration classes for the supplied test class.
-	 * <p>The returned class array will contain all static inner classes of
+	 * <p>The returned class array will contain all static nested classes of
 	 * the supplied class that meet the requirements for {@code @Configuration}
 	 * class implementations as specified in the documentation for
 	 * {@link Configuration @Configuration}.
@@ -82,6 +59,7 @@ public abstract class AnnotationConfigContextLoaderUtils {
 	 */
 	public static Class<?>[] detectDefaultConfigurationClasses(Class<?> declaringClass) {
 		Assert.notNull(declaringClass, "Declaring class must not be null");
+
 		List<Class<?>> configClasses = new ArrayList<Class<?>>();
 
 		for (Class<?> candidate : declaringClass.getDeclaredClasses()) {
@@ -101,12 +79,37 @@ public abstract class AnnotationConfigContextLoaderUtils {
 		if (configClasses.isEmpty()) {
 			if (logger.isInfoEnabled()) {
 				logger.info(String.format("Could not detect default configuration classes for test class [%s]: " +
-						"%s does not declare any static, non-private, non-final, inner classes " +
+						"%s does not declare any static, non-private, non-final, nested classes " +
 						"annotated with @Configuration.", declaringClass.getName(), declaringClass.getSimpleName()));
 			}
 		}
 
 		return configClasses.toArray(new Class<?>[configClasses.size()]);
+	}
+
+	/**
+	 * Determine if the supplied {@link Class} meets the criteria for being
+	 * considered a <em>default configuration class</em> candidate.
+	 * <p>Specifically, such candidates:
+	 * <ul>
+	 * <li>must not be {@code null}</li>
+	 * <li>must not be {@code private}</li>
+	 * <li>must not be {@code final}</li>
+	 * <li>must be {@code static}</li>
+	 * <li>must be annotated or meta-annotated with {@code @Configuration}</li>
+	 * </ul>
+	 * @param clazz the class to check
+	 * @return {@code true} if the supplied class meets the candidate criteria
+	 */
+	private static boolean isDefaultConfigurationClassCandidate(Class<?> clazz) {
+		return (clazz != null && isStaticNonPrivateAndNonFinal(clazz) &&
+				AnnotatedElementUtils.hasAnnotation(clazz, Configuration.class));
+	}
+
+	private static boolean isStaticNonPrivateAndNonFinal(Class<?> clazz) {
+		Assert.notNull(clazz, "Class must not be null");
+		int modifiers = clazz.getModifiers();
+		return (Modifier.isStatic(modifiers) && !Modifier.isPrivate(modifiers) && !Modifier.isFinal(modifiers));
 	}
 
 }

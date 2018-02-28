@@ -47,7 +47,7 @@ import static org.junit.Assert.*;
  * @author Andy Clement
  * @author Phillip Webb
  */
-public class MethodInvocationTests extends ExpressionTestCase {
+public class MethodInvocationTests extends AbstractExpressionTests {
 
 	@Test
 	public void testSimpleAccess01() {

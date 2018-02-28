@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ import org.springframework.aop.MethodMatcher;
 import org.springframework.aop.Pointcut;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.aop.support.DefaultPointcutAdvisor;
-import org.springframework.cglib.core.CodeGenerationException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextException;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
@@ -50,7 +49,7 @@ import static org.junit.Assert.*;
  * @author Chris Beams
  */
 @SuppressWarnings("serial")
-public final class CglibProxyTests extends AbstractAopProxyTests implements Serializable {
+public class CglibProxyTests extends AbstractAopProxyTests implements Serializable {
 
 	private static final String DEPENDENCY_CHECK_CONTEXT =
 			CglibProxyTests.class.getSimpleName() + "-with-dependency-checking.xml";
@@ -75,43 +74,71 @@ public final class CglibProxyTests extends AbstractAopProxyTests implements Seri
 		return true;
 	}
 
-	@Test
+	@Test(expected = IllegalArgumentException.class)
 	public void testNullConfig() {
-		try {
-			new CglibAopProxy(null);
-			fail("Shouldn't allow null interceptors");
-		}
-		catch (IllegalArgumentException ex) {
-			// Ok
-		}
+		new CglibAopProxy(null);
 	}
 
-	@Test
+	@Test(expected = AopConfigException.class)
 	public void testNoTarget() {
-		AdvisedSupport pc = new AdvisedSupport(new Class<?>[]{ITestBean.class});
+		AdvisedSupport pc = new AdvisedSupport(ITestBean.class);
 		pc.addAdvice(new NopInterceptor());
-		try {
-			AopProxy aop = createAopProxy(pc);
-			aop.getProxy();
-			fail("Shouldn't allow no target with CGLIB proxy");
-		}
-		catch (AopConfigException ex) {
-			// Ok
-		}
+		AopProxy aop = createAopProxy(pc);
+		aop.getProxy();
 	}
 
 	@Test
 	public void testProtectedMethodInvocation() {
 		ProtectedMethodTestBean bean = new ProtectedMethodTestBean();
+		bean.value = "foo";
 		mockTargetSource.setTarget(bean);
 
-		AdvisedSupport as = new AdvisedSupport(new Class<?>[]{});
+		AdvisedSupport as = new AdvisedSupport();
 		as.setTargetSource(mockTargetSource);
 		as.addAdvice(new NopInterceptor());
 		AopProxy aop = new CglibAopProxy(as);
 
-		Object proxy = aop.getProxy();
+		ProtectedMethodTestBean proxy = (ProtectedMethodTestBean) aop.getProxy();
 		assertTrue(AopUtils.isCglibProxy(proxy));
+		assertEquals(proxy.getClass().getClassLoader(), bean.getClass().getClassLoader());
+		assertEquals("foo", proxy.getString());
+	}
+
+	@Test
+	public void testPackageMethodInvocation() {
+		PackageMethodTestBean bean = new PackageMethodTestBean();
+		bean.value = "foo";
+		mockTargetSource.setTarget(bean);
+
+		AdvisedSupport as = new AdvisedSupport();
+		as.setTargetSource(mockTargetSource);
+		as.addAdvice(new NopInterceptor());
+		AopProxy aop = new CglibAopProxy(as);
+
+		PackageMethodTestBean proxy = (PackageMethodTestBean) aop.getProxy();
+		assertTrue(AopUtils.isCglibProxy(proxy));
+		assertEquals(proxy.getClass().getClassLoader(), bean.getClass().getClassLoader());
+		assertEquals("foo", proxy.getString());
+	}
+
+	@Test
+	public void testPackageMethodInvocationWithDifferentClassLoader() {
+		ClassLoader child = new ClassLoader(getClass().getClassLoader()) {
+		};
+
+		PackageMethodTestBean bean = new PackageMethodTestBean();
+		bean.value = "foo";
+		mockTargetSource.setTarget(bean);
+
+		AdvisedSupport as = new AdvisedSupport();
+		as.setTargetSource(mockTargetSource);
+		as.addAdvice(new NopInterceptor());
+		AopProxy aop = new CglibAopProxy(as);
+
+		PackageMethodTestBean proxy = (PackageMethodTestBean) aop.getProxy(child);
+		assertTrue(AopUtils.isCglibProxy(proxy));
+		assertNotEquals(proxy.getClass().getClassLoader(), bean.getClass().getClassLoader());
+		assertNull(proxy.getString());  // we're stuck in the proxy instance
 	}
 
 	@Test
@@ -133,36 +160,11 @@ public final class CglibProxyTests extends AbstractAopProxyTests implements Seri
 	}
 
 	@Test
-	public void testCglibProxyingGivesMeaningfulExceptionIfAskedToProxyNonvisibleClass() {
-
-		@SuppressWarnings("unused")
-		class YouCantSeeThis {
-			void hidden() {
-			}
-		}
-
-		YouCantSeeThis mine = new YouCantSeeThis();
-		try {
-			ProxyFactory pf = new ProxyFactory(mine);
-			pf.getProxy();
-			fail("Shouldn't be able to proxy non-visible class with CGLIB");
-		}
-		catch (AopConfigException ex) {
-			// Check that stack trace is preserved
-			assertTrue(ex.getCause() instanceof CodeGenerationException ||
-					ex.getCause() instanceof IllegalArgumentException);
-			// Check that error message is helpful
-			assertTrue(ex.getMessage().contains("final"));
-			assertTrue(ex.getMessage().contains("visible"));
-		}
-	}
-
-	@Test
 	public void testMethodInvocationDuringConstructor() {
 		CglibTestBean bean = new CglibTestBean();
 		bean.setName("Rob Harrop");
 
-		AdvisedSupport as = new AdvisedSupport(new Class<?>[]{});
+		AdvisedSupport as = new AdvisedSupport();
 		as.setTarget(bean);
 		as.addAdvice(new NopInterceptor());
 		AopProxy aop = new CglibAopProxy(as);
@@ -176,7 +178,7 @@ public final class CglibProxyTests extends AbstractAopProxyTests implements Seri
 		CglibTestBean target = new CglibTestBean();
 		target.setName("Rob Harrop");
 
-		AdvisedSupport pc = new AdvisedSupport(new Class<?>[]{});
+		AdvisedSupport pc = new AdvisedSupport();
 		pc.setFrozen(true);
 		pc.setTarget(target);
 
@@ -184,7 +186,6 @@ public final class CglibProxyTests extends AbstractAopProxyTests implements Seri
 		CglibTestBean proxy = (CglibTestBean) aop.getProxy();
 		assertNotNull("Proxy should not be null", proxy);
 		assertEquals("Constructor overrode the value of name", "Rob Harrop", proxy.getName());
-
 	}
 
 	@Test
@@ -196,7 +197,7 @@ public final class CglibProxyTests extends AbstractAopProxyTests implements Seri
 
 		ITestBean proxy1 = getAdvisedProxy(target);
 		ITestBean proxy2 = getAdvisedProxy(target2);
-		assertTrue(proxy1.getClass() == proxy2.getClass());
+		assertSame(proxy1.getClass(), proxy2.getClass());
 		assertEquals(target.getAge(), proxy1.getAge());
 		assertEquals(target2.getAge(), proxy2.getAge());
 	}
@@ -235,18 +236,18 @@ public final class CglibProxyTests extends AbstractAopProxyTests implements Seri
 
 	@Test
 	public void testMultipleProxiesForIntroductionAdvisor() {
-		TestBean target = new TestBean();
-		target.setAge(20);
+		TestBean target1 = new TestBean();
+		target1.setAge(20);
 		TestBean target2 = new TestBean();
 		target2.setAge(21);
 
-		ITestBean proxy1 = getIntroductionAdvisorProxy(target);
+		ITestBean proxy1 = getIntroductionAdvisorProxy(target1);
 		ITestBean proxy2 = getIntroductionAdvisorProxy(target2);
-		assertTrue("Incorrect duplicate creation of proxy classes", proxy1.getClass() == proxy2.getClass());
+		assertSame("Incorrect duplicate creation of proxy classes", proxy1.getClass(), proxy2.getClass());
 	}
 
 	private ITestBean getIntroductionAdvisorProxy(TestBean target) {
-		ProxyFactory pf = new ProxyFactory(new Class<?>[] {ITestBean.class});
+		ProxyFactory pf = new ProxyFactory(ITestBean.class);
 		pf.setProxyTargetClass(true);
 
 		pf.addAdvisor(new LockMixinAdvisor());
@@ -263,15 +264,13 @@ public final class CglibProxyTests extends AbstractAopProxyTests implements Seri
 		target.reset();
 
 		mockTargetSource.setTarget(target);
-		AdvisedSupport pc = new AdvisedSupport(new Class<?>[]{});
+		AdvisedSupport pc = new AdvisedSupport();
 		pc.setTargetSource(mockTargetSource);
 		CglibAopProxy aop = new CglibAopProxy(pc);
 		aop.setConstructorArguments(new Object[] {"Rob Harrop", 22}, new Class<?>[] {String.class, int.class});
 
 		NoArgCtorTestBean proxy = (NoArgCtorTestBean) aop.getProxy();
-		proxy = (NoArgCtorTestBean) aop.getProxy();
-
-		assertNotNull("Proxy should be null", proxy);
+		assertNotNull(proxy);
 	}
 
 	@Test
@@ -279,7 +278,7 @@ public final class CglibProxyTests extends AbstractAopProxyTests implements Seri
 		ITestBean target = new TestBean();
 
 		mockTargetSource.setTarget(target);
-		AdvisedSupport as = new AdvisedSupport(new Class<?>[]{});
+		AdvisedSupport as = new AdvisedSupport();
 		as.setTargetSource(mockTargetSource);
 		as.addAdvice(new NopInterceptor());
 		CglibAopProxy cglib = new CglibAopProxy(as);
@@ -300,7 +299,7 @@ public final class CglibProxyTests extends AbstractAopProxyTests implements Seri
 		ITestBean target = new TestBean();
 		mockTargetSource.setTarget(target);
 
-		AdvisedSupport as = new AdvisedSupport(new Class<?>[]{});
+		AdvisedSupport as = new AdvisedSupport();
 		as.setTargetSource(mockTargetSource);
 		as.addAdvice(new NopInterceptor());
 		as.addInterface(Serializable.class);
@@ -323,7 +322,7 @@ public final class CglibProxyTests extends AbstractAopProxyTests implements Seri
 		ExceptionThrower bean = new ExceptionThrower();
 		mockTargetSource.setTarget(bean);
 
-		AdvisedSupport as = new AdvisedSupport(new Class<?>[]{});
+		AdvisedSupport as = new AdvisedSupport();
 		as.setTargetSource(mockTargetSource);
 		as.addAdvice(new NopInterceptor());
 		AopProxy aop = new CglibAopProxy(as);
@@ -382,6 +381,20 @@ public final class CglibProxyTests extends AbstractAopProxyTests implements Seri
 		assertEquals(1, advice.getCalls("add"));
 	}
 
+	@Test
+	public void testProxyTargetClassInCaseOfNoInterfaces() throws Exception {
+		ProxyFactory proxyFactory = new ProxyFactory(new MyBean());
+		MyBean proxy = (MyBean) proxyFactory.getProxy();
+		assertEquals(4, proxy.add(1, 3));
+	}
+
+	@Test  // SPR-13328
+	public void testVarargsWithEnumArray() throws Exception {
+		ProxyFactory proxyFactory = new ProxyFactory(new MyBean());
+		MyBean proxy = (MyBean) proxyFactory.getProxy();
+		assertTrue(proxy.doWithVarargs(MyEnum.A, MyOtherEnum.C));
+	}
+
 
 	public static class MyBean {
 
@@ -398,6 +411,27 @@ public final class CglibProxyTests extends AbstractAopProxyTests implements Seri
 		protected int add(int x, int y) {
 			return x + y;
 		}
+
+		@SuppressWarnings("unchecked")
+		public <V extends MyInterface> boolean doWithVarargs(V... args) {
+			return true;
+		}
+	}
+
+
+	public interface MyInterface {
+	}
+
+
+	public enum MyEnum implements MyInterface {
+
+		A, B;
+	}
+
+
+	public enum MyOtherEnum implements MyInterface {
+
+		C, D;
 	}
 
 
@@ -430,9 +464,40 @@ public final class CglibProxyTests extends AbstractAopProxyTests implements Seri
 	}
 
 
-	public static class HasFinalMethod {
+	public static class NoArgCtorTestBean {
 
-		public final void foo() {
+		private boolean called = false;
+
+		public NoArgCtorTestBean(String x, int y) {
+			called = true;
+		}
+
+		public boolean wasCalled() {
+			return called;
+		}
+
+		public void reset() {
+			called = false;
+		}
+	}
+
+
+	public static class ProtectedMethodTestBean {
+
+		public String value;
+
+		protected String getString() {
+			return this.value;
+		}
+	}
+
+
+	public static class PackageMethodTestBean {
+
+		public String value;
+
+		String getString() {
+			return this.value;
 		}
 	}
 }
@@ -456,37 +521,10 @@ class CglibTestBean {
 }
 
 
-class NoArgCtorTestBean {
-
-	private boolean called = false;
-
-	public NoArgCtorTestBean(String x, int y) {
-		called = true;
-	}
-
-	public boolean wasCalled() {
-		return called;
-	}
-
-	public void reset() {
-		called = false;
-	}
-}
-
-
-class ProtectedMethodTestBean {
-
-	protected String getString() {
-		return "foo";
-	}
-}
-
-
 class UnsupportedInterceptor implements MethodInterceptor {
 
 	@Override
 	public Object invoke(MethodInvocation mi) throws Throwable {
 		throw new UnsupportedOperationException(mi.getMethod().getName());
 	}
-
 }

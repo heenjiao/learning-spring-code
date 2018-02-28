@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2015 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,13 +26,17 @@ import java.util.Set;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLResolver;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.sax.SAXSource;
+import javax.xml.transform.stax.StAXSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
@@ -62,11 +66,12 @@ import org.springframework.util.StreamUtils;
  */
 public class SourceHttpMessageConverter<T extends Source> extends AbstractHttpMessageConverter<T> {
 
-	private static final Set<Class<?>> SUPPORTED_CLASSES = new HashSet<Class<?>>(4);
+	private static final Set<Class<?>> SUPPORTED_CLASSES = new HashSet<Class<?>>(5);
 
 	static {
 		SUPPORTED_CLASSES.add(DOMSource.class);
 		SUPPORTED_CLASSES.add(SAXSource.class);
+		SUPPORTED_CLASSES.add(StAXSource.class);
 		SUPPORTED_CLASSES.add(StreamSource.class);
 		SUPPORTED_CLASSES.add(Source.class);
 	}
@@ -135,18 +140,21 @@ public class SourceHttpMessageConverter<T extends Source> extends AbstractHttpMe
 			throws IOException, HttpMessageNotReadableException {
 
 		InputStream body = inputMessage.getBody();
-		if (DOMSource.class.equals(clazz)) {
+		if (DOMSource.class == clazz) {
 			return (T) readDOMSource(body);
 		}
-		else if (SAXSource.class.equals(clazz)) {
+		else if (SAXSource.class == clazz) {
 			return (T) readSAXSource(body);
 		}
-		else if (StreamSource.class.equals(clazz) || Source.class.equals(clazz)) {
+		else if (StAXSource.class == clazz) {
+			return (T) readStAXSource(body);
+		}
+		else if (StreamSource.class == clazz || Source.class == clazz) {
 			return (T) readStreamSource(body);
 		}
 		else {
 			throw new HttpMessageConversionException("Could not read class [" + clazz +
-					"]. Only DOMSource, SAXSource, and StreamSource are supported.");
+					"]. Only DOMSource, SAXSource, StAXSource, and StreamSource are supported.");
 		}
 	}
 
@@ -167,9 +175,8 @@ public class SourceHttpMessageConverter<T extends Source> extends AbstractHttpMe
 		}
 		catch (NullPointerException ex) {
 			if (!isSupportDtd()) {
-				throw new HttpMessageNotReadableException("NPE while unmarshalling. " +
-						"This can happen on JDK 1.6 due to the presence of DTD " +
-						"declarations, which are disabled.", ex);
+				throw new HttpMessageNotReadableException("NPE while unmarshalling: " +
+						"This can happen due to the presence of DTD declarations which are disabled.", ex);
 			}
 			throw ex;
 		}
@@ -183,16 +190,32 @@ public class SourceHttpMessageConverter<T extends Source> extends AbstractHttpMe
 
 	private SAXSource readSAXSource(InputStream body) throws IOException {
 		try {
-			XMLReader reader = XMLReaderFactory.createXMLReader();
-			reader.setFeature("http://apache.org/xml/features/disallow-doctype-decl", !isSupportDtd());
-			reader.setFeature("http://xml.org/sax/features/external-general-entities", isProcessExternalEntities());
+			XMLReader xmlReader = XMLReaderFactory.createXMLReader();
+			xmlReader.setFeature("http://apache.org/xml/features/disallow-doctype-decl", !isSupportDtd());
+			xmlReader.setFeature("http://xml.org/sax/features/external-general-entities", isProcessExternalEntities());
 			if (!isProcessExternalEntities()) {
-				reader.setEntityResolver(NO_OP_ENTITY_RESOLVER);
+				xmlReader.setEntityResolver(NO_OP_ENTITY_RESOLVER);
 			}
 			byte[] bytes = StreamUtils.copyToByteArray(body);
-			return new SAXSource(reader, new InputSource(new ByteArrayInputStream(bytes)));
+			return new SAXSource(xmlReader, new InputSource(new ByteArrayInputStream(bytes)));
 		}
 		catch (SAXException ex) {
+			throw new HttpMessageNotReadableException("Could not parse document: " + ex.getMessage(), ex);
+		}
+	}
+
+	private Source readStAXSource(InputStream body) {
+		try {
+			XMLInputFactory inputFactory = XMLInputFactory.newInstance();
+			inputFactory.setProperty(XMLInputFactory.SUPPORT_DTD, isSupportDtd());
+			inputFactory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, isProcessExternalEntities());
+			if (!isProcessExternalEntities()) {
+				inputFactory.setXMLResolver(NO_OP_XML_RESOLVER);
+			}
+			XMLStreamReader streamReader = inputFactory.createXMLStreamReader(body);
+			return new StAXSource(streamReader);
+		}
+		catch (XMLStreamException ex) {
 			throw new HttpMessageNotReadableException("Could not parse document: " + ex.getMessage(), ex);
 		}
 	}
@@ -265,7 +288,7 @@ public class SourceHttpMessageConverter<T extends Source> extends AbstractHttpMe
 	private static final XMLResolver NO_OP_XML_RESOLVER = new XMLResolver() {
 		@Override
 		public Object resolveEntity(String publicID, String systemID, String base, String ns) {
-			return new ByteArrayInputStream(new byte[0]);
+			return StreamUtils.emptyInput();
 		}
 	};
 

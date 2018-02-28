@@ -43,7 +43,7 @@ public class DefaultIntroductionAdvisor implements IntroductionAdvisor, ClassFil
 
 	private final Advice advice;
 
-	private final Set<Class> interfaces = new LinkedHashSet<Class>();
+	private final Set<Class<?>> interfaces = new LinkedHashSet<Class<?>>();
 
 	private int order = Integer.MAX_VALUE;
 
@@ -102,6 +102,7 @@ public class DefaultIntroductionAdvisor implements IntroductionAdvisor, ClassFil
 		this.interfaces.add(intf);
 	}
 
+	@Override
 	public Class<?>[] getInterfaces() {
 		return this.interfaces.toArray(new Class<?>[this.interfaces.size()]);
 	}
@@ -122,23 +123,28 @@ public class DefaultIntroductionAdvisor implements IntroductionAdvisor, ClassFil
 		this.order = order;
 	}
 
+	@Override
 	public int getOrder() {
 		return this.order;
 	}
 
 
+	@Override
 	public Advice getAdvice() {
 		return this.advice;
 	}
 
+	@Override
 	public boolean isPerInstance() {
 		return true;
 	}
 
+	@Override
 	public ClassFilter getClassFilter() {
 		return this;
 	}
 
+	@Override
 	public boolean matches(Class<?> clazz) {
 		return true;
 	}

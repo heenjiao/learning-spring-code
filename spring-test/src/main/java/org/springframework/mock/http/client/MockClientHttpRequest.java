@@ -61,6 +61,7 @@ public class MockClientHttpRequest extends MockHttpOutputMessage implements Clie
 		this.httpMethod = httpMethod;
 	}
 
+	@Override
 	public HttpMethod getMethod() {
 		return this.httpMethod;
 	}
@@ -69,6 +70,7 @@ public class MockClientHttpRequest extends MockHttpOutputMessage implements Clie
 		this.uri = uri;
 	}
 
+	@Override
 	public URI getURI() {
 		return this.uri;
 	}
@@ -86,6 +88,7 @@ public class MockClientHttpRequest extends MockHttpOutputMessage implements Clie
 	 * configured {@link #setResponse(ClientHttpResponse) response}.
 	 * @see #executeInternal()
 	 */
+	@Override
 	public final ClientHttpResponse execute() throws IOException {
 		this.executed = true;
 		return executeInternal();

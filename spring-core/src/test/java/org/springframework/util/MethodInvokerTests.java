@@ -53,14 +53,14 @@ public class MethodInvokerTests {
 		mi = new MethodInvoker();
 		mi.setTargetClass(TestClass1.class);
 		mi.setTargetMethod("supertypes");
-		mi.setArguments(new Object[] {new ArrayList<Object>(), new ArrayList<Object>(), "hello"});
+		mi.setArguments(new Object[] {new ArrayList<>(), new ArrayList<>(), "hello"});
 		mi.prepare();
 		assertEquals("hello", mi.invoke());
 
 		mi = new MethodInvoker();
 		mi.setTargetClass(TestClass1.class);
 		mi.setTargetMethod("supertypes2");
-		mi.setArguments(new Object[] {new ArrayList<Object>(), new ArrayList<Object>(), "hello", "bogus"});
+		mi.setArguments(new Object[] {new ArrayList<>(), new ArrayList<>(), "hello", "bogus"});
 		mi.prepare();
 		assertEquals("hello", mi.invoke());
 
@@ -68,7 +68,7 @@ public class MethodInvokerTests {
 		mi = new MethodInvoker();
 		mi.setTargetClass(TestClass1.class);
 		mi.setTargetMethod("supertypes2");
-		mi.setArguments(new Object[] {new ArrayList<Object>(), new ArrayList<Object>(), "hello", Boolean.TRUE});
+		mi.setArguments(new Object[] {new ArrayList<>(), new ArrayList<>(), "hello", Boolean.TRUE});
 
 		exception.expect(NoSuchMethodException.class);
 		mi.prepare();

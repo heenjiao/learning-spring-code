@@ -16,6 +16,8 @@
 
 package org.springframework.http.converter.xml;
 
+import javax.xml.transform.Source;
+
 import org.springframework.http.converter.FormHttpMessageConverter;
 
 /**
@@ -32,7 +34,7 @@ public class XmlAwareFormHttpMessageConverter extends FormHttpMessageConverter {
 
 	public XmlAwareFormHttpMessageConverter() {
 		super();
-		addPartConverter(new SourceHttpMessageConverter());
+		addPartConverter(new SourceHttpMessageConverter<Source>());
 	}
 
 }

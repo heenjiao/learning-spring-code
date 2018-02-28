@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,9 +29,14 @@ import org.springframework.core.NamedThreadLocal;
 /**
  * A simple thread-backed {@link Scope} implementation.
  *
- * <p><strong>Note:</strong> {@code SimpleThreadScope} <em>does not clean up
- * any objects</em> associated with it. As such, it is typically preferable to
- * use {@link org.springframework.web.context.request.RequestScope RequestScope}
+ * <p><b>NOTE:</b> This thread scope is not registered by default in common contexts.
+ * Instead, you need to explicitly assign it to a scope key in your setup, either through
+ * {@link org.springframework.beans.factory.config.ConfigurableBeanFactory#registerScope}
+ * or through a {@link org.springframework.beans.factory.config.CustomScopeConfigurer} bean.
+ *
+ * <p>{@code SimpleThreadScope} <em>does not clean up any objects</em> associated with it.
+ * As such, it is typically preferable to use
+ * {@link org.springframework.web.context.request.RequestScope RequestScope}
  * in web environments.
  *
  * <p>For an implementation of a thread-based {@code Scope} with support for
@@ -59,6 +64,7 @@ public class SimpleThreadScope implements Scope {
 			};
 
 
+	@Override
 	public Object get(String name, ObjectFactory<?> objectFactory) {
 		Map<String, Object> scope = this.threadScope.get();
 		Object object = scope.get(name);
@@ -69,20 +75,24 @@ public class SimpleThreadScope implements Scope {
 		return object;
 	}
 
+	@Override
 	public Object remove(String name) {
 		Map<String, Object> scope = this.threadScope.get();
 		return scope.remove(name);
 	}
 
+	@Override
 	public void registerDestructionCallback(String name, Runnable callback) {
 		logger.warn("SimpleThreadScope does not support destruction callbacks. " +
 				"Consider using RequestScope in a web environment.");
 	}
 
+	@Override
 	public Object resolveContextualObject(String key) {
 		return null;
 	}
 
+	@Override
 	public String getConversationId() {
 		return Thread.currentThread().getName();
 	}

@@ -16,16 +16,12 @@
 
 package org.springframework.expression.spel;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
-
 import java.util.EmptyStackException;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.Test;
+
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.EvaluationException;
@@ -34,12 +30,14 @@ import org.springframework.expression.TypedValue;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.expression.spel.testresources.Inventor;
 
+import static org.junit.Assert.*;
+
 /**
  * Tests for the expression state object - some features are not yet exploited in the language (eg nested scopes)
  *
  * @author Andy Clement
  */
-public class ExpressionStateTests extends ExpressionTestCase {
+public class ExpressionStateTests extends AbstractExpressionTests {
 
 	@Test
 	public void testConstruction() {
@@ -142,7 +140,8 @@ public class ExpressionStateTests extends ExpressionTestCase {
 		try {
 			state.popActiveContextObject();
 			fail("stack should be empty...");
-		} catch (EmptyStackException ese) {
+		}
+		catch (EmptyStackException ese) {
 			// success
 		}
 
@@ -223,7 +222,8 @@ public class ExpressionStateTests extends ExpressionTestCase {
 		try {
 			state.operate(Operation.ADD,1,2);
 			fail("should have failed");
-		} catch (EvaluationException ee) {
+		}
+		catch (EvaluationException ee) {
 			SpelEvaluationException sEx = (SpelEvaluationException)ee;
 			assertEquals(SpelMessage.OPERATOR_NOT_SUPPORTED_BETWEEN_TYPES,sEx.getMessageCode());
 		}
@@ -231,7 +231,8 @@ public class ExpressionStateTests extends ExpressionTestCase {
 		try {
 			state.operate(Operation.ADD,null,null);
 			fail("should have failed");
-		} catch (EvaluationException ee) {
+		}
+		catch (EvaluationException ee) {
 			SpelEvaluationException sEx = (SpelEvaluationException)ee;
 			assertEquals(SpelMessage.OPERATOR_NOT_SUPPORTED_BETWEEN_TYPES,sEx.getMessageCode());
 		}
@@ -251,7 +252,8 @@ public class ExpressionStateTests extends ExpressionTestCase {
 		try {
 			state.findType("someMadeUpName");
 			fail("Should have failed to find it");
-		} catch (EvaluationException ee) {
+		}
+		catch (EvaluationException ee) {
 			SpelEvaluationException sEx = (SpelEvaluationException)ee;
 			assertEquals(SpelMessage.TYPE_NOT_FOUND,sEx.getMessageCode());
 		}

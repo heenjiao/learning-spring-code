@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,7 +68,7 @@ import java.lang.annotation.Target;
  * The result is that three application contexts will be loaded (one for each
  * declaration of {@code @ContextConfiguration}, and the application context
  * loaded based on the configuration in {@code AbstractWebTests} will be set as
- * the parent context for each of the contexts loaded for the concrete subclasses. 
+ * the parent context for each of the contexts loaded for the concrete subclasses.
  *
  * <pre class="code">
  * &#064;RunWith(SpringJUnit4ClassRunner.class)
@@ -104,7 +104,7 @@ import java.lang.annotation.Target;
  *     &#064;ContextConfiguration(name = "child",  locations = "/user-config.xml")
  * })
  * public class BaseTests {}
- * 
+ *
  * &#064;ContextHierarchy(
  *     &#064;ContextConfiguration(name = "child",  locations = "/order-config.xml")
  * )
@@ -116,7 +116,7 @@ import java.lang.annotation.Target;
  * by setting the {@link ContextConfiguration#inheritLocations} flag to {@code false}.
  * Consequently, the application context for {@code ExtendedTests} will be loaded
  * only from {@code "/test-user-config.xml"} and will have its parent set to the
- * context loaded from {@code "/app-config.xml"}. 
+ * context loaded from {@code "/app-config.xml"}.
  *
  * <pre class="code">
  * &#064;RunWith(SpringJUnit4ClassRunner.class)
@@ -125,27 +125,29 @@ import java.lang.annotation.Target;
  *     &#064;ContextConfiguration(name = "child",  locations = "/user-config.xml")
  * })
  * public class BaseTests {}
- * 
+ *
  * &#064;ContextHierarchy(
  *     &#064;ContextConfiguration(name = "child",  locations = "/test-user-config.xml", inheritLocations=false)
  * )
  * public class ExtendedTests extends BaseTests {}</pre>
+ *
+ * <p>As of Spring Framework 4.0, this annotation may be used as a
+ * <em>meta-annotation</em> to create custom <em>composed annotations</em>.
  *
  * @author Sam Brannen
  * @since 3.2.2
  * @see ContextConfiguration
  * @see org.springframework.context.ApplicationContext
  */
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
 public @interface ContextHierarchy {
 
 	/**
 	 * A list of {@link ContextConfiguration @ContextConfiguration} instances,
 	 * each of which defines a level in the context hierarchy.
-	 *
 	 * <p>If you need to merge or override the configuration for a given level
 	 * of the context hierarchy within a test class hierarchy, you must explicitly
 	 * name that level by supplying the same value to the {@link ContextConfiguration#name

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,32 +65,6 @@ public class ResourceEditor extends PropertyEditorSupport {
 
 	/**
 	 * Create a new instance of the {@link ResourceEditor} class
-	 * using the given {@link ResourceLoader} and a {@link StandardEnvironment}.
-	 * @param resourceLoader the {@code ResourceLoader} to use
-	 * @deprecated as of Spring 3.1 in favor of
-	 * {@link #ResourceEditor(ResourceLoader, PropertyResolver)}
-	 */
-	@Deprecated
-	public ResourceEditor(ResourceLoader resourceLoader) {
-		this(resourceLoader, null, true);
-	}
-
-	/**
-	 * Create a new instance of the {@link ResourceEditor} class
-	 * using the given {@link ResourceLoader}.
-	 * @param resourceLoader the {@code ResourceLoader} to use
-	 * @param ignoreUnresolvablePlaceholders whether to ignore unresolvable placeholders
-	 * if no corresponding property could be found
-	 * @deprecated as of Spring 3.1 in favor of
-	 * {@link #ResourceEditor(ResourceLoader, PropertyResolver, boolean)}
-	 */
-	@Deprecated
-	public ResourceEditor(ResourceLoader resourceLoader, boolean ignoreUnresolvablePlaceholders) {
-		this(resourceLoader, null, ignoreUnresolvablePlaceholders);
-	}
-
-	/**
-	 * Create a new instance of the {@link ResourceEditor} class
 	 * using the given {@link ResourceLoader} and {@link PropertyResolver}.
 	 * @param resourceLoader the {@code ResourceLoader} to use
 	 * @param propertyResolver the {@code PropertyResolver} to use
@@ -107,7 +81,9 @@ public class ResourceEditor extends PropertyEditorSupport {
 	 * @param ignoreUnresolvablePlaceholders whether to ignore unresolvable placeholders
 	 * if no corresponding property could be found in the given {@code propertyResolver}
 	 */
-	public ResourceEditor(ResourceLoader resourceLoader, PropertyResolver propertyResolver, boolean ignoreUnresolvablePlaceholders) {
+	public ResourceEditor(ResourceLoader resourceLoader, PropertyResolver propertyResolver,
+			boolean ignoreUnresolvablePlaceholders) {
+
 		Assert.notNull(resourceLoader, "ResourceLoader must not be null");
 		this.resourceLoader = resourceLoader;
 		this.propertyResolver = propertyResolver;

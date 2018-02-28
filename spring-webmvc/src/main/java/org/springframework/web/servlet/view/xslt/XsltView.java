@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,7 +73,7 @@ import org.springframework.web.util.WebUtils;
  */
 public class XsltView extends AbstractUrlBasedView {
 
-	private Class transformerFactoryClass;
+	private Class<? extends TransformerFactory> transformerFactoryClass;
 
 	private String sourceKey;
 
@@ -97,8 +97,7 @@ public class XsltView extends AbstractUrlBasedView {
 	 * <p>The default constructor of the specified class will be called
 	 * to build the TransformerFactory for this view.
 	 */
-	public void setTransformerFactoryClass(Class transformerFactoryClass) {
-		Assert.isAssignable(TransformerFactory.class, transformerFactoryClass);
+	public void setTransformerFactoryClass(Class<? extends TransformerFactory> transformerFactoryClass) {
 		this.transformerFactoryClass = transformerFactoryClass;
 	}
 
@@ -195,10 +194,10 @@ public class XsltView extends AbstractUrlBasedView {
 	 * @see #setTransformerFactoryClass
 	 * @see #getTransformerFactory()
 	 */
-	protected TransformerFactory newTransformerFactory(Class transformerFactoryClass) {
+	protected TransformerFactory newTransformerFactory(Class<? extends TransformerFactory> transformerFactoryClass) {
 		if (transformerFactoryClass != null) {
 			try {
-				return (TransformerFactory) transformerFactoryClass.newInstance();
+				return transformerFactoryClass.newInstance();
 			}
 			catch (Exception ex) {
 				throw new TransformerFactoryConfigurationError(ex, "Could not instantiate TransformerFactory");
@@ -264,7 +263,7 @@ public class XsltView extends AbstractUrlBasedView {
 	 * an object of {@link #getSourceTypes() supported type}.
 	 * @param model the merged model Map
 	 * @return the XSLT Source object (or {@code null} if none found)
-	 * @throws Exception if an error occured during locating the source
+	 * @throws Exception if an error occurred during locating the source
 	 * @see #setSourceKey
 	 * @see #convertSource
 	 */
@@ -283,8 +282,8 @@ public class XsltView extends AbstractUrlBasedView {
 	 * {@link Reader}, {@link InputStream} and {@link Resource}.
 	 * @return the supported source types
 	 */
-	protected Class[] getSourceTypes() {
-		return new Class[] {Source.class, Document.class, Node.class, Reader.class, InputStream.class, Resource.class};
+	protected Class<?>[] getSourceTypes() {
+		return new Class<?>[] {Source.class, Document.class, Node.class, Reader.class, InputStream.class, Resource.class};
 	}
 
 	/**
@@ -362,7 +361,7 @@ public class XsltView extends AbstractUrlBasedView {
 	 */
 	protected final void copyOutputProperties(Transformer transformer) {
 		if (this.outputProperties != null) {
-			Enumeration en = this.outputProperties.propertyNames();
+			Enumeration<?> en = this.outputProperties.propertyNames();
 			while (en.hasMoreElements()) {
 				String name = (String) en.nextElement();
 				transformer.setOutputProperty(name, this.outputProperties.getProperty(name));

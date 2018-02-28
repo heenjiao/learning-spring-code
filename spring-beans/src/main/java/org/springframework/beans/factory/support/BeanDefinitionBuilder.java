@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ public class BeanDefinitionBuilder {
 	 * Create a new {@code BeanDefinitionBuilder} used to construct a {@link GenericBeanDefinition}.
 	 * @param beanClass the {@code Class} of the bean that the definition is being created for
 	 */
-	public static BeanDefinitionBuilder genericBeanDefinition(Class beanClass) {
+	public static BeanDefinitionBuilder genericBeanDefinition(Class<?> beanClass) {
 		BeanDefinitionBuilder builder = new BeanDefinitionBuilder();
 		builder.beanDefinition = new GenericBeanDefinition();
 		builder.beanDefinition.setBeanClass(beanClass);
@@ -67,7 +67,7 @@ public class BeanDefinitionBuilder {
 	 * Create a new {@code BeanDefinitionBuilder} used to construct a {@link RootBeanDefinition}.
 	 * @param beanClass the {@code Class} of the bean that the definition is being created for
 	 */
-	public static BeanDefinitionBuilder rootBeanDefinition(Class beanClass) {
+	public static BeanDefinitionBuilder rootBeanDefinition(Class<?> beanClass) {
 		return rootBeanDefinition(beanClass, null);
 	}
 
@@ -76,7 +76,7 @@ public class BeanDefinitionBuilder {
 	 * @param beanClass the {@code Class} of the bean that the definition is being created for
 	 * @param factoryMethodName the name of the method to use to construct the bean instance
 	 */
-	public static BeanDefinitionBuilder rootBeanDefinition(Class beanClass, String factoryMethodName) {
+	public static BeanDefinitionBuilder rootBeanDefinition(Class<?> beanClass, String factoryMethodName) {
 		BeanDefinitionBuilder builder = new BeanDefinitionBuilder();
 		builder.beanDefinition = new RootBeanDefinition();
 		builder.beanDefinition.setBeanClass(beanClass);
@@ -159,7 +159,8 @@ public class BeanDefinitionBuilder {
 	}
 
 	/**
-	 * Set the name of the factory method to use for this definition.
+	 * Set the name of a static factory method to use for this definition,
+	 * to be called on this bean's class.
 	 */
 	public BeanDefinitionBuilder setFactoryMethod(String factoryMethod) {
 		this.beanDefinition.setFactoryMethodName(factoryMethod);
@@ -167,21 +168,21 @@ public class BeanDefinitionBuilder {
 	}
 
 	/**
-	 * Set the name of the factory bean to use for this definition.
-	 * @deprecated since Spring 2.5, in favor of preparing this on the
-	 * {@link #getRawBeanDefinition() raw BeanDefinition object}
+	 * Set the name of a non-static factory method to use for this definition,
+	 * including the bean name of the factory instance to call the method on.
+	 * @since 4.3.6
 	 */
-	@Deprecated
-	public BeanDefinitionBuilder setFactoryBean(String factoryBean, String factoryMethod) {
-		this.beanDefinition.setFactoryBeanName(factoryBean);
+	public BeanDefinitionBuilder setFactoryMethodOnBean(String factoryMethod, String factoryBean) {
 		this.beanDefinition.setFactoryMethodName(factoryMethod);
+		this.beanDefinition.setFactoryBeanName(factoryBean);
 		return this;
 	}
 
 	/**
 	 * Add an indexed constructor arg value. The current index is tracked internally
 	 * and all additions are at the present point.
-	 * @deprecated since Spring 2.5, in favor of {@link #addConstructorArgValue}
+	 * @deprecated since Spring 2.5, in favor of {@link #addConstructorArgValue}.
+	 * This variant just remains around for Spring Security 2.x compatibility.
 	 */
 	@Deprecated
 	public BeanDefinitionBuilder addConstructorArg(Object value) {
@@ -254,17 +255,6 @@ public class BeanDefinitionBuilder {
 	}
 
 	/**
-	 * Set whether or not this definition describes a singleton bean,
-	 * as alternative to {@link #setScope}.
-	 * @deprecated since Spring 2.5, in favor of {@link #setScope}
-	 */
-	@Deprecated
-	public BeanDefinitionBuilder setSingleton(boolean singleton) {
-		this.beanDefinition.setSingleton(singleton);
-		return this;
-	}
-
-	/**
 	 * Set whether or not this definition is abstract.
 	 */
 	public BeanDefinitionBuilder setAbstract(boolean flag) {
@@ -302,7 +292,7 @@ public class BeanDefinitionBuilder {
 	 */
 	public BeanDefinitionBuilder addDependsOn(String beanName) {
 		if (this.beanDefinition.getDependsOn() == null) {
-			this.beanDefinition.setDependsOn(new String[] {beanName});
+			this.beanDefinition.setDependsOn(beanName);
 		}
 		else {
 			String[] added = ObjectUtils.addObjectToArray(this.beanDefinition.getDependsOn(), beanName);
@@ -316,28 +306,6 @@ public class BeanDefinitionBuilder {
 	 */
 	public BeanDefinitionBuilder setRole(int role) {
 		this.beanDefinition.setRole(role);
-		return this;
-	}
-
-	/**
-	 * Set the source of this definition.
-	 * @deprecated since Spring 2.5, in favor of preparing this on the
-	 * {@link #getRawBeanDefinition() raw BeanDefinition object}
-	 */
-	@Deprecated
-	public BeanDefinitionBuilder setSource(Object source) {
-		this.beanDefinition.setSource(source);
-		return this;
-	}
-
-	/**
-	 * Set the description associated with this definition.
-	 * @deprecated since Spring 2.5, in favor of preparing this on the
-	 * {@link #getRawBeanDefinition() raw BeanDefinition object}
-	 */
-	@Deprecated
-	public BeanDefinitionBuilder setResourceDescription(String resourceDescription) {
-		this.beanDefinition.setResourceDescription(resourceDescription);
 		return this;
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.springframework.orm.hibernate4;
 
+import java.lang.reflect.Method;
 import javax.sql.DataSource;
 
 import org.apache.commons.logging.Log;
@@ -26,8 +27,10 @@ import org.hibernate.NonUniqueObjectException;
 import org.hibernate.NonUniqueResultException;
 import org.hibernate.ObjectDeletedException;
 import org.hibernate.PersistentObjectException;
+import org.hibernate.PessimisticLockException;
 import org.hibernate.PropertyValueException;
 import org.hibernate.QueryException;
+import org.hibernate.QueryTimeoutException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.StaleObjectStateException;
@@ -35,13 +38,15 @@ import org.hibernate.StaleStateException;
 import org.hibernate.TransientObjectException;
 import org.hibernate.UnresolvableObjectException;
 import org.hibernate.WrongClassException;
+import org.hibernate.dialect.lock.OptimisticEntityLockException;
+import org.hibernate.dialect.lock.PessimisticEntityLockException;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.DataException;
 import org.hibernate.exception.JDBCConnectionException;
 import org.hibernate.exception.LockAcquisitionException;
 import org.hibernate.exception.SQLGrammarException;
-import org.hibernate.service.jdbc.connections.spi.ConnectionProvider;
+import org.hibernate.service.spi.Wrapped;
 
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataAccessException;
@@ -51,7 +56,10 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.datasource.DataSourceUtils;
+import org.springframework.util.ClassUtils;
+import org.springframework.util.ReflectionUtils;
 
 /**
  * Helper class featuring methods for Hibernate Session handling.
@@ -78,6 +86,12 @@ public abstract class SessionFactoryUtils {
 
 	static final Log logger = LogFactory.getLog(SessionFactoryUtils.class);
 
+	/**
+	 * Bridging between the different ConnectionProvider package location in 4.0-4.2 vs 4.3.
+	 */
+	private static final Method getConnectionProviderMethod =
+			ClassUtils.getMethodIfAvailable(SessionFactoryImplementor.class, "getConnectionProvider");
+
 
 	/**
 	 * Determine the DataSource of the given SessionFactory.
@@ -86,9 +100,11 @@ public abstract class SessionFactoryUtils {
 	 * @see org.hibernate.engine.spi.SessionFactoryImplementor#getConnectionProvider
 	 */
 	public static DataSource getDataSource(SessionFactory sessionFactory) {
-		if (sessionFactory instanceof SessionFactoryImplementor) {
-			ConnectionProvider cp = ((SessionFactoryImplementor) sessionFactory).getConnectionProvider();
-			return cp.unwrap(DataSource.class);
+		if (getConnectionProviderMethod != null && sessionFactory instanceof SessionFactoryImplementor) {
+			Wrapped cp = (Wrapped) ReflectionUtils.invokeMethod(getConnectionProviderMethod, sessionFactory);
+			if (cp != null) {
+				return cp.unwrap(DataSource.class);
+			}
 		}
 		return null;
 	}
@@ -116,7 +132,7 @@ public abstract class SessionFactoryUtils {
 	/**
 	 * Convert the given HibernateException to an appropriate exception
 	 * from the {@code org.springframework.dao} hierarchy.
-	 * @param ex HibernateException that occured
+	 * @param ex HibernateException that occurred
 	 * @return the corresponding DataAccessException instance
 	 * @see HibernateExceptionTranslator#convertHibernateAccessException
 	 * @see HibernateTransactionManager#convertHibernateAccessException
@@ -129,9 +145,17 @@ public abstract class SessionFactoryUtils {
 			SQLGrammarException jdbcEx = (SQLGrammarException) ex;
 			return new InvalidDataAccessResourceUsageException(ex.getMessage() + "; SQL [" + jdbcEx.getSQL() + "]", ex);
 		}
+		if (ex instanceof QueryTimeoutException) {
+			QueryTimeoutException jdbcEx = (QueryTimeoutException) ex;
+			return new org.springframework.dao.QueryTimeoutException(ex.getMessage() + "; SQL [" + jdbcEx.getSQL() + "]", ex);
+		}
 		if (ex instanceof LockAcquisitionException) {
 			LockAcquisitionException jdbcEx = (LockAcquisitionException) ex;
 			return new CannotAcquireLockException(ex.getMessage() + "; SQL [" + jdbcEx.getSQL() + "]", ex);
+		}
+		if (ex instanceof PessimisticLockException) {
+			PessimisticLockException jdbcEx = (PessimisticLockException) ex;
+			return new PessimisticLockingFailureException(ex.getMessage() + "; SQL [" + jdbcEx.getSQL() + "]", ex);
 		}
 		if (ex instanceof ConstraintViolationException) {
 			ConstraintViolationException jdbcEx = (ConstraintViolationException) ex;
@@ -179,6 +203,15 @@ public abstract class SessionFactoryUtils {
 		}
 		if (ex instanceof StaleStateException) {
 			return new HibernateOptimisticLockingFailureException((StaleStateException) ex);
+		}
+		if (ex instanceof OptimisticEntityLockException) {
+			return new HibernateOptimisticLockingFailureException((OptimisticEntityLockException) ex);
+		}
+		if (ex instanceof PessimisticEntityLockException) {
+			if (ex.getCause() instanceof LockAcquisitionException) {
+				return new CannotAcquireLockException(ex.getMessage(), ex.getCause());
+			}
+			return new PessimisticLockingFailureException(ex.getMessage(), ex);
 		}
 
 		// fallback

@@ -94,8 +94,14 @@ import org.springframework.scheduling.config.ScheduledTaskRegistrar;
  *     }
  * }</pre>
  *
- * In all of the above scenarios, a default single-threaded task executor is used.
- * When more control is desired, a {@code @Configuration} class may implement
+ * <p>By default, will be searching for an associated scheduler definition: either
+ * a unique {@link org.springframework.scheduling.TaskScheduler} bean in the context,
+ * or a {@code TaskScheduler} bean named "taskScheduler" otherwise; the same lookup
+ * will also be performed for a {@link java.util.concurrent.ScheduledExecutorService}
+ * bean. If neither of the two is resolvable, a local single-threaded default
+ * scheduler will be created and used within the registrar.
+ *
+ * <p>When more control is desired, a {@code @Configuration} class may implement
  * {@link SchedulingConfigurer}. This allows access to the underlying
  * {@link ScheduledTaskRegistrar} instance. For example, the following example
  * demonstrates how to customize the {@link Executor} used to execute scheduled

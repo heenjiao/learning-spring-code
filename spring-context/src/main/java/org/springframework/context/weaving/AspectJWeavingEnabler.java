@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2009 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 
 package org.springframework.context.weaving;
 
-
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
 
 import org.aspectj.weaver.loadtime.ClassPreProcessorAgentAdapter;
+
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
@@ -43,29 +43,40 @@ import org.springframework.instrument.classloading.LoadTimeWeaver;
 public class AspectJWeavingEnabler
 		implements BeanFactoryPostProcessor, BeanClassLoaderAware, LoadTimeWeaverAware, Ordered {
 
+	public static final String ASPECTJ_AOP_XML_RESOURCE = "META-INF/aop.xml";
+
+
 	private ClassLoader beanClassLoader;
 
 	private LoadTimeWeaver loadTimeWeaver;
 
-	public static final String ASPECTJ_AOP_XML_RESOURCE = "META-INF/aop.xml";
 
-
+	@Override
 	public void setBeanClassLoader(ClassLoader classLoader) {
 		this.beanClassLoader = classLoader;
 	}
 
+	@Override
 	public void setLoadTimeWeaver(LoadTimeWeaver loadTimeWeaver) {
 		this.loadTimeWeaver = loadTimeWeaver;
 	}
 
+	@Override
 	public int getOrder() {
 		return HIGHEST_PRECEDENCE;
 	}
 
+	@Override
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 		enableAspectJWeaving(this.loadTimeWeaver, this.beanClassLoader);
 	}
 
+
+	/**
+	 * Enable AspectJ weaving with the given {@link LoadTimeWeaver}.
+	 * @param weaverToUse the LoadTimeWeaver to apply to (or {@code null} for a default weaver)
+	 * @param beanClassLoader the class loader to create a default weaver for (if necessary)
+	 */
 	public static void enableAspectJWeaving(LoadTimeWeaver weaverToUse, ClassLoader beanClassLoader) {
 		if (weaverToUse == null) {
 			if (InstrumentationLoadTimeWeaver.isInstrumentationAvailable()) {
@@ -75,16 +86,14 @@ public class AspectJWeavingEnabler
 				throw new IllegalStateException("No LoadTimeWeaver available");
 			}
 		}
-		weaverToUse.addTransformer(new AspectJClassBypassingClassFileTransformer(
-					new ClassPreProcessorAgentAdapter()));
+		weaverToUse.addTransformer(
+				new AspectJClassBypassingClassFileTransformer(new ClassPreProcessorAgentAdapter()));
 	}
 
 
 	/**
 	 * ClassFileTransformer decorator that suppresses processing of AspectJ
-	 * classes in order to avoid potential LinkageErrors. Required especially for OC4J and
-	 * Tomcat (in Glassfish).
-	 *
+	 * classes in order to avoid potential LinkageErrors.
 	 * @see org.springframework.context.annotation.LoadTimeWeavingConfiguration
 	 */
 	private static class AspectJClassBypassingClassFileTransformer implements ClassFileTransformer {
@@ -95,6 +104,7 @@ public class AspectJWeavingEnabler
 			this.delegate = delegate;
 		}
 
+		@Override
 		public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined,
 				ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
 
@@ -104,4 +114,5 @@ public class AspectJWeavingEnabler
 			return this.delegate.transform(loader, className, classBeingRedefined, protectionDomain, classfileBuffer);
 		}
 	}
+
 }

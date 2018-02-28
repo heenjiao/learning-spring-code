@@ -53,6 +53,7 @@ import org.springframework.util.CollectionUtils;
  * <li>{@code html} - {@code JasperReportsHtmlView}</li>
  * <li>{@code pdf} - {@code JasperReportsPdfView}</li>
  * <li>{@code xls} - {@code JasperReportsXlsView}</li>
+ * <li>{@code xlsx} - {@code JasperReportsXlsxView}</li> (as of Spring 4.2)
  * </ul>
  *
  * <p>The format key can be changed using the {@code formatKey} property.
@@ -100,6 +101,7 @@ public class JasperReportsMultiFormatView extends AbstractJasperReportsView {
 		this.formatMappings.put("html", JasperReportsHtmlView.class);
 		this.formatMappings.put("pdf", JasperReportsPdfView.class);
 		this.formatMappings.put("xls", JasperReportsXlsView.class);
+		this.formatMappings.put("xlsx", JasperReportsXlsxView.class);
 	}
 
 
@@ -119,6 +121,7 @@ public class JasperReportsMultiFormatView extends AbstractJasperReportsView {
 	 * <li>{@code html} - {@code JasperReportsHtmlView}</li>
 	 * <li>{@code pdf} - {@code JasperReportsPdfView}</li>
 	 * <li>{@code xls} - {@code JasperReportsXlsView}</li>
+	 * <li>{@code xlsx} - {@code JasperReportsXlsxView}</li> (as of Spring 4.2)
 	 * </ul>
 	 */
 	public void setFormatMappings(Map<String, Class<? extends AbstractJasperReportsView>> formatMappings) {
@@ -167,7 +170,7 @@ public class JasperReportsMultiFormatView extends AbstractJasperReportsView {
 
 		String format = (String) model.get(this.formatKey);
 		if (format == null) {
-			throw new IllegalArgumentException("No format format found in model");
+			throw new IllegalArgumentException("No format found in model");
 		}
 
 		if (logger.isDebugEnabled()) {

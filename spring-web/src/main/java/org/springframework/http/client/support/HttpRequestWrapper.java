@@ -57,6 +57,7 @@ public class HttpRequestWrapper implements HttpRequest {
 	/**
 	 * Return the method of the wrapped request.
 	 */
+	@Override
 	public HttpMethod getMethod() {
 		return this.request.getMethod();
 	}
@@ -64,6 +65,7 @@ public class HttpRequestWrapper implements HttpRequest {
 	/**
 	 * Return the URI of the wrapped request.
 	 */
+	@Override
 	public URI getURI() {
 		return this.request.getURI();
 	}
@@ -71,6 +73,7 @@ public class HttpRequestWrapper implements HttpRequest {
 	/**
 	 * Return the headers of the wrapped request.
 	 */
+	@Override
 	public HttpHeaders getHeaders() {
 		return this.request.getHeaders();
 	}

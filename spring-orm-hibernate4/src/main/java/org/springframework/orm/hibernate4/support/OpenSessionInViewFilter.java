@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Servlet 2.3 Filter that binds a Hibernate Session to the thread for the entire
+ * Servlet Filter that binds a Hibernate Session to the thread for the entire
  * processing of the request. Intended for the "Open Session in View" pattern,
  * i.e. to allow for lazy loading in web views despite the original transactions
  * already being completed.
@@ -69,6 +69,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * @since 3.1
  * @see #lookupSessionFactory
  * @see OpenSessionInViewInterceptor
+ * @see OpenSessionInterceptor
  * @see org.springframework.orm.hibernate4.HibernateTransactionManager
  * @see org.springframework.transaction.support.TransactionSynchronizationManager
  * @see org.hibernate.SessionFactory#getCurrentSession()
@@ -96,6 +97,7 @@ public class OpenSessionInViewFilter extends OncePerRequestFilter {
 	protected String getSessionFactoryBeanName() {
 		return this.sessionFactoryBeanName;
 	}
+
 
 	/**
 	 * Returns "false" so that the filter may re-bind the opened Hibernate

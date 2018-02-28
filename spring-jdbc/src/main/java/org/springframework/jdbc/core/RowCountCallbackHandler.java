@@ -16,11 +16,11 @@
 
 package org.springframework.jdbc.core;
 
-import org.springframework.jdbc.support.JdbcUtils;
-
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+
+import org.springframework.jdbc.support.JdbcUtils;
 
 /**
  * Implementation of RowCallbackHandler. Convenient superclass for callback handlers.
@@ -69,6 +69,7 @@ public class RowCountCallbackHandler implements RowCallbackHandler {
 	 * by overriding the {@code processRow(ResultSet, int)} method.
 	 * @see #processRow(java.sql.ResultSet, int)
 	 */
+	@Override
 	public final void processRow(ResultSet rs) throws SQLException {
 		if (this.rowCount == 0) {
 			ResultSetMetaData rsmd = rs.getMetaData();

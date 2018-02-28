@@ -61,7 +61,7 @@ public abstract class AbstractJdbcCall {
 	private final List<SqlParameter> declaredParameters = new ArrayList<SqlParameter>();
 
 	/** List of RefCursor/ResultSet RowMapper objects */
-	private final Map<String, RowMapper> declaredRowMappers = new LinkedHashMap<String, RowMapper>();
+	private final Map<String, RowMapper<?>> declaredRowMappers = new LinkedHashMap<String, RowMapper<?>>();
 
 	/**
 	 * Has this operation been compiled? Compilation means at least checking
@@ -191,6 +191,23 @@ public abstract class AbstractJdbcCall {
 	}
 
 	/**
+	 * Specify whether parameters should be bound by name.
+	 * The default is {@code false}.
+	 * @since 4.2
+	 */
+	public void setNamedBinding(boolean namedBinding) {
+		this.callMetaDataContext.setNamedBinding(namedBinding);
+	}
+
+	/**
+	 * Should parameters be bound by name?
+	 * @since 4.2
+	 */
+	public boolean isNamedBinding() {
+		return this.callMetaDataContext.isNamedBinding();
+	}
+
+	/**
 	 * Specify whether the parameter metadata for the call should be used.
 	 * The default is {@code true}.
 	 */
@@ -238,20 +255,11 @@ public abstract class AbstractJdbcCall {
 	 * @param parameterName name of parameter or column
 	 * @param rowMapper the RowMapper implementation to use
 	 */
-	public void addDeclaredRowMapper(String parameterName, RowMapper rowMapper) {
+	public void addDeclaredRowMapper(String parameterName, RowMapper<?> rowMapper) {
 		this.declaredRowMappers.put(parameterName, rowMapper);
 		if (logger.isDebugEnabled()) {
 			logger.debug("Added row mapper for [" + getProcedureName() + "]: " + parameterName);
 		}
-	}
-
-	/**
-	 * Add a {@link org.springframework.jdbc.core.RowMapper} for the specified parameter or column.
-	 * @deprecated in favor of {@link #addDeclaredRowMapper(String, org.springframework.jdbc.core.RowMapper)}
-	 */
-	@Deprecated
-	public void addDeclaredRowMapper(String parameterName, ParameterizedRowMapper rowMapper) {
-		addDeclaredRowMapper(parameterName, (RowMapper) rowMapper);
 	}
 
 
@@ -295,7 +303,7 @@ public abstract class AbstractJdbcCall {
 		this.callMetaDataContext.initializeMetaData(getJdbcTemplate().getDataSource());
 
 		// Iterate over the declared RowMappers and register the corresponding SqlParameter
-		for (Map.Entry<String, RowMapper> entry : this.declaredRowMappers.entrySet()) {
+		for (Map.Entry<String, RowMapper<?>> entry : this.declaredRowMappers.entrySet()) {
 			SqlParameter resultSetParameter =
 					this.callMetaDataContext.createReturnResultSetParameter(entry.getKey(), entry.getValue());
 			this.declaredParameters.add(resultSetParameter);

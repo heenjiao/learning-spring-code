@@ -244,10 +244,12 @@ public class MutablePropertyValues implements PropertyValues, Serializable {
 	}
 
 
+	@Override
 	public PropertyValue[] getPropertyValues() {
 		return this.propertyValueList.toArray(new PropertyValue[this.propertyValueList.size()]);
 	}
 
+	@Override
 	public PropertyValue getPropertyValue(String propertyName) {
 		for (PropertyValue pv : this.propertyValueList) {
 			if (pv.getName().equals(propertyName)) {
@@ -257,6 +259,20 @@ public class MutablePropertyValues implements PropertyValues, Serializable {
 		return null;
 	}
 
+	/**
+	 * Get the raw property value, if any.
+	 * @param propertyName the name to search for
+	 * @return the raw property value, or {@code null}
+	 * @since 4.0
+	 * @see #getPropertyValue(String)
+	 * @see PropertyValue#getValue()
+	 */
+	public Object get(String propertyName) {
+		PropertyValue pv = getPropertyValue(propertyName);
+		return (pv != null ? pv.getValue() : null);
+	}
+
+	@Override
 	public PropertyValues changesSince(PropertyValues old) {
 		MutablePropertyValues changes = new MutablePropertyValues();
 		if (old == this) {
@@ -278,11 +294,13 @@ public class MutablePropertyValues implements PropertyValues, Serializable {
 		return changes;
 	}
 
+	@Override
 	public boolean contains(String propertyName) {
 		return (getPropertyValue(propertyName) != null ||
 				(this.processedProperties != null && this.processedProperties.contains(propertyName)));
 	}
 
+	@Override
 	public boolean isEmpty() {
 		return this.propertyValueList.isEmpty();
 	}
